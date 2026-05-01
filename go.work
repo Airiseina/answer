@@ -1,0 +1,9 @@
+go 1.26.1
+
+use (
+	./api_gateway
+	./kitex_service/chat_service
+	./kitex_service/user_service
+	./pkg
+	./work_service
+)
