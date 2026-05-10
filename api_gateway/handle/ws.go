@@ -1,13 +1,12 @@
 package handle
 
 import (
-	"answer_pkg/logger"
 	"api_gateway/internal/ws"
 	"net/http"
 	"strconv"
 
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
 var upgrader = websocket.Upgrader{
@@ -23,7 +22,7 @@ func HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	userId, _ := strconv.ParseUint(userIdStr, 10, 64)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logger.Error("ws协议升级失败", zap.Error(err))
+		hlog.Error("ws协议升级失败", err)
 		return
 	}
 	defer conn.Close()

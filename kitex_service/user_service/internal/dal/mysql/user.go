@@ -1,11 +1,10 @@
 package mysql
 
 import (
-	"answer_pkg/logger"
 	"errors"
+	"fmt"
 	"user_service/internal/model"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -17,8 +16,7 @@ func (db *gor) Register(account, name, hash string) error {
 	}
 	err := db.db.Create(&userInfo).Error
 	if err != nil {
-		logger.Error(" 存入数据失败", zap.Error(err))
-		return err
+		return fmt.Errorf("存入数据失败: %w", err)
 	}
 	return nil
 }
@@ -30,8 +28,16 @@ func (db *gor) GetUser(account string) (model.User, error) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return model.User{}, nil
 		}
-		logger.Error("查询用户失败", zap.Error(err))
-		return model.User{}, err
+		return model.User{}, fmt.Errorf("查询用户失败: %w", err)
 	}
 	return user, nil
+}
+
+func (db *gor) CountUsersByIds(userIds []int64) (int64, error) {
+	var count int64
+	err := db.db.Model(&model.User{}).Where("id IN ?", userIds).Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("查询用户失败: %w", err)
+	}
+	return count, nil
 }

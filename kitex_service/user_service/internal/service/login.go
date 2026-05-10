@@ -33,7 +33,7 @@ func (dao *UserService) Register(account, name, password string) (bool, error) {
 }
 
 type UserDTO struct {
-	Id      uint   `json:"id"`
+	Id      int64  `json:"id"`
 	Account string `json:"account"`
 }
 

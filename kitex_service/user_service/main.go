@@ -2,7 +2,6 @@ package main
 
 import (
 	"answer_pkg/connect"
-	"answer_pkg/logger"
 	"net"
 	"os"
 	"user_service/internal/config"
@@ -16,6 +15,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/server"
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
+	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -28,29 +28,30 @@ func main() {
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
 			zap.AddCallerSkip(1),
-			zap.Fields(zap.String("service", "chat_service")),
+			zap.Fields(zap.String("service", "user_service")),
 		),
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
 	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
 	if err != nil {
-		logger.Fatal("注册中心出错", zap.Error(err))
+		klog.Fatalf("注册中心出错: %v", err)
 	}
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4321")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4320")
 	if err != nil {
-		logger.Fatal("监听地址出错", zap.Error(err))
+		klog.Fatalf("监听地址出错:%v", err)
 	}
 	db, err := connect.ConnectMysql()
 	if err != nil {
-		logger.Fatal("连接数据库失败", zap.Error(err))
+		klog.Fatalf("连接数据库失败:%v", err)
 	}
 	err = db.AutoMigrate(&model.User{}) //建表
 	if err != nil {
-		logger.Fatal("数据库建表失败", zap.Error(err))
+		klog.Fatalf("数据库建表失败:%v", err)
 	}
 	userService := service.NewUserService(mysql.NewUserDao(db))
 	svr := loginservice.NewServer(&LoginServiceImpl{userService: userService},
+		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "userservice"}),
 		server.WithServiceAddr(addr),
 		server.WithRegistry(r),
@@ -60,6 +61,6 @@ func main() {
 		}))
 	err = svr.Run()
 	if err != nil {
-		logger.Fatal("服务启动失败", zap.Error(err))
+		klog.Fatalf("服务启动失败:%v", err)
 	}
 }

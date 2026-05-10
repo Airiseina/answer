@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"answer_pkg/logger"
 	"api_gateway/response"
 	"api_gateway/rpc"
 	"context"
@@ -10,9 +9,9 @@ import (
 	"user_service/kitex_gen/user"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/hertz-contrib/jwt"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 var key = viper.GetString("jwt.Key")
@@ -25,7 +24,7 @@ type loginParam struct {
 }
 
 type Resp struct {
-	Id      uint
+	Id      int64
 	Account string
 }
 
@@ -52,9 +51,9 @@ func JwtMiddleware() {
 			if res == nil {
 				return nil, errors.New("账号密码错误")
 			}
-			c.Set("user_id", uint(res.Id))
+			c.Set("user_id", res.Id)
 			c.Set("account", res.Account)
-			return &Resp{uint(res.Id), res.Account}, nil
+			return &Resp{res.Id, res.Account}, nil
 		},
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(*Resp); ok {
@@ -79,10 +78,10 @@ func JwtMiddleware() {
 		},
 		IdentityHandler: func(ctx context.Context, c *app.RequestContext) interface{} {
 			claims := jwt.ExtractClaims(ctx, c)
-			var userId uint
+			var userId int64
 			if idVal, ok := claims["id"]; ok {
 				if idFloat, ok := idVal.(float64); ok {
-					userId = uint(idFloat)
+					userId = int64(idFloat)
 				}
 			}
 			account := claims["account"].(string)
@@ -93,12 +92,12 @@ func JwtMiddleware() {
 			account, _ := c.Get("account")
 			response.Success(c, map[string]interface{}{
 				"token":   message,
-				"id":      userID.(uint),
+				"id":      userID,
 				"account": account,
 			})
 		},
 	})
 	if err != nil {
-		logger.Fatal("jwt错误", zap.Error(err))
+		hlog.Fatalf("jwt中间件错误:%v", err)
 	}
 }

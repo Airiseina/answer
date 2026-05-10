@@ -17,4 +17,5 @@ func NewUserDao(db *gorm.DB) UserDao {
 type UserDao interface {
 	Register(account, name, hash string) error
 	GetUser(account string) (model.User, error)
+	CountUsersByIds(userIds []int64) (int64, error)
 }

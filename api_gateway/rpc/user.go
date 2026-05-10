@@ -1,28 +1,24 @@
 package rpc
 
 import (
-	"answer_pkg/logger"
 	"context"
 	"time"
 	"user_service/kitex_gen/user"
 	"user_service/kitex_gen/user/loginservice"
 
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
+	"github.com/cloudwego/kitex/pkg/discovery"
 	"github.com/cloudwego/kitex/pkg/fallback"
 	"github.com/cloudwego/kitex/pkg/loadbalance"
 	"github.com/cloudwego/kitex/pkg/retry"
-	etcd "github.com/kitex-contrib/registry-etcd"
-	"go.uber.org/zap"
+	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 )
 
-var cli loginservice.Client
+var userCli loginservice.Client
 
-func Connect() {
-	r, err := etcd.NewEtcdResolver([]string{"127.0.0.1:2379"})
-	if err != nil {
-		logger.Fatal("连接etcd出错", zap.Error(err))
-	}
+func ConnectUserService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
 	fp.WithMaxRetryTimes(3)  //最大重试次数
 	fp.WithFixedBackOff(100) //
@@ -48,7 +44,9 @@ func Connect() {
 			}
 			return resp, err
 		}))
-	c, err := loginservice.NewClient("userservice", client.WithResolver(r),
+	c, err := loginservice.NewClient("userservice",
+		client.WithResolver(r),
+		client.WithSuite(tracing.NewClientSuite()), //链路追踪
 		client.WithFallback(loginFbPolicy),
 		client.WithFailureRetry(fp),
 		client.WithRPCTimeout(5*time.Second),
@@ -56,15 +54,15 @@ func Connect() {
 		client.WithLoadBalancer(loadbalance.NewWeightedRoundRobinBalancer()),
 	)
 	if err != nil {
-		logger.Fatal("初始化客户端失败", zap.Error(err))
+		hlog.Fatalf("初始化客户端失败:%v", err)
 	}
-	cli = c
+	userCli = c
 }
 
 func Register(ctx context.Context, req *user.RegisterReq) (*user.RegisterRes, error) {
-	return cli.Register(ctx, req)
+	return userCli.Register(ctx, req)
 }
 
 func Login(ctx context.Context, req *user.LoginReq) (*user.LoginRes, error) {
-	return cli.Login(ctx, req)
+	return userCli.Login(ctx, req)
 }

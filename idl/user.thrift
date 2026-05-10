@@ -13,10 +13,18 @@ struct LoginReq{
 2:string password,
 }
 struct LoginRes{
-1:i16 id,
+1:i64 id,
 2:string account,
 }
+struct CheckUsersExistReq{
+1:list<i64> userIds,
+}
+struct CheckUsersExistRes{
+1:bool allExist,
+}
+
 service LoginService{
 RegisterRes Register(1:RegisterReq req)
 LoginRes Login(1:LoginReq req)
+CheckUsersExistRes CheckUsersExist(1:CheckUsersExistReq req)
 }

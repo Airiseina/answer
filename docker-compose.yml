@@ -123,6 +123,51 @@ services:
    networks:
      -  answer-net
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: answer_jaeger
+    ports:
+      - "16686:16686" # Web UI 面板 (浏览器访问这个端口)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - answer-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: answer_otel_collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # 接收微服务发来的 OTLP gRPC 数据（原来是由 Jaeger 接收）
+    networks:
+      - answer-net
+    depends_on:
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: answer_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - answer-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: answer_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - answer-net
+    depends_on:
+      - prometheus
+
 volumes:
   mysql_data:
   redis_data:

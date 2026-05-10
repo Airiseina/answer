@@ -1,0 +1,74 @@
+package main
+
+import (
+	"answer_pkg/connect"
+	"group_service/internal/config"
+	"group_service/internal/dal"
+	"group_service/internal/model"
+	"group_service/internal/service"
+	"group_service/rpc"
+
+	"group_service/kitex_gen/group/groupservice"
+	"net"
+	"os"
+
+	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/cloudwego/kitex/pkg/limit"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/server"
+	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
+	"github.com/kitex-contrib/obs-opentelemetry/tracing"
+	etcd "github.com/kitex-contrib/registry-etcd"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+func main() {
+	kitexZapLogger := kitexzap.NewLogger(
+		kitexzap.WithCoreWs(zapcore.AddSync(os.Stdout)),
+		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
+		kitexzap.WithZapOptions(
+			zap.AddCaller(),
+			zap.AddCallerSkip(1),
+			zap.Fields(zap.String("service", "group_service")),
+		),
+	)
+	klog.SetLogger(kitexZapLogger)
+	config.GetConfig()
+	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
+	if err != nil {
+		klog.Fatalf("注册中心出错: %v", err)
+	}
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4321")
+	if err != nil {
+		klog.Fatalf("监听地址出错:%v", err)
+	}
+	db, err := connect.ConnectMysql()
+	if err != nil {
+		klog.Fatalf("连接数据库失败:%v", err)
+	}
+	err = db.AutoMigrate(&model.Group{}, &model.GroupMember{}) //建表
+	if err != nil {
+		klog.Fatalf("数据库建表失败:%v", err)
+	}
+	groupService := service.NewGroupService(dal.NewGroupDao(db))
+	svr := groupservice.NewServer(&GroupServiceImpl{groupService: groupService},
+		server.WithSuite(tracing.NewServerSuite()),
+		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "groupservice"}),
+		server.WithServiceAddr(addr),
+		server.WithRegistry(r),
+		server.WithLimit(&limit.Option{
+			MaxConnections: 1000,
+			MaxQPS:         2000,
+		}))
+	r1, err := etcd.NewEtcdResolver([]string{"127.0.0.1:2379"})
+	if err != nil {
+		hlog.Fatalf("连接etcd出错:%v", err)
+	}
+	rpc.ConnectUserService(r1)
+	err = svr.Run()
+	if err != nil {
+		klog.Fatalf("服务启动失败:%v", err)
+	}
+}

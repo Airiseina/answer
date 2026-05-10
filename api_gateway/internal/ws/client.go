@@ -1,11 +1,8 @@
 package ws
 
 import (
-	"answer_pkg/logger"
-
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
 type Client struct {
@@ -18,7 +15,7 @@ func (client *Client) ReadMessage() {
 	for {
 		messageType, message, err := client.Socket.ReadMessage()
 		if err != nil {
-			logger.Error("读取用户消息失败", zap.Any("用户id", client.UserId))
+			hlog.Errorf("读取%d用户消息失败", client.UserId)
 			break
 		}
 		//使用消息队列，之后我们会接入 Kafka 或者直接路由，不仅发给用户，也要发给自己

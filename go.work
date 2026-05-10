@@ -6,4 +6,5 @@ use (
 	./kitex_service/user_service
 	./pkg
 	./work_service
+	kitex_service/group_service
 )
