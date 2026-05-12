@@ -1,9 +1,12 @@
-package ws
+package core
 
 import (
+	"context"
 	"sync"
 
-	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"answer_pkg/meter"
+
+	"github.com/cloudwego/kitex/pkg/klog"
 )
 
 type Manager struct {
@@ -20,20 +23,22 @@ var GlobalManager = Manager{
 }
 
 func (manager *Manager) Start() {
-	hlog.Infof("WebSocket 管理器启动...")
+	klog.Infof("WebSocket 管理器启动...")
 	for {
 		select {
 		case client := <-manager.Register:
 			manager.Lock.Lock()
 			manager.Clients[client.UserId] = client
-			hlog.Infof("%d用户上线", client.UserId)
+			meter.M.WsConnectTotal.Add(context.Background(), 1)
+			klog.Infof("%d用户上线", client.UserId)
 			manager.Lock.Unlock()
 		case client := <-manager.Unregister:
 			manager.Lock.Lock()
 			if _, ok := manager.Clients[client.UserId]; ok {
 				delete(manager.Clients, client.UserId)
+				meter.M.WsDisconnectTotal.Add(context.Background(), 1)
 				client.Socket.Close()
-				hlog.Infof("用户下线")
+				klog.Infof("用户下线")
 			}
 			manager.Lock.Unlock()
 		}

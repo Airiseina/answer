@@ -1,6 +1,7 @@
 package main
 
 import (
+	"answer_pkg/meter"
 	"answer_pkg/tracer"
 	"api_gateway/config"
 	"api_gateway/middleware"
@@ -22,7 +23,7 @@ func main() {
 		hertzzap.WithCoreWs(zapcore.AddSync(os.Stdout)),
 		hertzzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		hertzzap.WithZapOptions(
-			zap.AddCaller(), // 输出是在哪行代码打的日志
+			zap.AddCaller(),
 			zap.AddCallerSkip(1),
 			zap.Fields(zap.String("service", "api_gateway")),
 		),
@@ -30,10 +31,9 @@ func main() {
 	hlog.SetLogger(hertzZapLogger)
 	p := tracer.InitTracer("api_gateway", "localhost:4317")
 	defer p.Shutdown(context.Background())
+	meter.InitMeter("api_gateway")
 	config.GetConfig()
 	rpc.Connect()
-	//mq.KafkaInit()
-	//stoClient := handle.NewUploadController(storage.NewMinio(storage.InitMinio()), producer.NewProducer())
 	tracerOptions, cfg := hertztracing.NewServerTracer()
 	h := server.New(server.WithHostPorts("127.0.0.1:1234"), tracerOptions)
 	h.Use(hertztracing.ServerMiddleware(cfg))

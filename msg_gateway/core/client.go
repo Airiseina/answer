@@ -1,7 +1,7 @@
-package ws
+package core
 
 import (
-	"github.com/cloudwego/hertz/pkg/common/hlog"
+	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/gorilla/websocket"
 )
 
@@ -15,11 +15,11 @@ func (client *Client) ReadMessage() {
 	for {
 		messageType, message, err := client.Socket.ReadMessage()
 		if err != nil {
-			hlog.Errorf("读取%d用户消息失败", client.UserId)
+			klog.Errorf("读取%d用户消息失败", client.UserId)
 			break
 		}
 		//使用消息队列，之后我们会接入 Kafka 或者直接路由，不仅发给用户，也要发给自己
-		hlog.Infof("收到%d用户消息:%s:格式：%d", client.UserId, message, messageType)
+		klog.Infof("收到%d用户消息:%s:格式：%d", client.UserId, message, messageType)
 	}
 	defer func() {
 		client.Manager.Unregister <- client
