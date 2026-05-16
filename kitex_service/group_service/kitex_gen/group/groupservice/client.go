@@ -19,6 +19,11 @@ type Client interface {
 	ChangeNotice(ctx context.Context, req *group.ChangeNoticeReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
 	Muted(ctx context.Context, req *group.MutedReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
 	SetAdmin(ctx context.Context, req *group.SetAdminReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
+	GetUserGroups(ctx context.Context, req *group.GetUserGroupsReq, callOptions ...callopt.Option) (r *group.GetUserGroupsRes, err error)
+	SearchGroupByNumber(ctx context.Context, req *group.SearchGroupByNumberReq, callOptions ...callopt.Option) (r *group.SearchGroupByNumberRes, err error)
+	JoinGroup(ctx context.Context, req *group.JoinGroupReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
+	HandleJoinReq(ctx context.Context, req *group.HandleJoinReqReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
+	GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq, callOptions ...callopt.Option) (r *group.GetJoinRequestsRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -88,4 +93,29 @@ func (p *kGroupServiceClient) Muted(ctx context.Context, req *group.MutedReq, ca
 func (p *kGroupServiceClient) SetAdmin(ctx context.Context, req *group.SetAdminReq, callOptions ...callopt.Option) (r *group.CommonRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SetAdmin(ctx, req)
+}
+
+func (p *kGroupServiceClient) GetUserGroups(ctx context.Context, req *group.GetUserGroupsReq, callOptions ...callopt.Option) (r *group.GetUserGroupsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetUserGroups(ctx, req)
+}
+
+func (p *kGroupServiceClient) SearchGroupByNumber(ctx context.Context, req *group.SearchGroupByNumberReq, callOptions ...callopt.Option) (r *group.SearchGroupByNumberRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchGroupByNumber(ctx, req)
+}
+
+func (p *kGroupServiceClient) JoinGroup(ctx context.Context, req *group.JoinGroupReq, callOptions ...callopt.Option) (r *group.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.JoinGroup(ctx, req)
+}
+
+func (p *kGroupServiceClient) HandleJoinReq(ctx context.Context, req *group.HandleJoinReqReq, callOptions ...callopt.Option) (r *group.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.HandleJoinReq(ctx, req)
+}
+
+func (p *kGroupServiceClient) GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq, callOptions ...callopt.Option) (r *group.GetJoinRequestsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetJoinRequests(ctx, req)
 }

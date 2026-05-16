@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var key = viper.GetString("jwt.Key")
 var Authmiddleware *jwt.HertzJWTMiddleware
 var IdentityKey = "user"
 
@@ -29,6 +28,7 @@ type Resp struct {
 }
 
 func JwtMiddleware() {
+	key := viper.GetString("jwt.Key")
 	var err error
 	Authmiddleware, err = jwt.New(&jwt.HertzJWTMiddleware{
 		Key:         []byte(key),

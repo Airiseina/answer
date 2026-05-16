@@ -69,6 +69,41 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetUserGroups": kitex.NewMethodInfo(
+		getUserGroupsHandler,
+		newGroupServiceGetUserGroupsArgs,
+		newGroupServiceGetUserGroupsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SearchGroupByNumber": kitex.NewMethodInfo(
+		searchGroupByNumberHandler,
+		newGroupServiceSearchGroupByNumberArgs,
+		newGroupServiceSearchGroupByNumberResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"JoinGroup": kitex.NewMethodInfo(
+		joinGroupHandler,
+		newGroupServiceJoinGroupArgs,
+		newGroupServiceJoinGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"HandleJoinReq": kitex.NewMethodInfo(
+		handleJoinReqHandler,
+		newGroupServiceHandleJoinReqArgs,
+		newGroupServiceHandleJoinReqResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetJoinRequests": kitex.NewMethodInfo(
+		getJoinRequestsHandler,
+		newGroupServiceGetJoinRequestsArgs,
+		newGroupServiceGetJoinRequestsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -279,6 +314,96 @@ func newGroupServiceSetAdminResult() interface{} {
 	return group.NewGroupServiceSetAdminResult()
 }
 
+func getUserGroupsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceGetUserGroupsArgs)
+	realResult := result.(*group.GroupServiceGetUserGroupsResult)
+	success, err := handler.(group.GroupService).GetUserGroups(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceGetUserGroupsArgs() interface{} {
+	return group.NewGroupServiceGetUserGroupsArgs()
+}
+
+func newGroupServiceGetUserGroupsResult() interface{} {
+	return group.NewGroupServiceGetUserGroupsResult()
+}
+
+func searchGroupByNumberHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceSearchGroupByNumberArgs)
+	realResult := result.(*group.GroupServiceSearchGroupByNumberResult)
+	success, err := handler.(group.GroupService).SearchGroupByNumber(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceSearchGroupByNumberArgs() interface{} {
+	return group.NewGroupServiceSearchGroupByNumberArgs()
+}
+
+func newGroupServiceSearchGroupByNumberResult() interface{} {
+	return group.NewGroupServiceSearchGroupByNumberResult()
+}
+
+func joinGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceJoinGroupArgs)
+	realResult := result.(*group.GroupServiceJoinGroupResult)
+	success, err := handler.(group.GroupService).JoinGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceJoinGroupArgs() interface{} {
+	return group.NewGroupServiceJoinGroupArgs()
+}
+
+func newGroupServiceJoinGroupResult() interface{} {
+	return group.NewGroupServiceJoinGroupResult()
+}
+
+func handleJoinReqHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceHandleJoinReqArgs)
+	realResult := result.(*group.GroupServiceHandleJoinReqResult)
+	success, err := handler.(group.GroupService).HandleJoinReq(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceHandleJoinReqArgs() interface{} {
+	return group.NewGroupServiceHandleJoinReqArgs()
+}
+
+func newGroupServiceHandleJoinReqResult() interface{} {
+	return group.NewGroupServiceHandleJoinReqResult()
+}
+
+func getJoinRequestsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceGetJoinRequestsArgs)
+	realResult := result.(*group.GroupServiceGetJoinRequestsResult)
+	success, err := handler.(group.GroupService).GetJoinRequests(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceGetJoinRequestsArgs() interface{} {
+	return group.NewGroupServiceGetJoinRequestsArgs()
+}
+
+func newGroupServiceGetJoinRequestsResult() interface{} {
+	return group.NewGroupServiceGetJoinRequestsResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -364,6 +489,56 @@ func (p *kClient) SetAdmin(ctx context.Context, req *group.SetAdminReq) (r *grou
 	_args.Req = req
 	var _result group.GroupServiceSetAdminResult
 	if err = p.c.Call(ctx, "SetAdmin", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetUserGroups(ctx context.Context, req *group.GetUserGroupsReq) (r *group.GetUserGroupsRes, err error) {
+	var _args group.GroupServiceGetUserGroupsArgs
+	_args.Req = req
+	var _result group.GroupServiceGetUserGroupsResult
+	if err = p.c.Call(ctx, "GetUserGroups", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SearchGroupByNumber(ctx context.Context, req *group.SearchGroupByNumberReq) (r *group.SearchGroupByNumberRes, err error) {
+	var _args group.GroupServiceSearchGroupByNumberArgs
+	_args.Req = req
+	var _result group.GroupServiceSearchGroupByNumberResult
+	if err = p.c.Call(ctx, "SearchGroupByNumber", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) JoinGroup(ctx context.Context, req *group.JoinGroupReq) (r *group.CommonRes, err error) {
+	var _args group.GroupServiceJoinGroupArgs
+	_args.Req = req
+	var _result group.GroupServiceJoinGroupResult
+	if err = p.c.Call(ctx, "JoinGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) HandleJoinReq(ctx context.Context, req *group.HandleJoinReqReq) (r *group.CommonRes, err error) {
+	var _args group.GroupServiceHandleJoinReqArgs
+	_args.Req = req
+	var _result group.GroupServiceHandleJoinReqResult
+	if err = p.c.Call(ctx, "HandleJoinReq", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq) (r *group.GetJoinRequestsRes, err error) {
+	var _args group.GroupServiceGetJoinRequestsArgs
+	_args.Req = req
+	var _result group.GroupServiceGetJoinRequestsResult
+	if err = p.c.Call(ctx, "GetJoinRequests", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

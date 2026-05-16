@@ -10,7 +10,6 @@ import (
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
 	"github.com/cloudwego/kitex/pkg/discovery"
-	"github.com/cloudwego/kitex/pkg/fallback"
 	"github.com/cloudwego/kitex/pkg/loadbalance"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
@@ -20,8 +19,8 @@ var groupCli groupservice.Client
 
 func ConnectGroupService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
-	fp.WithMaxRetryTimes(3)  //最大重试次数
-	fp.WithFixedBackOff(100) //
+	fp.WithMaxRetryTimes(3)
+	fp.WithFixedBackOff(100)
 	cbConfig := circuitbreak.CBConfig{
 		Enable:    true,
 		ErrRate:   0.1,
@@ -29,24 +28,9 @@ func ConnectGroupService(r discovery.Resolver) {
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("groupservice", cbConfig)
-	groupFbPolicy := fallback.NewFallbackPolicy(fallback.UnwrapHelper(
-		func(ctx context.Context, req, resp interface{}, err error) (interface{}, error) {
-			if err != nil {
-				if r, ok := resp.(*group.CreateGroupRes); ok {
-					if r == nil {
-						r = &group.CreateGroupRes{}
-						resp = r
-					}
-					r.GroupId = 0
-					return r, nil
-				}
-			}
-			return resp, err
-		}))
 	c, err := groupservice.NewClient("groupservice",
 		client.WithResolver(r),
-		client.WithSuite(tracing.NewClientSuite()), //链路追踪
-		client.WithFallback(groupFbPolicy),
+		client.WithSuite(tracing.NewClientSuite()),
 		client.WithFailureRetry(fp),
 		client.WithRPCTimeout(5*time.Second),
 		client.WithCircuitBreaker(cbs),
@@ -86,4 +70,24 @@ func Muted(ctx context.Context, req *group.MutedReq) (resp *group.CommonRes, err
 }
 func SetAdmin(ctx context.Context, req *group.SetAdminReq) (resp *group.CommonRes, err error) {
 	return groupCli.SetAdmin(ctx, req)
+}
+
+func GetUserGroups(ctx context.Context, req *group.GetUserGroupsReq) (*group.GetUserGroupsRes, error) {
+	return groupCli.GetUserGroups(ctx, req)
+}
+
+func SearchGroupByNumber(ctx context.Context, req *group.SearchGroupByNumberReq) (*group.SearchGroupByNumberRes, error) {
+	return groupCli.SearchGroupByNumber(ctx, req)
+}
+
+func JoinGroup(ctx context.Context, req *group.JoinGroupReq) (*group.CommonRes, error) {
+	return groupCli.JoinGroup(ctx, req)
+}
+
+func HandleJoinReq(ctx context.Context, req *group.HandleJoinReqReq) (*group.CommonRes, error) {
+	return groupCli.HandleJoinReq(ctx, req)
+}
+
+func GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq) (*group.GetJoinRequestsRes, error) {
+	return groupCli.GetJoinRequests(ctx, req)
 }

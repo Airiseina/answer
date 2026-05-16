@@ -2,6 +2,9 @@ package main
 
 import (
 	"answer_pkg/connect"
+	"answer_pkg/meter"
+	"answer_pkg/tracer"
+	"context"
 	"net"
 	"os"
 	"user_service/internal/config"
@@ -17,6 +20,7 @@ import (
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -27,17 +31,25 @@ func main() {
 		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(1),
+			zap.AddCallerSkip(4),
 			zap.Fields(zap.String("service", "user_service")),
 		),
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
-	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
+	otelAddr := viper.GetString("otel.Addr")
+	p := tracer.InitTracer("user_service", otelAddr)
+	defer p.Shutdown(context.Background())
+	meter.InitMeter("user_service")
+	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
+		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
+	}
+	etcdAddr := viper.GetString("etcd.Addr")
+	r, err := etcd.NewEtcdRegistry([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4320")
+	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4320")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
 	}
@@ -45,12 +57,14 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.User{}) //建表
+	err = db.AutoMigrate(&model.User{}, &model.FriendRequest{}, &model.Friend{}, &model.FriendGroup{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
-	userService := service.NewUserService(mysql.NewUserDao(db))
-	svr := loginservice.NewServer(&LoginServiceImpl{userService: userService},
+	userDao := mysql.NewUserDao(db)
+	userService := service.NewUserService(userDao)
+	friendService := service.NewFriendService(userDao)
+	svr := loginservice.NewServer(&LoginServiceImpl{userService: userService, friendService: friendService},
 		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "userservice"}),
 		server.WithServiceAddr(addr),

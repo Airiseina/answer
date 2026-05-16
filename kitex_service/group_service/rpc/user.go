@@ -70,3 +70,20 @@ func CheckUsersExist(ctx context.Context, userIds []int64) (bool, error) {
 	}
 	return resp.AllExist, nil
 }
+
+func GetUserNames(ctx context.Context, userIds []int64) (map[int64]string, error) {
+	req := &user.GetUserNamesReq{
+		UserIds: userIds,
+	}
+	resp, err := userCli.GetUserNames(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]string)
+	if resp != nil {
+		for _, u := range resp.Users {
+			result[u.Id] = u.Name
+		}
+	}
+	return result, nil
+}

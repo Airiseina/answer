@@ -8,11 +8,13 @@ import (
 )
 
 type Group struct {
-	GroupId    int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
-	Name       string `thrift:"name,2" frugal:"2,default,string" json:"name"`
-	OwnerId    int64  `thrift:"owner_id,3" frugal:"3,default,i64" json:"owner_id"`
-	Notice     string `thrift:"notice,4" frugal:"4,default,string" json:"notice"`
-	CreateTime int64  `thrift:"create_time,5" frugal:"5,default,i64" json:"create_time"`
+	GroupId     int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	Name        string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	OwnerId     int64  `thrift:"owner_id,3" frugal:"3,default,i64" json:"owner_id"`
+	OwnerName   string `thrift:"owner_name,4" frugal:"4,default,string" json:"owner_name"`
+	Notice      string `thrift:"notice,5" frugal:"5,default,string" json:"notice"`
+	CreateTime  int64  `thrift:"create_time,6" frugal:"6,default,i64" json:"create_time"`
+	GroupNumber int64  `thrift:"group_number,7" frugal:"7,default,i64" json:"group_number"`
 }
 
 func NewGroup() *Group {
@@ -34,12 +36,20 @@ func (p *Group) GetOwnerId() (v int64) {
 	return p.OwnerId
 }
 
+func (p *Group) GetOwnerName() (v string) {
+	return p.OwnerName
+}
+
 func (p *Group) GetNotice() (v string) {
 	return p.Notice
 }
 
 func (p *Group) GetCreateTime() (v int64) {
 	return p.CreateTime
+}
+
+func (p *Group) GetGroupNumber() (v int64) {
+	return p.GroupNumber
 }
 func (p *Group) SetGroupId(val int64) {
 	p.GroupId = val
@@ -50,11 +60,17 @@ func (p *Group) SetName(val string) {
 func (p *Group) SetOwnerId(val int64) {
 	p.OwnerId = val
 }
+func (p *Group) SetOwnerName(val string) {
+	p.OwnerName = val
+}
 func (p *Group) SetNotice(val string) {
 	p.Notice = val
 }
 func (p *Group) SetCreateTime(val int64) {
 	p.CreateTime = val
+}
+func (p *Group) SetGroupNumber(val int64) {
+	p.GroupNumber = val
 }
 
 func (p *Group) String() string {
@@ -68,16 +84,19 @@ var fieldIDToName_Group = map[int16]string{
 	1: "group_id",
 	2: "name",
 	3: "owner_id",
-	4: "notice",
-	5: "create_time",
+	4: "owner_name",
+	5: "notice",
+	6: "create_time",
+	7: "group_number",
 }
 
 type GroupMember struct {
-	GroupId  int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
-	UserId   int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
-	Role     int64 `thrift:"role,3" frugal:"3,default,i64" json:"role"`
-	IsMuted  bool  `thrift:"is_muted,4" frugal:"4,default,bool" json:"is_muted"`
-	JoinTime int64 `thrift:"join_time,5" frugal:"5,default,i64" json:"join_time"`
+	GroupId  int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	UserId   int64  `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	Role     int64  `thrift:"role,3" frugal:"3,default,i64" json:"role"`
+	IsMuted  bool   `thrift:"is_muted,4" frugal:"4,default,bool" json:"is_muted"`
+	JoinTime int64  `thrift:"join_time,5" frugal:"5,default,i64" json:"join_time"`
+	Name     string `thrift:"name,6" frugal:"6,default,string" json:"name"`
 }
 
 func NewGroupMember() *GroupMember {
@@ -106,6 +125,10 @@ func (p *GroupMember) GetIsMuted() (v bool) {
 func (p *GroupMember) GetJoinTime() (v int64) {
 	return p.JoinTime
 }
+
+func (p *GroupMember) GetName() (v string) {
+	return p.Name
+}
 func (p *GroupMember) SetGroupId(val int64) {
 	p.GroupId = val
 }
@@ -121,6 +144,9 @@ func (p *GroupMember) SetIsMuted(val bool) {
 func (p *GroupMember) SetJoinTime(val int64) {
 	p.JoinTime = val
 }
+func (p *GroupMember) SetName(val string) {
+	p.Name = val
+}
 
 func (p *GroupMember) String() string {
 	if p == nil {
@@ -135,6 +161,7 @@ var fieldIDToName_GroupMember = map[int16]string{
 	3: "role",
 	4: "is_muted",
 	5: "join_time",
+	6: "name",
 }
 
 type CommonRes struct {
@@ -214,7 +241,8 @@ var fieldIDToName_CreateGroupReq = map[int16]string{
 }
 
 type CreateGroupRes struct {
-	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	GroupId     int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	GroupNumber int64 `thrift:"group_number,2" frugal:"2,default,i64" json:"group_number"`
 }
 
 func NewCreateGroupRes() *CreateGroupRes {
@@ -227,8 +255,15 @@ func (p *CreateGroupRes) InitDefault() {
 func (p *CreateGroupRes) GetGroupId() (v int64) {
 	return p.GroupId
 }
+
+func (p *CreateGroupRes) GetGroupNumber() (v int64) {
+	return p.GroupNumber
+}
 func (p *CreateGroupRes) SetGroupId(val int64) {
 	p.GroupId = val
+}
+func (p *CreateGroupRes) SetGroupNumber(val int64) {
+	p.GroupNumber = val
 }
 
 func (p *CreateGroupRes) String() string {
@@ -240,6 +275,7 @@ func (p *CreateGroupRes) String() string {
 
 var fieldIDToName_CreateGroupRes = map[int16]string{
 	1: "group_id",
+	2: "group_number",
 }
 
 type InviteMembersReq struct {
@@ -618,6 +654,451 @@ var fieldIDToName_SetAdminReq = map[int16]string{
 	4: "role",
 }
 
+type GetUserGroupsReq struct {
+	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+}
+
+func NewGetUserGroupsReq() *GetUserGroupsReq {
+	return &GetUserGroupsReq{}
+}
+
+func (p *GetUserGroupsReq) InitDefault() {
+}
+
+func (p *GetUserGroupsReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *GetUserGroupsReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *GetUserGroupsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserGroupsReq(%+v)", *p)
+}
+
+var fieldIDToName_GetUserGroupsReq = map[int16]string{
+	1: "user_id",
+}
+
+type UserGroupInfo struct {
+	GroupId     int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	Name        string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	GroupNumber int64  `thrift:"group_number,3" frugal:"3,default,i64" json:"group_number"`
+}
+
+func NewUserGroupInfo() *UserGroupInfo {
+	return &UserGroupInfo{}
+}
+
+func (p *UserGroupInfo) InitDefault() {
+}
+
+func (p *UserGroupInfo) GetGroupId() (v int64) {
+	return p.GroupId
+}
+
+func (p *UserGroupInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *UserGroupInfo) GetGroupNumber() (v int64) {
+	return p.GroupNumber
+}
+func (p *UserGroupInfo) SetGroupId(val int64) {
+	p.GroupId = val
+}
+func (p *UserGroupInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *UserGroupInfo) SetGroupNumber(val int64) {
+	p.GroupNumber = val
+}
+
+func (p *UserGroupInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserGroupInfo(%+v)", *p)
+}
+
+var fieldIDToName_UserGroupInfo = map[int16]string{
+	1: "group_id",
+	2: "name",
+	3: "group_number",
+}
+
+type GetUserGroupsRes struct {
+	Groups []*UserGroupInfo `thrift:"groups,1" frugal:"1,default,list<UserGroupInfo>" json:"groups"`
+}
+
+func NewGetUserGroupsRes() *GetUserGroupsRes {
+	return &GetUserGroupsRes{}
+}
+
+func (p *GetUserGroupsRes) InitDefault() {
+}
+
+func (p *GetUserGroupsRes) GetGroups() (v []*UserGroupInfo) {
+	return p.Groups
+}
+func (p *GetUserGroupsRes) SetGroups(val []*UserGroupInfo) {
+	p.Groups = val
+}
+
+func (p *GetUserGroupsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserGroupsRes(%+v)", *p)
+}
+
+var fieldIDToName_GetUserGroupsRes = map[int16]string{
+	1: "groups",
+}
+
+type SearchGroupByNumberReq struct {
+	GroupNumber int64 `thrift:"group_number,1" frugal:"1,default,i64" json:"group_number"`
+}
+
+func NewSearchGroupByNumberReq() *SearchGroupByNumberReq {
+	return &SearchGroupByNumberReq{}
+}
+
+func (p *SearchGroupByNumberReq) InitDefault() {
+}
+
+func (p *SearchGroupByNumberReq) GetGroupNumber() (v int64) {
+	return p.GroupNumber
+}
+func (p *SearchGroupByNumberReq) SetGroupNumber(val int64) {
+	p.GroupNumber = val
+}
+
+func (p *SearchGroupByNumberReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchGroupByNumberReq(%+v)", *p)
+}
+
+var fieldIDToName_SearchGroupByNumberReq = map[int16]string{
+	1: "group_number",
+}
+
+type GroupSearchResult_ struct {
+	GroupId     int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	Name        string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	OwnerName   string `thrift:"owner_name,3" frugal:"3,default,string" json:"owner_name"`
+	GroupNumber int64  `thrift:"group_number,4" frugal:"4,default,i64" json:"group_number"`
+}
+
+func NewGroupSearchResult_() *GroupSearchResult_ {
+	return &GroupSearchResult_{}
+}
+
+func (p *GroupSearchResult_) InitDefault() {
+}
+
+func (p *GroupSearchResult_) GetGroupId() (v int64) {
+	return p.GroupId
+}
+
+func (p *GroupSearchResult_) GetName() (v string) {
+	return p.Name
+}
+
+func (p *GroupSearchResult_) GetOwnerName() (v string) {
+	return p.OwnerName
+}
+
+func (p *GroupSearchResult_) GetGroupNumber() (v int64) {
+	return p.GroupNumber
+}
+func (p *GroupSearchResult_) SetGroupId(val int64) {
+	p.GroupId = val
+}
+func (p *GroupSearchResult_) SetName(val string) {
+	p.Name = val
+}
+func (p *GroupSearchResult_) SetOwnerName(val string) {
+	p.OwnerName = val
+}
+func (p *GroupSearchResult_) SetGroupNumber(val int64) {
+	p.GroupNumber = val
+}
+
+func (p *GroupSearchResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupSearchResult_(%+v)", *p)
+}
+
+var fieldIDToName_GroupSearchResult_ = map[int16]string{
+	1: "group_id",
+	2: "name",
+	3: "owner_name",
+	4: "group_number",
+}
+
+type SearchGroupByNumberRes struct {
+	GroupInfo *GroupSearchResult_ `thrift:"group_info,1" frugal:"1,default,GroupSearchResult_" json:"group_info"`
+}
+
+func NewSearchGroupByNumberRes() *SearchGroupByNumberRes {
+	return &SearchGroupByNumberRes{}
+}
+
+func (p *SearchGroupByNumberRes) InitDefault() {
+}
+
+var SearchGroupByNumberRes_GroupInfo_DEFAULT *GroupSearchResult_
+
+func (p *SearchGroupByNumberRes) GetGroupInfo() (v *GroupSearchResult_) {
+	if !p.IsSetGroupInfo() {
+		return SearchGroupByNumberRes_GroupInfo_DEFAULT
+	}
+	return p.GroupInfo
+}
+func (p *SearchGroupByNumberRes) SetGroupInfo(val *GroupSearchResult_) {
+	p.GroupInfo = val
+}
+
+func (p *SearchGroupByNumberRes) IsSetGroupInfo() bool {
+	return p.GroupInfo != nil
+}
+
+func (p *SearchGroupByNumberRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchGroupByNumberRes(%+v)", *p)
+}
+
+var fieldIDToName_SearchGroupByNumberRes = map[int16]string{
+	1: "group_info",
+}
+
+type JoinGroupReq struct {
+	UserId      int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	GroupNumber int64  `thrift:"group_number,2" frugal:"2,default,i64" json:"group_number"`
+	Message     string `thrift:"message,3" frugal:"3,default,string" json:"message"`
+}
+
+func NewJoinGroupReq() *JoinGroupReq {
+	return &JoinGroupReq{}
+}
+
+func (p *JoinGroupReq) InitDefault() {
+}
+
+func (p *JoinGroupReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *JoinGroupReq) GetGroupNumber() (v int64) {
+	return p.GroupNumber
+}
+
+func (p *JoinGroupReq) GetMessage() (v string) {
+	return p.Message
+}
+func (p *JoinGroupReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *JoinGroupReq) SetGroupNumber(val int64) {
+	p.GroupNumber = val
+}
+func (p *JoinGroupReq) SetMessage(val string) {
+	p.Message = val
+}
+
+func (p *JoinGroupReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("JoinGroupReq(%+v)", *p)
+}
+
+var fieldIDToName_JoinGroupReq = map[int16]string{
+	1: "user_id",
+	2: "group_number",
+	3: "message",
+}
+
+type HandleJoinReqReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	GroupId    int64 `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
+	UserId     int64 `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+	Accept     bool  `thrift:"accept,4" frugal:"4,default,bool" json:"accept"`
+}
+
+func NewHandleJoinReqReq() *HandleJoinReqReq {
+	return &HandleJoinReqReq{}
+}
+
+func (p *HandleJoinReqReq) InitDefault() {
+}
+
+func (p *HandleJoinReqReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *HandleJoinReqReq) GetGroupId() (v int64) {
+	return p.GroupId
+}
+
+func (p *HandleJoinReqReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *HandleJoinReqReq) GetAccept() (v bool) {
+	return p.Accept
+}
+func (p *HandleJoinReqReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *HandleJoinReqReq) SetGroupId(val int64) {
+	p.GroupId = val
+}
+func (p *HandleJoinReqReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *HandleJoinReqReq) SetAccept(val bool) {
+	p.Accept = val
+}
+
+func (p *HandleJoinReqReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("HandleJoinReqReq(%+v)", *p)
+}
+
+var fieldIDToName_HandleJoinReqReq = map[int16]string{
+	1: "operator_id",
+	2: "group_id",
+	3: "user_id",
+	4: "accept",
+}
+
+type GetJoinRequestsReq struct {
+	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+}
+
+func NewGetJoinRequestsReq() *GetJoinRequestsReq {
+	return &GetJoinRequestsReq{}
+}
+
+func (p *GetJoinRequestsReq) InitDefault() {
+}
+
+func (p *GetJoinRequestsReq) GetGroupId() (v int64) {
+	return p.GroupId
+}
+func (p *GetJoinRequestsReq) SetGroupId(val int64) {
+	p.GroupId = val
+}
+
+func (p *GetJoinRequestsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetJoinRequestsReq(%+v)", *p)
+}
+
+var fieldIDToName_GetJoinRequestsReq = map[int16]string{
+	1: "group_id",
+}
+
+type JoinRequestInfo struct {
+	UserId  int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Name    string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	Message string `thrift:"message,3" frugal:"3,default,string" json:"message"`
+	Status  int64  `thrift:"status,4" frugal:"4,default,i64" json:"status"`
+}
+
+func NewJoinRequestInfo() *JoinRequestInfo {
+	return &JoinRequestInfo{}
+}
+
+func (p *JoinRequestInfo) InitDefault() {
+}
+
+func (p *JoinRequestInfo) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *JoinRequestInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *JoinRequestInfo) GetMessage() (v string) {
+	return p.Message
+}
+
+func (p *JoinRequestInfo) GetStatus() (v int64) {
+	return p.Status
+}
+func (p *JoinRequestInfo) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *JoinRequestInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *JoinRequestInfo) SetMessage(val string) {
+	p.Message = val
+}
+func (p *JoinRequestInfo) SetStatus(val int64) {
+	p.Status = val
+}
+
+func (p *JoinRequestInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("JoinRequestInfo(%+v)", *p)
+}
+
+var fieldIDToName_JoinRequestInfo = map[int16]string{
+	1: "user_id",
+	2: "name",
+	3: "message",
+	4: "status",
+}
+
+type GetJoinRequestsRes struct {
+	Requests []*JoinRequestInfo `thrift:"requests,1" frugal:"1,default,list<JoinRequestInfo>" json:"requests"`
+}
+
+func NewGetJoinRequestsRes() *GetJoinRequestsRes {
+	return &GetJoinRequestsRes{}
+}
+
+func (p *GetJoinRequestsRes) InitDefault() {
+}
+
+func (p *GetJoinRequestsRes) GetRequests() (v []*JoinRequestInfo) {
+	return p.Requests
+}
+func (p *GetJoinRequestsRes) SetRequests(val []*JoinRequestInfo) {
+	p.Requests = val
+}
+
+func (p *GetJoinRequestsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetJoinRequestsRes(%+v)", *p)
+}
+
+var fieldIDToName_GetJoinRequestsRes = map[int16]string{
+	1: "requests",
+}
+
 type GroupService interface {
 	CreateGroup(ctx context.Context, req *CreateGroupReq) (r *CreateGroupRes, err error)
 
@@ -634,6 +1115,16 @@ type GroupService interface {
 	Muted(ctx context.Context, req *MutedReq) (r *CommonRes, err error)
 
 	SetAdmin(ctx context.Context, req *SetAdminReq) (r *CommonRes, err error)
+
+	GetUserGroups(ctx context.Context, req *GetUserGroupsReq) (r *GetUserGroupsRes, err error)
+
+	SearchGroupByNumber(ctx context.Context, req *SearchGroupByNumberReq) (r *SearchGroupByNumberRes, err error)
+
+	JoinGroup(ctx context.Context, req *JoinGroupReq) (r *CommonRes, err error)
+
+	HandleJoinReq(ctx context.Context, req *HandleJoinReqReq) (r *CommonRes, err error)
+
+	GetJoinRequests(ctx context.Context, req *GetJoinRequestsReq) (r *GetJoinRequestsRes, err error)
 }
 
 type GroupServiceCreateGroupArgs struct {
@@ -1241,5 +1732,385 @@ func (p *GroupServiceSetAdminResult) String() string {
 }
 
 var fieldIDToName_GroupServiceSetAdminResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceGetUserGroupsArgs struct {
+	Req *GetUserGroupsReq `thrift:"req,1" frugal:"1,default,GetUserGroupsReq" json:"req"`
+}
+
+func NewGroupServiceGetUserGroupsArgs() *GroupServiceGetUserGroupsArgs {
+	return &GroupServiceGetUserGroupsArgs{}
+}
+
+func (p *GroupServiceGetUserGroupsArgs) InitDefault() {
+}
+
+var GroupServiceGetUserGroupsArgs_Req_DEFAULT *GetUserGroupsReq
+
+func (p *GroupServiceGetUserGroupsArgs) GetReq() (v *GetUserGroupsReq) {
+	if !p.IsSetReq() {
+		return GroupServiceGetUserGroupsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceGetUserGroupsArgs) SetReq(val *GetUserGroupsReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceGetUserGroupsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceGetUserGroupsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceGetUserGroupsArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceGetUserGroupsArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceGetUserGroupsResult struct {
+	Success *GetUserGroupsRes `thrift:"success,0,optional" frugal:"0,optional,GetUserGroupsRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceGetUserGroupsResult() *GroupServiceGetUserGroupsResult {
+	return &GroupServiceGetUserGroupsResult{}
+}
+
+func (p *GroupServiceGetUserGroupsResult) InitDefault() {
+}
+
+var GroupServiceGetUserGroupsResult_Success_DEFAULT *GetUserGroupsRes
+
+func (p *GroupServiceGetUserGroupsResult) GetSuccess() (v *GetUserGroupsRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceGetUserGroupsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceGetUserGroupsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetUserGroupsRes)
+}
+
+func (p *GroupServiceGetUserGroupsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceGetUserGroupsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceGetUserGroupsResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceGetUserGroupsResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceSearchGroupByNumberArgs struct {
+	Req *SearchGroupByNumberReq `thrift:"req,1" frugal:"1,default,SearchGroupByNumberReq" json:"req"`
+}
+
+func NewGroupServiceSearchGroupByNumberArgs() *GroupServiceSearchGroupByNumberArgs {
+	return &GroupServiceSearchGroupByNumberArgs{}
+}
+
+func (p *GroupServiceSearchGroupByNumberArgs) InitDefault() {
+}
+
+var GroupServiceSearchGroupByNumberArgs_Req_DEFAULT *SearchGroupByNumberReq
+
+func (p *GroupServiceSearchGroupByNumberArgs) GetReq() (v *SearchGroupByNumberReq) {
+	if !p.IsSetReq() {
+		return GroupServiceSearchGroupByNumberArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceSearchGroupByNumberArgs) SetReq(val *SearchGroupByNumberReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceSearchGroupByNumberArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceSearchGroupByNumberArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceSearchGroupByNumberArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceSearchGroupByNumberArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceSearchGroupByNumberResult struct {
+	Success *SearchGroupByNumberRes `thrift:"success,0,optional" frugal:"0,optional,SearchGroupByNumberRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceSearchGroupByNumberResult() *GroupServiceSearchGroupByNumberResult {
+	return &GroupServiceSearchGroupByNumberResult{}
+}
+
+func (p *GroupServiceSearchGroupByNumberResult) InitDefault() {
+}
+
+var GroupServiceSearchGroupByNumberResult_Success_DEFAULT *SearchGroupByNumberRes
+
+func (p *GroupServiceSearchGroupByNumberResult) GetSuccess() (v *SearchGroupByNumberRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceSearchGroupByNumberResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceSearchGroupByNumberResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SearchGroupByNumberRes)
+}
+
+func (p *GroupServiceSearchGroupByNumberResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceSearchGroupByNumberResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceSearchGroupByNumberResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceSearchGroupByNumberResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceJoinGroupArgs struct {
+	Req *JoinGroupReq `thrift:"req,1" frugal:"1,default,JoinGroupReq" json:"req"`
+}
+
+func NewGroupServiceJoinGroupArgs() *GroupServiceJoinGroupArgs {
+	return &GroupServiceJoinGroupArgs{}
+}
+
+func (p *GroupServiceJoinGroupArgs) InitDefault() {
+}
+
+var GroupServiceJoinGroupArgs_Req_DEFAULT *JoinGroupReq
+
+func (p *GroupServiceJoinGroupArgs) GetReq() (v *JoinGroupReq) {
+	if !p.IsSetReq() {
+		return GroupServiceJoinGroupArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceJoinGroupArgs) SetReq(val *JoinGroupReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceJoinGroupArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceJoinGroupArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceJoinGroupArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceJoinGroupArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceJoinGroupResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceJoinGroupResult() *GroupServiceJoinGroupResult {
+	return &GroupServiceJoinGroupResult{}
+}
+
+func (p *GroupServiceJoinGroupResult) InitDefault() {
+}
+
+var GroupServiceJoinGroupResult_Success_DEFAULT *CommonRes
+
+func (p *GroupServiceJoinGroupResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceJoinGroupResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceJoinGroupResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *GroupServiceJoinGroupResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceJoinGroupResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceJoinGroupResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceJoinGroupResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceHandleJoinReqArgs struct {
+	Req *HandleJoinReqReq `thrift:"req,1" frugal:"1,default,HandleJoinReqReq" json:"req"`
+}
+
+func NewGroupServiceHandleJoinReqArgs() *GroupServiceHandleJoinReqArgs {
+	return &GroupServiceHandleJoinReqArgs{}
+}
+
+func (p *GroupServiceHandleJoinReqArgs) InitDefault() {
+}
+
+var GroupServiceHandleJoinReqArgs_Req_DEFAULT *HandleJoinReqReq
+
+func (p *GroupServiceHandleJoinReqArgs) GetReq() (v *HandleJoinReqReq) {
+	if !p.IsSetReq() {
+		return GroupServiceHandleJoinReqArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceHandleJoinReqArgs) SetReq(val *HandleJoinReqReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceHandleJoinReqArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceHandleJoinReqArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceHandleJoinReqArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceHandleJoinReqArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceHandleJoinReqResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceHandleJoinReqResult() *GroupServiceHandleJoinReqResult {
+	return &GroupServiceHandleJoinReqResult{}
+}
+
+func (p *GroupServiceHandleJoinReqResult) InitDefault() {
+}
+
+var GroupServiceHandleJoinReqResult_Success_DEFAULT *CommonRes
+
+func (p *GroupServiceHandleJoinReqResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceHandleJoinReqResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceHandleJoinReqResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *GroupServiceHandleJoinReqResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceHandleJoinReqResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceHandleJoinReqResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceHandleJoinReqResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceGetJoinRequestsArgs struct {
+	Req *GetJoinRequestsReq `thrift:"req,1" frugal:"1,default,GetJoinRequestsReq" json:"req"`
+}
+
+func NewGroupServiceGetJoinRequestsArgs() *GroupServiceGetJoinRequestsArgs {
+	return &GroupServiceGetJoinRequestsArgs{}
+}
+
+func (p *GroupServiceGetJoinRequestsArgs) InitDefault() {
+}
+
+var GroupServiceGetJoinRequestsArgs_Req_DEFAULT *GetJoinRequestsReq
+
+func (p *GroupServiceGetJoinRequestsArgs) GetReq() (v *GetJoinRequestsReq) {
+	if !p.IsSetReq() {
+		return GroupServiceGetJoinRequestsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceGetJoinRequestsArgs) SetReq(val *GetJoinRequestsReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceGetJoinRequestsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceGetJoinRequestsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceGetJoinRequestsArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceGetJoinRequestsArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceGetJoinRequestsResult struct {
+	Success *GetJoinRequestsRes `thrift:"success,0,optional" frugal:"0,optional,GetJoinRequestsRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceGetJoinRequestsResult() *GroupServiceGetJoinRequestsResult {
+	return &GroupServiceGetJoinRequestsResult{}
+}
+
+func (p *GroupServiceGetJoinRequestsResult) InitDefault() {
+}
+
+var GroupServiceGetJoinRequestsResult_Success_DEFAULT *GetJoinRequestsRes
+
+func (p *GroupServiceGetJoinRequestsResult) GetSuccess() (v *GetJoinRequestsRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceGetJoinRequestsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceGetJoinRequestsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetJoinRequestsRes)
+}
+
+func (p *GroupServiceGetJoinRequestsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceGetJoinRequestsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceGetJoinRequestsResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceGetJoinRequestsResult = map[int16]string{
 	0: "success",
 }

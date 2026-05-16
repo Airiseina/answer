@@ -20,6 +20,7 @@ import (
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -30,17 +31,21 @@ func main() {
 		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(1),
+			zap.AddCallerSkip(4),
 			zap.Fields(zap.String("service", "group_service")),
 		),
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
-	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
+	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
+		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
+	}
+	etcdAddr := viper.GetString("etcd.Addr")
+	r, err := etcd.NewEtcdRegistry([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:4321")
+	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4321")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
 	}
@@ -48,7 +53,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.Group{}, &model.GroupMember{}) //建表
+	err = db.AutoMigrate(&model.Group{}, &model.GroupMember{}, &model.GroupJoinRequest{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
@@ -62,7 +67,7 @@ func main() {
 			MaxConnections: 1000,
 			MaxQPS:         2000,
 		}))
-	r1, err := etcd.NewEtcdResolver([]string{"127.0.0.1:2379"})
+	r1, err := etcd.NewEtcdResolver([]string{etcdAddr})
 	if err != nil {
 		hlog.Fatalf("连接etcd出错:%v", err)
 	}

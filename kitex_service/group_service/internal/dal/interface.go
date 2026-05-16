@@ -25,4 +25,12 @@ type GroupDao interface {
 	ChangeNotice(groupId int64, notice string) error
 	Muted(groupId int64, mutedId int64, isMute bool) error
 	SetAdmin(groupId int64, targetId int64, role int64) error
+	GetUserGroups(userId int64) ([]model.Group, error)
+	SearchGroupByNumber(groupNumber int64) (model.Group, error)
+	CreateJoinRequest(req model.GroupJoinRequest) error
+	HandleJoinRequest(groupId int64, userId int64, accept bool, userName string) error
+	GetJoinRequests(groupId int64) ([]model.GroupJoinRequest, error)
+	UpdateMemberRole(groupId int64, userId int64, role int64) error
+	IsGroupMember(groupId int64, userId int64) (bool, error)
+	GetMemberRole(groupId int64, userId int64) (int64, error)
 }

@@ -4,8 +4,10 @@ struct Group {
     1: i64 group_id
     2: string name
     3: i64 owner_id
-    4: string notice  //群公告
-    5: i64 create_time
+    4: string owner_name
+    5: string notice
+    6: i64 create_time
+    7: i64 group_number
 }
 
 struct GroupMember {
@@ -14,6 +16,7 @@ struct GroupMember {
     3: i64 role      // 2:"owner", 1:"admin", 0:"member"
     4: bool is_muted
     5: i64 join_time
+    6: string name
 }
 
 struct CommonRes{
@@ -28,18 +31,19 @@ struct CreateGroupReq {
 
 struct CreateGroupRes {
     1: i64 group_id
+    2: i64 group_number
 }
 
 struct InviteMembersReq {
     1: i64 inviter_id
     2: i64 group_id
-    3: list<i64> user_ids // 被拉的人
+    3: list<i64> user_ids
 }
 
 struct KickMembersReq {
     1: i64 operator_id
     2: i64 group_id
-    3: list<i64> user_ids // 被踢的人
+    3: list<i64> user_ids
 }
 
 struct GetGroupInfoReq {
@@ -74,7 +78,64 @@ struct SetAdminReq {
     1: i64 operator_id
     2: i64 group_id
     3: i64 target_id
-    4: i64 role // 1 for admin, 0 to revoke admin
+    4: i64 role
+}
+
+struct GetUserGroupsReq {
+    1: i64 user_id
+}
+
+struct UserGroupInfo {
+    1: i64 group_id
+    2: string name
+    3: i64 group_number
+}
+
+struct GetUserGroupsRes {
+    1: list<UserGroupInfo> groups
+}
+
+struct SearchGroupByNumberReq {
+    1: i64 group_number
+}
+
+struct GroupSearchResult {
+    1: i64 group_id
+    2: string name
+    3: string owner_name
+    4: i64 group_number
+}
+
+struct SearchGroupByNumberRes {
+    1: GroupSearchResult group_info
+}
+
+struct JoinGroupReq {
+    1: i64 user_id
+    2: i64 group_number
+    3: string message
+}
+
+struct HandleJoinReqReq {
+    1: i64 operator_id
+    2: i64 group_id
+    3: i64 user_id
+    4: bool accept
+}
+
+struct GetJoinRequestsReq {
+    1: i64 group_id
+}
+
+struct JoinRequestInfo {
+    1: i64 user_id
+    2: string name
+    3: string message
+    4: i64 status   // 0:pending, 1:accepted, 2:rejected
+}
+
+struct GetJoinRequestsRes {
+    1: list<JoinRequestInfo> requests
 }
 
 service GroupService {
@@ -86,4 +147,9 @@ service GroupService {
     CommonRes ChangeNotice(1: ChangeNoticeReq req)
     CommonRes Muted(1: MutedReq req)
     CommonRes SetAdmin(1: SetAdminReq req)
+    GetUserGroupsRes GetUserGroups(1: GetUserGroupsReq req)
+    SearchGroupByNumberRes SearchGroupByNumber(1: SearchGroupByNumberReq req)
+    CommonRes JoinGroup(1: JoinGroupReq req)
+    CommonRes HandleJoinReq(1: HandleJoinReqReq req)
+    GetJoinRequestsRes GetJoinRequests(1: GetJoinRequestsReq req)
 }

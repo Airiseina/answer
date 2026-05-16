@@ -5,9 +5,10 @@ package loginservice
 import (
 	"context"
 	"errors"
+	user "user_service/kitex_gen/user"
+
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
-	user "user_service/kitex_gen/user"
 )
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
@@ -31,6 +32,97 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		checkUsersExistHandler,
 		newLoginServiceCheckUsersExistArgs,
 		newLoginServiceCheckUsersExistResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"AddFriend": kitex.NewMethodInfo(
+		addFriendHandler,
+		newLoginServiceAddFriendArgs,
+		newLoginServiceAddFriendResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"HandleFriendReq": kitex.NewMethodInfo(
+		handleFriendReqHandler,
+		newLoginServiceHandleFriendReqArgs,
+		newLoginServiceHandleFriendReqResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteFriend": kitex.NewMethodInfo(
+		deleteFriendHandler,
+		newLoginServiceDeleteFriendArgs,
+		newLoginServiceDeleteFriendResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetFriendList": kitex.NewMethodInfo(
+		getFriendListHandler,
+		newLoginServiceGetFriendListArgs,
+		newLoginServiceGetFriendListResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetFriendRequests": kitex.NewMethodInfo(
+		getFriendRequestsHandler,
+		newLoginServiceGetFriendRequestsArgs,
+		newLoginServiceGetFriendRequestsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateFriendGroup": kitex.NewMethodInfo(
+		createFriendGroupHandler,
+		newLoginServiceCreateFriendGroupArgs,
+		newLoginServiceCreateFriendGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateFriendGroup": kitex.NewMethodInfo(
+		updateFriendGroupHandler,
+		newLoginServiceUpdateFriendGroupArgs,
+		newLoginServiceUpdateFriendGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteFriendGroup": kitex.NewMethodInfo(
+		deleteFriendGroupHandler,
+		newLoginServiceDeleteFriendGroupArgs,
+		newLoginServiceDeleteFriendGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"MoveFriendToGroup": kitex.NewMethodInfo(
+		moveFriendToGroupHandler,
+		newLoginServiceMoveFriendToGroupArgs,
+		newLoginServiceMoveFriendToGroupResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateFriendRemark": kitex.NewMethodInfo(
+		updateFriendRemarkHandler,
+		newLoginServiceUpdateFriendRemarkArgs,
+		newLoginServiceUpdateFriendRemarkResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetFriendGroups": kitex.NewMethodInfo(
+		getFriendGroupsHandler,
+		newLoginServiceGetFriendGroupsArgs,
+		newLoginServiceGetFriendGroupsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SearchUserByAccount": kitex.NewMethodInfo(
+		searchUserByAccountHandler,
+		newLoginServiceSearchUserByAccountArgs,
+		newLoginServiceSearchUserByAccountResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetUserNames": kitex.NewMethodInfo(
+		getUserNamesHandler,
+		newLoginServiceGetUserNamesArgs,
+		newLoginServiceGetUserNamesResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -154,6 +246,238 @@ func newLoginServiceCheckUsersExistResult() interface{} {
 	return user.NewLoginServiceCheckUsersExistResult()
 }
 
+func addFriendHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceAddFriendArgs)
+	realResult := result.(*user.LoginServiceAddFriendResult)
+	success, err := handler.(user.LoginService).AddFriend(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceAddFriendArgs() interface{} {
+	return user.NewLoginServiceAddFriendArgs()
+}
+
+func newLoginServiceAddFriendResult() interface{} {
+	return user.NewLoginServiceAddFriendResult()
+}
+
+func handleFriendReqHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceHandleFriendReqArgs)
+	realResult := result.(*user.LoginServiceHandleFriendReqResult)
+	success, err := handler.(user.LoginService).HandleFriendReq(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceHandleFriendReqArgs() interface{} {
+	return user.NewLoginServiceHandleFriendReqArgs()
+}
+
+func newLoginServiceHandleFriendReqResult() interface{} {
+	return user.NewLoginServiceHandleFriendReqResult()
+}
+
+func deleteFriendHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceDeleteFriendArgs)
+	realResult := result.(*user.LoginServiceDeleteFriendResult)
+	success, err := handler.(user.LoginService).DeleteFriend(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceDeleteFriendArgs() interface{} {
+	return user.NewLoginServiceDeleteFriendArgs()
+}
+
+func newLoginServiceDeleteFriendResult() interface{} {
+	return user.NewLoginServiceDeleteFriendResult()
+}
+
+func getFriendListHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetFriendListArgs)
+	realResult := result.(*user.LoginServiceGetFriendListResult)
+	success, err := handler.(user.LoginService).GetFriendList(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetFriendListArgs() interface{} {
+	return user.NewLoginServiceGetFriendListArgs()
+}
+
+func newLoginServiceGetFriendListResult() interface{} {
+	return user.NewLoginServiceGetFriendListResult()
+}
+
+func getFriendRequestsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetFriendRequestsArgs)
+	realResult := result.(*user.LoginServiceGetFriendRequestsResult)
+	success, err := handler.(user.LoginService).GetFriendRequests(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetFriendRequestsArgs() interface{} {
+	return user.NewLoginServiceGetFriendRequestsArgs()
+}
+
+func newLoginServiceGetFriendRequestsResult() interface{} {
+	return user.NewLoginServiceGetFriendRequestsResult()
+}
+
+func createFriendGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceCreateFriendGroupArgs)
+	realResult := result.(*user.LoginServiceCreateFriendGroupResult)
+	success, err := handler.(user.LoginService).CreateFriendGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceCreateFriendGroupArgs() interface{} {
+	return user.NewLoginServiceCreateFriendGroupArgs()
+}
+
+func newLoginServiceCreateFriendGroupResult() interface{} {
+	return user.NewLoginServiceCreateFriendGroupResult()
+}
+
+func updateFriendGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceUpdateFriendGroupArgs)
+	realResult := result.(*user.LoginServiceUpdateFriendGroupResult)
+	success, err := handler.(user.LoginService).UpdateFriendGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceUpdateFriendGroupArgs() interface{} {
+	return user.NewLoginServiceUpdateFriendGroupArgs()
+}
+
+func newLoginServiceUpdateFriendGroupResult() interface{} {
+	return user.NewLoginServiceUpdateFriendGroupResult()
+}
+
+func deleteFriendGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceDeleteFriendGroupArgs)
+	realResult := result.(*user.LoginServiceDeleteFriendGroupResult)
+	success, err := handler.(user.LoginService).DeleteFriendGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceDeleteFriendGroupArgs() interface{} {
+	return user.NewLoginServiceDeleteFriendGroupArgs()
+}
+
+func newLoginServiceDeleteFriendGroupResult() interface{} {
+	return user.NewLoginServiceDeleteFriendGroupResult()
+}
+
+func moveFriendToGroupHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceMoveFriendToGroupArgs)
+	realResult := result.(*user.LoginServiceMoveFriendToGroupResult)
+	success, err := handler.(user.LoginService).MoveFriendToGroup(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceMoveFriendToGroupArgs() interface{} {
+	return user.NewLoginServiceMoveFriendToGroupArgs()
+}
+
+func newLoginServiceMoveFriendToGroupResult() interface{} {
+	return user.NewLoginServiceMoveFriendToGroupResult()
+}
+
+func updateFriendRemarkHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceUpdateFriendRemarkArgs)
+	realResult := result.(*user.LoginServiceUpdateFriendRemarkResult)
+	success, err := handler.(user.LoginService).UpdateFriendRemark(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceUpdateFriendRemarkArgs() interface{} {
+	return user.NewLoginServiceUpdateFriendRemarkArgs()
+}
+
+func newLoginServiceUpdateFriendRemarkResult() interface{} {
+	return user.NewLoginServiceUpdateFriendRemarkResult()
+}
+
+func getFriendGroupsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetFriendGroupsArgs)
+	realResult := result.(*user.LoginServiceGetFriendGroupsResult)
+	success, err := handler.(user.LoginService).GetFriendGroups(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetFriendGroupsArgs() interface{} {
+	return user.NewLoginServiceGetFriendGroupsArgs()
+}
+
+func newLoginServiceGetFriendGroupsResult() interface{} {
+	return user.NewLoginServiceGetFriendGroupsResult()
+}
+
+func searchUserByAccountHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceSearchUserByAccountArgs)
+	realResult := result.(*user.LoginServiceSearchUserByAccountResult)
+	success, err := handler.(user.LoginService).SearchUserByAccount(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceSearchUserByAccountArgs() interface{} {
+	return user.NewLoginServiceSearchUserByAccountArgs()
+}
+func newLoginServiceSearchUserByAccountResult() interface{} {
+	return user.NewLoginServiceSearchUserByAccountResult()
+}
+
+func getUserNamesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetUserNamesArgs)
+	realResult := result.(*user.LoginServiceGetUserNamesResult)
+	success, err := handler.(user.LoginService).GetUserNames(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetUserNamesArgs() interface{} {
+	return user.NewLoginServiceGetUserNamesArgs()
+}
+func newLoginServiceGetUserNamesResult() interface{} {
+	return user.NewLoginServiceGetUserNamesResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -189,6 +513,136 @@ func (p *kClient) CheckUsersExist(ctx context.Context, req *user.CheckUsersExist
 	_args.Req = req
 	var _result user.LoginServiceCheckUsersExistResult
 	if err = p.c.Call(ctx, "CheckUsersExist", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AddFriend(ctx context.Context, req *user.AddFriendReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceAddFriendArgs
+	_args.Req = req
+	var _result user.LoginServiceAddFriendResult
+	if err = p.c.Call(ctx, "AddFriend", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) HandleFriendReq(ctx context.Context, req *user.HandleFriendReqReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceHandleFriendReqArgs
+	_args.Req = req
+	var _result user.LoginServiceHandleFriendReqResult
+	if err = p.c.Call(ctx, "HandleFriendReq", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteFriend(ctx context.Context, req *user.DeleteFriendReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceDeleteFriendArgs
+	_args.Req = req
+	var _result user.LoginServiceDeleteFriendResult
+	if err = p.c.Call(ctx, "DeleteFriend", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFriendList(ctx context.Context, req *user.GetFriendListReq) (r *user.GetFriendListRes, err error) {
+	var _args user.LoginServiceGetFriendListArgs
+	_args.Req = req
+	var _result user.LoginServiceGetFriendListResult
+	if err = p.c.Call(ctx, "GetFriendList", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFriendRequests(ctx context.Context, req *user.GetFriendRequestsReq) (r *user.GetFriendRequestsRes, err error) {
+	var _args user.LoginServiceGetFriendRequestsArgs
+	_args.Req = req
+	var _result user.LoginServiceGetFriendRequestsResult
+	if err = p.c.Call(ctx, "GetFriendRequests", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateFriendGroup(ctx context.Context, req *user.CreateFriendGroupReq) (r *user.CreateFriendGroupRes, err error) {
+	var _args user.LoginServiceCreateFriendGroupArgs
+	_args.Req = req
+	var _result user.LoginServiceCreateFriendGroupResult
+	if err = p.c.Call(ctx, "CreateFriendGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateFriendGroup(ctx context.Context, req *user.UpdateFriendGroupReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceUpdateFriendGroupArgs
+	_args.Req = req
+	var _result user.LoginServiceUpdateFriendGroupResult
+	if err = p.c.Call(ctx, "UpdateFriendGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteFriendGroup(ctx context.Context, req *user.DeleteFriendGroupReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceDeleteFriendGroupArgs
+	_args.Req = req
+	var _result user.LoginServiceDeleteFriendGroupResult
+	if err = p.c.Call(ctx, "DeleteFriendGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MoveFriendToGroup(ctx context.Context, req *user.MoveFriendToGroupReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceMoveFriendToGroupArgs
+	_args.Req = req
+	var _result user.LoginServiceMoveFriendToGroupResult
+	if err = p.c.Call(ctx, "MoveFriendToGroup", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateFriendRemark(ctx context.Context, req *user.UpdateFriendRemarkReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceUpdateFriendRemarkArgs
+	_args.Req = req
+	var _result user.LoginServiceUpdateFriendRemarkResult
+	if err = p.c.Call(ctx, "UpdateFriendRemark", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetFriendGroups(ctx context.Context, req *user.GetFriendGroupsReq) (r *user.GetFriendGroupsRes, err error) {
+	var _args user.LoginServiceGetFriendGroupsArgs
+	_args.Req = req
+	var _result user.LoginServiceGetFriendGroupsResult
+	if err = p.c.Call(ctx, "GetFriendGroups", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SearchUserByAccount(ctx context.Context, req *user.SearchUserByAccountReq) (r *user.SearchUserByAccountRes, err error) {
+	var _args user.LoginServiceSearchUserByAccountArgs
+	_args.Req = req
+	var _result user.LoginServiceSearchUserByAccountResult
+	if err = p.c.Call(ctx, "SearchUserByAccount", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetUserNames(ctx context.Context, req *user.GetUserNamesReq) (r *user.GetUserNamesRes, err error) {
+	var _args user.LoginServiceGetUserNamesArgs
+	_args.Req = req
+	var _result user.LoginServiceGetUserNamesResult
+	if err = p.c.Call(ctx, "GetUserNames", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

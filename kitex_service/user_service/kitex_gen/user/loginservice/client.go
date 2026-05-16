@@ -4,9 +4,10 @@ package loginservice
 
 import (
 	"context"
+	user "user_service/kitex_gen/user"
+
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
-	user "user_service/kitex_gen/user"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
@@ -14,6 +15,19 @@ type Client interface {
 	Register(ctx context.Context, req *user.RegisterReq, callOptions ...callopt.Option) (r *user.RegisterRes, err error)
 	Login(ctx context.Context, req *user.LoginReq, callOptions ...callopt.Option) (r *user.LoginRes, err error)
 	CheckUsersExist(ctx context.Context, req *user.CheckUsersExistReq, callOptions ...callopt.Option) (r *user.CheckUsersExistRes, err error)
+	AddFriend(ctx context.Context, req *user.AddFriendReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	HandleFriendReq(ctx context.Context, req *user.HandleFriendReqReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	DeleteFriend(ctx context.Context, req *user.DeleteFriendReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	GetFriendList(ctx context.Context, req *user.GetFriendListReq, callOptions ...callopt.Option) (r *user.GetFriendListRes, err error)
+	GetFriendRequests(ctx context.Context, req *user.GetFriendRequestsReq, callOptions ...callopt.Option) (r *user.GetFriendRequestsRes, err error)
+	CreateFriendGroup(ctx context.Context, req *user.CreateFriendGroupReq, callOptions ...callopt.Option) (r *user.CreateFriendGroupRes, err error)
+	UpdateFriendGroup(ctx context.Context, req *user.UpdateFriendGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	DeleteFriendGroup(ctx context.Context, req *user.DeleteFriendGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	MoveFriendToGroup(ctx context.Context, req *user.MoveFriendToGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	UpdateFriendRemark(ctx context.Context, req *user.UpdateFriendRemarkReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	GetFriendGroups(ctx context.Context, req *user.GetFriendGroupsReq, callOptions ...callopt.Option) (r *user.GetFriendGroupsRes, err error)
+	SearchUserByAccount(ctx context.Context, req *user.SearchUserByAccountReq, callOptions ...callopt.Option) (r *user.SearchUserByAccountRes, err error)
+	GetUserNames(ctx context.Context, req *user.GetUserNamesReq, callOptions ...callopt.Option) (r *user.GetUserNamesRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -58,4 +72,69 @@ func (p *kLoginServiceClient) Login(ctx context.Context, req *user.LoginReq, cal
 func (p *kLoginServiceClient) CheckUsersExist(ctx context.Context, req *user.CheckUsersExistReq, callOptions ...callopt.Option) (r *user.CheckUsersExistRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CheckUsersExist(ctx, req)
+}
+
+func (p *kLoginServiceClient) AddFriend(ctx context.Context, req *user.AddFriendReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AddFriend(ctx, req)
+}
+
+func (p *kLoginServiceClient) HandleFriendReq(ctx context.Context, req *user.HandleFriendReqReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.HandleFriendReq(ctx, req)
+}
+
+func (p *kLoginServiceClient) DeleteFriend(ctx context.Context, req *user.DeleteFriendReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteFriend(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetFriendList(ctx context.Context, req *user.GetFriendListReq, callOptions ...callopt.Option) (r *user.GetFriendListRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFriendList(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetFriendRequests(ctx context.Context, req *user.GetFriendRequestsReq, callOptions ...callopt.Option) (r *user.GetFriendRequestsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFriendRequests(ctx, req)
+}
+
+func (p *kLoginServiceClient) CreateFriendGroup(ctx context.Context, req *user.CreateFriendGroupReq, callOptions ...callopt.Option) (r *user.CreateFriendGroupRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateFriendGroup(ctx, req)
+}
+
+func (p *kLoginServiceClient) UpdateFriendGroup(ctx context.Context, req *user.UpdateFriendGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateFriendGroup(ctx, req)
+}
+
+func (p *kLoginServiceClient) DeleteFriendGroup(ctx context.Context, req *user.DeleteFriendGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteFriendGroup(ctx, req)
+}
+
+func (p *kLoginServiceClient) MoveFriendToGroup(ctx context.Context, req *user.MoveFriendToGroupReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.MoveFriendToGroup(ctx, req)
+}
+
+func (p *kLoginServiceClient) UpdateFriendRemark(ctx context.Context, req *user.UpdateFriendRemarkReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateFriendRemark(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetFriendGroups(ctx context.Context, req *user.GetFriendGroupsReq, callOptions ...callopt.Option) (r *user.GetFriendGroupsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetFriendGroups(ctx, req)
+}
+
+func (p *kLoginServiceClient) SearchUserByAccount(ctx context.Context, req *user.SearchUserByAccountReq, callOptions ...callopt.Option) (r *user.SearchUserByAccountRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchUserByAccount(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetUserNames(ctx context.Context, req *user.GetUserNamesReq, callOptions ...callopt.Option) (r *user.GetUserNamesRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetUserNames(ctx, req)
 }

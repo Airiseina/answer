@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -11,6 +12,8 @@ func LoadConfig() {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 	if err := viper.ReadInConfig(); err != nil {
 		log.Println("未找到配置文件，先使用默认值")
 	}

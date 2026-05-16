@@ -1,6 +1,8 @@
 package core
 
 import (
+	"encoding/json"
+
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/gorilla/websocket"
 )
@@ -11,18 +13,54 @@ type Client struct {
 	Socket  *websocket.Conn
 }
 
+type WsMessage struct {
+	Type      string `json:"type"`
+	To        uint   `json:"to,omitempty"`
+	From      uint   `json:"from,omitempty"`
+	Content   string `json:"content,omitempty"`
+	MsgID     int64  `json:"msg_id,omitempty"`
+	Timestamp int64  `json:"timestamp,omitempty"`
+	Success   bool   `json:"success,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+type ClientMessage struct {
+	Client  *Client
+	Message *WsMessage
+}
+
 func (client *Client) ReadMessage() {
-	for {
-		messageType, message, err := client.Socket.ReadMessage()
-		if err != nil {
-			klog.Errorf("读取%d用户消息失败", client.UserId)
-			break
-		}
-		//使用消息队列，之后我们会接入 Kafka 或者直接路由，不仅发给用户，也要发给自己
-		klog.Infof("收到%d用户消息:%s:格式：%d", client.UserId, message, messageType)
-	}
 	defer func() {
 		client.Manager.Unregister <- client
 		client.Socket.Close()
 	}()
+	for {
+		_, message, err := client.Socket.ReadMessage()
+		if err != nil {
+			klog.Errorf("读取%d用户消息失败: %v", client.UserId, err)
+			break
+		}
+		var wsMsg WsMessage
+		if err := json.Unmarshal(message, &wsMsg); err != nil {
+			klog.Errorf("解析%d用户消息失败: %v", client.UserId, err)
+			client.Send(&WsMessage{
+				Type:    "system",
+				Reason:  "消息格式错误",
+				Success: false,
+			})
+			continue
+		}
+		client.Manager.Message <- &ClientMessage{
+			Client:  client,
+			Message: &wsMsg,
+		}
+	}
+}
+
+func (client *Client) Send(msg *WsMessage) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return client.Socket.WriteMessage(websocket.TextMessage, data)
 }
