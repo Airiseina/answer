@@ -14,4 +14,5 @@ func Connect() {
 	}
 	ConnectUserService(r)
 	ConnectGroupService(r)
+	ConnectChatService(r)
 }

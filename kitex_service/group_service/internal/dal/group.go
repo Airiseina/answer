@@ -207,3 +207,13 @@ func (db *gro) GetMemberRole(groupId int64, userId int64) (int64, error) {
 	}
 	return member.Role, nil
 }
+
+// UpdateConversationID 将 chat_service 返回的 conversationID 回写到群组记录
+// 建立群组与会话的关联关系，后续邀请/踢人时通过此 ID 同步会话成员
+func (db *gro) UpdateConversationID(groupId int64, conversationID int64) error {
+	err := db.db.Model(&model.Group{}).Where("id = ?", groupId).Update("conversation_id", conversationID).Error
+	if err != nil {
+		return fmt.Errorf("更新会话ID失败: %w", err)
+	}
+	return nil
+}

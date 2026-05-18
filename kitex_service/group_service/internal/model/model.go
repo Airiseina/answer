@@ -5,13 +5,14 @@ import (
 )
 
 type Group struct {
-	ID          int64         `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name        string        `gorm:"type:varchar(100);not null" json:"name"`
-	OwnerID     int64         `gorm:"not null;index" json:"owner_id"`
-	Members     []GroupMember `gorm:"foreignKey:GroupID;references:ID"`
-	Notice      string        `gorm:"type:text" json:"notice"`
-	GroupNumber int64         `gorm:"uniqueIndex;not null" json:"group_number"`
-	CreateTime  time.Time     `gorm:"autoCreateTime" json:"create_time"`
+	ID             int64         `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name           string        `gorm:"type:varchar(100);not null" json:"name"`
+	OwnerID        int64         `gorm:"not null;index" json:"owner_id"`
+	Members        []GroupMember `gorm:"foreignKey:GroupID;references:ID"`
+	Notice         string        `gorm:"type:text" json:"notice"`
+	GroupNumber    int64         `gorm:"uniqueIndex;not null" json:"group_number"`
+	ConversationID int64         `gorm:"not null;index" json:"conversation_id"` // 关联的会话ID，创建群组时由 chat_service 返回
+	CreateTime     time.Time     `gorm:"autoCreateTime" json:"create_time"`
 }
 
 type GroupMember struct {

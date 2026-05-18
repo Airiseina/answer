@@ -6,6 +6,7 @@ import (
 	"context"
 	"msg_gateway/config"
 	"msg_gateway/core"
+	"msg_gateway/rpc"
 	"net/http"
 	"os"
 
@@ -105,10 +106,14 @@ func main() {
 		return nil
 	})
 	jwtKey = []byte(viper.GetString("jwt.Key"))
-	klog.Infof("JWT Key: %s", string(jwtKey))
+	gatewayAddr := viper.GetString("gateway.addr")
+	core.InitManager(gatewayAddr)
+	rpc.Connect()
 	go core.GlobalManager.Start()
 	wsHandler := otelhttp.NewHandler(http.HandlerFunc(handleWebSocket), "/ws")
 	http.Handle("/ws", corsMiddleware(wsHandler))
+	http.Handle("/push", corsMiddleware(http.HandlerFunc(core.HandlePush)))
+	klog.Infof("msg_gateway 启动, gatewayAddr=%s", gatewayAddr)
 	if err := http.ListenAndServe(":8081", nil); err != nil {
 		klog.Fatalf("服务启动失败: %v", err)
 	}

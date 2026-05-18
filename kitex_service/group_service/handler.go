@@ -37,7 +37,7 @@ func (s *GroupServiceImpl) CreateGroup(ctx context.Context, req *group.CreateGro
 		klog.CtxErrorf(ctx, "创建群聊时获取用户名失败:%v", err)
 		nameMap = make(map[int64]string)
 	}
-	groupId, groupNumber, err := s.groupService.CreateGroup(req.CreatorId, req.Name, members, nameMap)
+	groupId, groupNumber, err := s.groupService.CreateGroup(ctx, req.CreatorId, req.Name, members, nameMap)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建群聊时发生系统错误:%v", req.CreatorId, err)
 		return nil, err
@@ -55,7 +55,7 @@ func (s *GroupServiceImpl) InviteMembers(ctx context.Context, req *group.InviteM
 		klog.CtxErrorf(ctx, "邀请成员时获取用户名失败:%v", rpcErr)
 		nameMap = make(map[int64]string)
 	}
-	success, err := s.groupService.InviteMembers(req.InviterId, req.GroupId, req.UserIds, nameMap)
+	success, err := s.groupService.InviteMembers(ctx, req.InviterId, req.GroupId, req.UserIds, nameMap)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]邀请成员到群[%d]时发生系统错误:%v", req.InviterId, req.GroupId, err)
 		return &group.CommonRes{Success: false}, err
@@ -64,7 +64,7 @@ func (s *GroupServiceImpl) InviteMembers(ctx context.Context, req *group.InviteM
 }
 
 func (s *GroupServiceImpl) KickMembers(ctx context.Context, req *group.KickMembersReq) (resp *group.CommonRes, err error) {
-	success, err := s.groupService.KickMembers(req.OperatorId, req.GroupId, req.UserIds)
+	success, err := s.groupService.KickMembers(ctx, req.OperatorId, req.GroupId, req.UserIds)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]踢出[%d]群成员时发生系统错误:%v", req.OperatorId, req.GroupId, err)
 		return &group.CommonRes{Success: false}, err
@@ -196,7 +196,7 @@ func (s *GroupServiceImpl) HandleJoinReq(ctx context.Context, req *group.HandleJ
 			userName = nameMap[req.UserId]
 		}
 	}
-	success, err := s.groupService.HandleJoinRequest(req.OperatorId, req.GroupId, req.UserId, req.Accept, userName)
+	success, err := s.groupService.HandleJoinRequest(ctx, req.OperatorId, req.GroupId, req.UserId, req.Accept, userName)
 	if err != nil {
 		klog.CtxErrorf(ctx, "处理入群申请时发生系统错误:%v", err)
 		return &group.CommonRes{Success: false}, err

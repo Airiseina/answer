@@ -36,5 +36,6 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/handle_join_req", handle.HandleJoinReq)
 	authGroup.GET("/get_join_requests", handle.GetJoinRequests)
 	authGroup.GET("/search_user", handle.SearchUserByAccount)
-	//authGroup.POST("/upload", stoClient.UploadFile)
+	authGroup.GET("/v1/chat/history", handle.GetHistory)
+	authGroup.GET("/v1/chat/conversations", handle.GetConversations)
 }

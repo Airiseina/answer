@@ -33,4 +33,7 @@ type GroupDao interface {
 	UpdateMemberRole(groupId int64, userId int64, role int64) error
 	IsGroupMember(groupId int64, userId int64) (bool, error)
 	GetMemberRole(groupId int64, userId int64) (int64, error)
+	// UpdateConversationID 将 chat_service 返回的 conversationID 回写到群组记录
+	// 建立群组与会话的关联，后续邀请/踢人时通过此 ID 同步会话成员
+	UpdateConversationID(groupId int64, conversationID int64) error
 }

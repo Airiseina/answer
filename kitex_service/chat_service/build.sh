@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-RUN_NAME="chat"
+RUN_NAME="chat-service"
 
 mkdir -p output/bin
 cp script/* output/

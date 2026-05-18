@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	answer_pkg v0.0.0
+	chat_service v0.0.0
 	github.com/cloudwego/gopkg v0.2.0
 	github.com/cloudwego/hertz v0.10.4
 	github.com/cloudwego/kitex v0.16.2
@@ -99,3 +100,5 @@ require (
 )
 
 replace answer_pkg => ../../pkg
+
+replace chat_service => ../chat_service

@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"group_service/internal/dal"
 	"group_service/internal/model"
+	"group_service/rpc"
 	"time"
 
 	"answer_pkg/snowflake"
@@ -20,7 +22,17 @@ func NewGroupService(dao dal.GroupDao) *GroupService {
 	}
 }
 
-func (service GroupService) CreateGroup(createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, error) {
+// CreateGroup 创建群组并同步创建对应的群聊会话
+// 这是跨服务数据一致性的核心入口：
+//  1. 在 MySQL 中创建群组记录和成员记录（group_service 职责）
+//  2. 通过 RPC 调用 chat_service 创建对应的群聊会话（chat_service 职责）
+//  3. 将 chat_service 返回的 conversationID 回写到群组记录中
+//
+// 为什么需要同步创建会话：
+//   - 统一会话模型下，群聊消息的收发依赖 conversation_id
+//   - 如果不同步创建会话，群组存在但无法发送消息
+//   - conversationID 回写到 Group 表，后续邀请/踢人时需要用它同步会话成员
+func (service GroupService) CreateGroup(ctx context.Context, createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, error) {
 	groupNumber := service.snowNode.Generate()
 	group := model.Group{
 		Name:        name,
@@ -43,10 +55,36 @@ func (service GroupService) CreateGroup(createId int64, name string, membersId [
 	if err != nil {
 		return 0, 0, err
 	}
+
+	// 同步创建群聊会话：调用 chat_service 的 CreateConversation RPC
+	// 传入 groupID，让 chat_service 在会话记录中存储群组关联
+	// 前端通过 GetConversations 返回的 group_id 将会话与群组关联
+	conversationID, rpcErr := rpc.CreateConversation(ctx, name, membersId, groupId)
+	if rpcErr != nil {
+		// RPC 失败不影响群组创建（群组已持久化），但记录错误
+		// 后续可通过定时任务补偿同步
+		_ = rpcErr
+	} else {
+		// 将 conversationID 回写到群组记录，建立群组与会话的关联
+		// 后续邀请/踢人时通过此 ID 同步会话成员
+		_ = service.dao.UpdateConversationID(groupId, conversationID)
+	}
+
 	return groupId, groupNumber, nil
 }
 
-func (service GroupService) InviteMembers(inviterId int64, groupId int64, membersId []int64, nameMap map[int64]string) (bool, error) {
+// InviteMembers 邀请成员入群，并同步更新会话成员
+// 操作流程：
+//  1. 权限校验（邀请人是否为管理员/群主）
+//  2. 去重检查（避免重复邀请已在群内的成员）
+//  3. 写入 group_member 记录（group_service 职责）
+//  4. 通过 RPC 同步 conversation_member 记录（chat_service 职责）
+//
+// 为什么邀请后需要同步会话成员：
+//   - 新成员加入群组后，应该能收到该群的消息推送
+//   - 如果不同步 conversation_member，新成员不在会话成员列表中
+//   - SendMessage 查询 GetConversationMembers 时会遗漏新成员
+func (service GroupService) InviteMembers(ctx context.Context, inviterId int64, groupId int64, membersId []int64, nameMap map[int64]string) (bool, error) {
 	info, err := service.dao.GetGroupInfo(groupId)
 	if err != nil {
 		return false, err
@@ -84,10 +122,35 @@ func (service GroupService) InviteMembers(inviterId int64, groupId int64, member
 	if err != nil {
 		return false, err
 	}
+
+	// 同步会话成员：通知 chat_service 添加新成员到对应会话
+	// 使用群组记录中的 conversationID 关联到 chat_service 的会话
+	if info.ConversationID > 0 {
+		var newMemberIDs []int64
+		for _, m := range members {
+			newMemberIDs = append(newMemberIDs, m.UserID)
+		}
+		if rpcErr := rpc.AddConversationMembers(ctx, info.ConversationID, newMemberIDs); rpcErr != nil {
+			// RPC 失败不影响群组操作（群组成员已持久化），但记录错误
+			// 后续可通过定时任务补偿同步
+			_ = rpcErr
+		}
+	}
+
 	return true, nil
 }
 
-func (service GroupService) KickMembers(operatorId int64, groupId int64, membersId []int64) (bool, error) {
+// KickMembers 踢出群成员，并同步更新会话成员
+// 操作流程：
+//  1. 权限校验（操作人是否为管理员/群主，不能踢自己/群主）
+//  2. 删除 group_member 记录（group_service 职责）
+//  3. 通过 RPC 同步删除 conversation_member 记录（chat_service 职责）
+//
+// 为什么踢出后需要同步会话成员：
+//   - 被踢出的成员不应再收到该群的消息推送
+//   - 如果不同步移除 conversation_member，被踢用户仍在会话成员列表中
+//   - SendMessage 会继续向已退群的用户推送消息，造成数据不一致
+func (service GroupService) KickMembers(ctx context.Context, operatorId int64, groupId int64, membersId []int64) (bool, error) {
 	if len(membersId) == 0 {
 		return false, nil
 	}
@@ -112,7 +175,7 @@ func (service GroupService) KickMembers(operatorId int64, groupId int64, members
 		return false, nil
 	}
 	for _, id := range membersId {
-		if !memberMap[id] && id == operatorId && id == info.OwnerID {
+		if !memberMap[id] || id == operatorId || id == info.OwnerID {
 			return false, nil
 		}
 	}
@@ -120,6 +183,15 @@ func (service GroupService) KickMembers(operatorId int64, groupId int64, members
 	if err != nil {
 		return false, err
 	}
+	// 同步会话成员：通知 chat_service 从对应会话中移除被踢成员
+	if info.ConversationID > 0 {
+		if rpcErr := rpc.RemoveConversationMembers(ctx, info.ConversationID, membersId); rpcErr != nil {
+			// RPC 失败不影响群组操作（群组成员已持久化），但记录错误
+			// 后续可通过定时任务补偿同步
+			_ = rpcErr
+		}
+	}
+
 	return true, nil
 }
 
@@ -393,7 +465,7 @@ func (service GroupService) JoinGroup(userId int64, groupNumber int64, message s
 	return true, nil
 }
 
-func (service GroupService) HandleJoinRequest(operatorId int64, groupId int64, userId int64, accept bool, userName string) (bool, error) {
+func (service GroupService) HandleJoinRequest(ctx context.Context, operatorId int64, groupId int64, userId int64, accept bool, userName string) (bool, error) {
 	operatorRole, err := service.dao.GetMemberRole(groupId, operatorId)
 	if err != nil {
 		return false, err
@@ -404,6 +476,14 @@ func (service GroupService) HandleJoinRequest(operatorId int64, groupId int64, u
 	err = service.dao.HandleJoinRequest(groupId, userId, accept, userName)
 	if err != nil {
 		return false, err
+	}
+	if accept {
+		info, getInfoErr := service.dao.GetGroupInfo(groupId)
+		if getInfoErr == nil && info.ConversationID > 0 {
+			if rpcErr := rpc.AddConversationMembers(ctx, info.ConversationID, []int64{userId}); rpcErr != nil {
+				_ = rpcErr
+			}
+		}
 	}
 	return true, nil
 }

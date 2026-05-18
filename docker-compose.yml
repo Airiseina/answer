@@ -15,120 +15,137 @@ services:
     networks:
       - answer-net
 
-  frontend:
-    build:
-      context: ./test_frontend
-      dockerfile: Dockerfile
-    container_name: answer_frontend
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.frontend.entrypoints=web"
-      - "traefik.http.routers.frontend.priority=1"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-    networks:
-      - answer-net
-    depends_on:
-      - api-gateway
+#  frontend:
+#    build:
+#      context: ./test_frontend
+#      dockerfile: Dockerfile
+#    container_name: answer_frontend
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+#      - "traefik.http.routers.frontend.entrypoints=web"
+#      - "traefik.http.routers.frontend.priority=1"
+#      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - api-gateway
 
-  api-gateway:
-    build:
-      context: .
-      dockerfile: api_gateway/Dockerfile
-    container_name: answer_api_gateway
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=PathPrefix(`/login`) || PathPrefix(`/register`) || PathPrefix(`/api`)"
-      - "traefik.http.routers.api.entrypoints=web"
-      - "traefik.http.routers.api.priority=10"
-      - "traefik.http.services.api.loadbalancer.server.port=1234"
-    environment:
-      - JWT_KEY=Airiseina
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-    networks:
-      - answer-net
-    depends_on:
-      - user-service
-      - group-service
-      - etcd
-      - mysql
-      - redis
-      - otel-collector
+#  api-gateway:
+#    build:
+#      context: .
+#      dockerfile: api_gateway/Dockerfile
+#    container_name: answer_api_gateway
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.api.rule=PathPrefix(`/login`) || PathPrefix(`/register`) || PathPrefix(`/api`)"
+#      - "traefik.http.routers.api.entrypoints=web"
+#      - "traefik.http.routers.api.priority=10"
+#      - "traefik.http.services.api.loadbalancer.server.port=1234"
+#    environment:
+#      - JWT_KEY=Airiseina
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - user-service
+#      - group-service
+#      - etcd
+#      - mysql
+#      - redis
+#      - otel-collector
+#
+#  msg-gateway:
+#    build:
+#      context: .
+#      dockerfile: msg_gateway/Dockerfile
+#    container_name: answer_msg_gateway
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.ws.rule=PathPrefix(`/ws`)"
+#      - "traefik.http.routers.ws.entrypoints=web"
+#      - "traefik.http.routers.ws.priority=20"
+#      - "traefik.http.services.ws.loadbalancer.server.port=8081"
+#    environment:
+#      - JWT_KEY=Airiseina
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#      - GATEWAY_ADDR=answer_msg_gateway:8081
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - chat-service
+#      - etcd
+#      - otel-collector
 
-  msg-gateway:
-    build:
-      context: .
-      dockerfile: msg_gateway/Dockerfile
-    container_name: answer_msg_gateway
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ws.rule=PathPrefix(`/ws`)"
-      - "traefik.http.routers.ws.entrypoints=web"
-      - "traefik.http.routers.ws.priority=20"
-      - "traefik.http.services.ws.loadbalancer.server.port=8081"
-    environment:
-      - JWT_KEY=Airiseina
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-    networks:
-      - answer-net
-    depends_on:
-      - etcd
-      - otel-collector
+#  user-service:
+#    build:
+#      context: .
+#      dockerfile: kitex_service/user_service/Dockerfile
+#    container_name: answer_user_service
+#    environment:
+#      - MYSQL_HOST=mysql
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#      - KITEX_IP_TO_REGISTRY=answer_user_service
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - mysql
+#      - redis
+#      - etcd
+#      - otel-collector
+#
+#  group-service:
+#    build:
+#      context: .
+#      dockerfile: kitex_service/group_service/Dockerfile
+#    container_name: answer_group_service
+#    environment:
+#      - MYSQL_HOST=mysql
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#      - KITEX_IP_TO_REGISTRY=answer_group_service
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - mysql
+#      - etcd
+#      - otel-collector
+#
+#  chat-service:
+#    build:
+#      context: .
+#      dockerfile: kitex_service/chat_service/Dockerfile
+#    container_name: answer_chat_service
+#    environment:
+#      - POSTGRES_HOST=postgres
+#      - REDIS_ADDR=redis:6379
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#      - KITEX_IP_TO_REGISTRY=answer_chat_service
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - postgres
+#      - redis
+#      - etcd
+#      - otel-collector
 
-  user-service:
-    build:
-      context: .
-      dockerfile: kitex_service/user_service/Dockerfile
-    container_name: answer_user_service
+  postgres:
+    image: postgres:16
+    container_name: answer_postgres
     environment:
-      - MYSQL_HOST=mysql
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-      - KITEX_IP_TO_REGISTRY=answer_user_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: answer_chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - answer-net
-    depends_on:
-      - mysql
-      - redis
-      - etcd
-      - otel-collector
-
-  group-service:
-    build:
-      context: .
-      dockerfile: kitex_service/group_service/Dockerfile
-    container_name: answer_group_service
-    environment:
-      - MYSQL_HOST=mysql
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-      - KITEX_IP_TO_REGISTRY=answer_group_service
-    networks:
-      - answer-net
-    depends_on:
-      - mysql
-      - etcd
-      - otel-collector
-
-  chat-service:
-    build:
-      context: .
-      dockerfile: kitex_service/chat_service/Dockerfile
-    container_name: answer_chat_service
-    environment:
-      - MYSQL_HOST=mysql
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-    networks:
-      - answer-net
-    depends_on:
-      - mysql
-      - kafka-1
-      - kafka-2
-      - etcd
-      - otel-collector
 
   mysql:
     image: mysql:8.0
@@ -284,6 +301,7 @@ services:
       - prometheus
 
 volumes:
+  postgres_data:
   mysql_data:
   redis_data:
   kafka_1_data:

@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/cloudwego/hertz v0.10.4
 	github.com/cloudwego/kitex v0.16.2
+	github.com/hertz-contrib/cors v0.1.0
 	github.com/hertz-contrib/jwt v1.0.4
 	github.com/hertz-contrib/logger/zap v1.1.0
 	github.com/hertz-contrib/obs-opentelemetry/tracing v0.4.1
@@ -46,7 +47,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
-	github.com/hertz-contrib/cors v0.1.0 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jhump/protoreflect v1.18.0 // indirect
 	github.com/jhump/protoreflect/v2 v2.0.0-beta.2 // indirect

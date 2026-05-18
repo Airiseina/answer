@@ -72,6 +72,7 @@ func main() {
 		hlog.Fatalf("连接etcd出错:%v", err)
 	}
 	rpc.ConnectUserService(r1)
+	rpc.ConnectChatService(r1)
 	err = svr.Run()
 	if err != nil {
 		klog.Fatalf("服务启动失败:%v", err)
