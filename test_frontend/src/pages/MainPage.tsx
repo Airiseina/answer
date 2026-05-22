@@ -27,8 +27,8 @@ export default function MainPage() {
       />
       <div className="main-middle">
         {tab === 'chat' && <ConvList />}
-        {tab === 'contacts' && <ContactsPanel />}
-        {tab === 'groups' && <GroupsPanel />}
+        {tab === 'contacts' && <ContactsPanel onSwitchToChat={() => setTab('chat')} />}
+        {tab === 'groups' && <GroupsPanel onSwitchToChat={() => setTab('chat')} />}
       </div>
       <div className="main-right">
         {showChat ? <ChatPanel /> : (

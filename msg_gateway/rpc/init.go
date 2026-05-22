@@ -13,4 +13,5 @@ func Connect() {
 		klog.Fatalf("连接etcd出错:%v", err)
 	}
 	ConnectChatService(r)
+	ConnectUserService(r)
 }

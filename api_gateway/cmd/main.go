@@ -2,6 +2,7 @@ package main
 
 import (
 	"answer_pkg/meter"
+	"answer_pkg/storage"
 	"answer_pkg/tracer"
 	"api_gateway/config"
 	"api_gateway/middleware"
@@ -33,6 +34,7 @@ func main() {
 	)
 	hlog.SetLogger(hertzZapLogger)
 	config.GetConfig()
+	storage.Init()
 	otelAddr := viper.GetString("otel.Addr")
 	p := tracer.InitTracer("api_gateway", otelAddr)
 	defer p.Shutdown(context.Background())

@@ -1,56 +1,131 @@
 package model
 
-// Message 聊天消息模型，对应 PostgreSQL 中的 message_table
-// 以 conversation_id 为分区键，支持按会话维度查询和推送
+import "encoding/json"
+
+const (
+	MsgStatusNormal   int16 = 0
+	MsgStatusRecalled int16 = 1
+)
+
 type Message struct {
-	MsgID          int64  `gorm:"primaryKey;autoIncrement:false" json:"msg_id"`                     // 消息唯一ID，由 Snowflake 算法生成，不自增
-	ClientSeq      int64  `gorm:"not null;default:0" json:"client_seq"`                             // 客户端序列号，用于客户端去重和排序
-	SenderID       int64  `gorm:"not null;index:idx_sender" json:"sender_id"`                       // 发送者用户ID，建立索引用于查询某用户发送的所有消息
-	ConversationID int64  `gorm:"not null;index:idx_conversation_timestamp" json:"conversation_id"` // 所属会话ID，与 Timestamp 组成复合索引
-	Content        string `gorm:"type:text;not null" json:"content"`                                // 消息文本内容
-	Timestamp      int64  `gorm:"not null;index:idx_conversation_timestamp" json:"timestamp"`       // 消息发送时间戳（毫秒），与 ConversationID 组成复合索引，支持按时间翻页
+	MsgID          int64  `gorm:"primaryKey;autoIncrement:false" json:"msg_id"`
+	ClientSeq      int64  `gorm:"not null;default:0" json:"client_seq"`
+	SenderID       int64  `gorm:"not null;index:idx_sender" json:"sender_id"`
+	ConversationID int64  `gorm:"not null;default:0;index:idx_conversation_timestamp" json:"conversation_id"`
+	Seq            int64  `gorm:"not null;default:0;index:idx_conversation_seq" json:"seq"`
+	Content        string `gorm:"type:jsonb;not null" json:"content"`
+	Status         int16  `gorm:"not null;default:0" json:"status"`
+	IsEdited       bool   `gorm:"not null;default:false" json:"is_edited"`
+	Timestamp      int64  `gorm:"not null;index:idx_conversation_timestamp" json:"timestamp"`
 }
 
 func (Message) TableName() string {
 	return "message_table"
 }
 
-// 会话类型常量
 const (
-	ConvTypePrivate int16 = 1 // 单聊会话：仅包含两个成员
-	ConvTypeGroup   int16 = 2 // 群聊会话：包含多个成员
+	MsgTypeText  = "text"
+	MsgTypeImage = "image"
+	MsgTypeFile  = "file"
+	MsgTypeVoice = "voice"
 )
 
-// Conversation 会话模型，统一单聊和群聊
-// 单聊和群聊共享同一张表，通过 Type 字段区分
+type BaseContent struct {
+	Type string `json:"type"`
+}
+
+type TextContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type ImageContent struct {
+	Type   string `json:"type"`
+	URL    string `json:"url"`
+	Size   int64  `json:"size"`
+	Width  int    `json:"width,omitempty"`
+	Height int    `json:"height,omitempty"`
+}
+
+type FileContent struct {
+	Type     string `json:"type"`
+	URL      string `json:"url"`
+	FileName string `json:"filename"`
+	Size     int64  `json:"size"`
+}
+
+type VoiceContent struct {
+	Type     string `json:"type"`
+	URL      string `json:"url"`
+	Duration int    `json:"duration"`
+	Size     int64  `json:"size"`
+}
+
+func NormalizeContent(content string) string {
+	if content == "" {
+		b, _ := json.Marshal(TextContent{Type: MsgTypeText, Text: ""})
+		return string(b)
+	}
+	var base BaseContent
+	if json.Unmarshal([]byte(content), &base) == nil && base.Type != "" {
+		return content
+	}
+	b, _ := json.Marshal(TextContent{Type: MsgTypeText, Text: content})
+	return string(b)
+}
+
+func ParseContentType(content string) string {
+	var base BaseContent
+	if json.Unmarshal([]byte(content), &base) == nil {
+		return base.Type
+	}
+	return MsgTypeText
+}
+
+const (
+	ConvTypePrivate int16 = 1
+	ConvTypeGroup   int16 = 2
+)
+
 type Conversation struct {
-	ID        int64  `gorm:"primaryKey;autoIncrement:false" json:"id"`          // 会话唯一ID，由 Snowflake 算法（节点4）生成，不自增
-	Type      int16  `gorm:"not null" json:"type"`                              // 会话类型：1=单聊，2=群聊
-	Name      string `gorm:"type:varchar(128);not null;default:''" json:"name"` // 会话名称，单聊时可为空，群聊时必填
-	GroupID   int64  `gorm:"default:0;index" json:"group_id"`                   // 群聊关联的群组ID，单聊时为0。用于前端将会话与群组关联
-	CreatedAt int64  `gorm:"not null" json:"created_at"`                        // 创建时间（毫秒时间戳）
-	UpdatedAt int64  `gorm:"not null" json:"updated_at"`                        // 最后更新时间（毫秒时间戳），用于会话列表排序
+	ID        int64  `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	Type      int16  `gorm:"not null" json:"type"`
+	Name      string `gorm:"type:varchar(128);not null;default:''" json:"name"`
+	GroupID   int64  `gorm:"default:0;index" json:"group_id"`
+	CreatedAt int64  `gorm:"not null" json:"created_at"`
+	UpdatedAt int64  `gorm:"not null" json:"updated_at"`
 }
 
 func (Conversation) TableName() string {
 	return "conversation_table"
 }
 
-// 会话成员角色常量
 const (
-	MemberRoleCreator int16 = 1 // 创建者：群聊中拥有最高权限（转让群主、设置管理员等）
-	MemberRoleNormal  int16 = 2 // 普通成员：默认角色
+	MemberRoleCreator int16 = 1
+	MemberRoleNormal  int16 = 2
 )
 
-// ConversationMember 会话成员关联模型
-// 使用 (ConversationID, UserID) 作为联合主键，一个用户在同一会话中只能有一条记录
 type ConversationMember struct {
-	ConversationID int64 `gorm:"primaryKey" json:"conversation_id"` // 所属会话ID
-	UserID         int64 `gorm:"primaryKey" json:"user_id"`         // 用户ID
-	Role           int16 `gorm:"not null;default:2" json:"role"`    // 角色：1=创建者，2=普通成员
-	JoinedAt       int64 `gorm:"not null" json:"joined_at"`         // 加入时间（毫秒时间戳）
+	ConversationID int64 `gorm:"primaryKey" json:"conversation_id"`
+	UserID         int64 `gorm:"primaryKey" json:"user_id"`
+	Role           int16 `gorm:"not null;default:2" json:"role"`
+	MaxReadSeq     int64 `gorm:"not null;default:0" json:"max_read_seq"`
+	JoinedAt       int64 `gorm:"not null" json:"joined_at"`
 }
 
 func (ConversationMember) TableName() string {
 	return "conversation_member"
+}
+
+type MessageEditHistory struct {
+	ID         int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	MsgID      int64  `gorm:"not null;index:idx_msg_id_version" json:"msg_id"`
+	Version    int32  `gorm:"not null;index:idx_msg_id_version" json:"version"`
+	OldContent string `gorm:"type:jsonb;not null" json:"old_content"`
+	EditorID   int64  `gorm:"not null" json:"editor_id"`
+	EditedAt   int64  `gorm:"not null" json:"edited_at"`
+}
+
+func (MessageEditHistory) TableName() string {
+	return "message_edit_history"
 }

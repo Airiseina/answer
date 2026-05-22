@@ -14,7 +14,7 @@ func LoadConfig() {
 	v.AddConfigPath(".")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		log.Println("未找到配置文件，先使用默认值")
 	}
 }
@@ -22,6 +22,4 @@ func LoadConfig() {
 //func GetConfig() {
 //	viper.SetDefault("redis.host", "localhost")
 //	viper.SetDefault("redis.port", "6379")
-//	viper.SetDefault("minio.user", "admin")
-//	viper.SetDefault("minio.password", "password")
 //}

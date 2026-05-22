@@ -31,7 +31,7 @@ func main() {
 		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(4),
+			zap.AddCallerSkip(3),
 			zap.Fields(zap.String("service", "user_service")),
 		),
 	)

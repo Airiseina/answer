@@ -1,8 +1,7 @@
 package mysql
 
 import (
-	"answer/internal/kitex_service/chat_service/model"
-	"answer/pkg/logger"
+	"answer_pkg/logger"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"

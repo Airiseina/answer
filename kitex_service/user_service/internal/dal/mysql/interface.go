@@ -22,9 +22,11 @@ type UserDao interface {
 	CreateFriendRequest(sender, receiver int64, message string) error
 	GetFriendRequest(sender, receiver int64) (model.FriendRequest, error)
 	GetFriendRequestBetweenUsers(userA, userB int64) (model.FriendRequest, error)
+	DeleteFriendRequest(sender, receiver int64) error
 	UpdateFriendRequestStatus(sender, receiver, status int64) error
 	GetFriendRequestsByReceiver(receiver int64) ([]model.FriendRequest, error)
 	CreateFriend(userID, friendID, groupID int64) error
+	CreateFriendPair(userA, userB int64, groupID int64) error
 	GetFriend(userID, friendID int64) (model.Friend, error)
 	DeleteFriend(userID, friendID int64) error
 	GetFriendList(userID int64) ([]model.Friend, error)

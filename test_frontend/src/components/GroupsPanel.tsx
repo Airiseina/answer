@@ -42,8 +42,8 @@ interface JoinRequestInfo {
   status: number
 }
 
-export default function GroupsPanel() {
-  const { openChatWith, friends, auth } = useApp()
+export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
+  const { openChatWith, friends, auth, conversations, setActiveConvId } = useApp()
   const currentUserId = auth.userId ? parseInt(auth.userId) : 0
   const [tab, setTab] = useState<'create' | 'list' | 'search' | 'info'>('list')
   const [createName, setCreateName] = useState('')
@@ -151,7 +151,14 @@ export default function GroupsPanel() {
   }
 
   const startGroupChat = (gid: number, name: string) => {
-    openChatWith(gid, name || `群组 ${gid}`, 2)
+    const conv = conversations.find(c => c.groupId === String(gid))
+    if (conv) {
+      setActiveConvId(conv.id)
+      onSwitchToChat()
+      return
+    }
+    openChatWith(String(gid), name || `群组 ${gid}`, 2)
+    onSwitchToChat()
   }
 
   const getRoleLabel = (role: number) => {
@@ -229,12 +236,15 @@ export default function GroupsPanel() {
         {tab === 'list' && (
           <div className="group-list">
             {myGroups.map(g => (
-              <div key={g.group_id} className="friend-item" onClick={() => openGroupDetail(g.group_id)}>
-                <div className="friend-avatar">👥</div>
-                <div className="friend-info">
-                  <div className="friend-name">{g.name}</div>
-                  <div className="friend-sub">群号: {g.group_number}</div>
+              <div key={g.group_id} className="friend-item">
+                <div className="friend-main" onClick={() => openGroupDetail(g.group_id)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <div className="friend-avatar">👥</div>
+                  <div className="friend-info">
+                    <div className="friend-name">{g.name}</div>
+                    <div className="friend-sub">群号: {g.group_number}</div>
+                  </div>
                 </div>
+                <button className="btn-icon" title="进入群聊" onClick={() => startGroupChat(g.group_id, g.name)} style={{ flexShrink: 0 }}>💬</button>
               </div>
             ))}
             {myGroups.length === 0 && <div className="contacts-empty">暂无群组</div>}

@@ -9,6 +9,7 @@ import (
 	"msg_gateway/rpc"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/golang-jwt/jwt/v4"
@@ -50,36 +51,39 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	klog.Infof("WS 收到 token (前20字符): %s...", tokenStr[:min(20, len(tokenStr))])
-
 	claims := jwt.MapClaims{}
 	_, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
 	if err != nil {
-		klog.Warnf("JWT 验证失败: %v, token长度: %d", err, len(tokenStr))
-		http.Error(w, "无效的令牌: "+err.Error(), http.StatusUnauthorized)
+		klog.Warnf("JWT 验证失败: %v", err)
+		http.Error(w, "无效的令牌", http.StatusUnauthorized)
 		return
 	}
 
 	userIdFloat, ok := claims["id"].(float64)
 	if !ok {
-		klog.Warnf("JWT claims 中缺少 id 字段, claims: %v", claims)
+		klog.Warnf("JWT claims 中缺少 id 字段")
 		http.Error(w, "无效的令牌", http.StatusUnauthorized)
 		return
 	}
-	userId := uint(userIdFloat)
+	userId := int64(userIdFloat)
 	klog.Infof("JWT 验证成功, userId: %d", userId)
-
+	userName := ""
+	if nameCtx, nameCancel := context.WithTimeout(context.Background(), 3*time.Second); nameCtx != nil {
+		userName = rpc.GetUserName(nameCtx, userId)
+		nameCancel()
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		klog.Errorf("WebSocket 升级失败: %v", err)
 		return
 	}
 	client := &core.Client{
-		Manager: &core.GlobalManager,
-		UserId:  userId,
-		Socket:  conn,
+		Manager:  &core.GlobalManager,
+		UserId:   userId,
+		UserName: userName,
+		Socket:   conn,
 	}
 	core.GlobalManager.Register <- client
 	go client.ReadMessage()
@@ -91,7 +95,7 @@ func main() {
 		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(2),
+			zap.AddCallerSkip(3),
 			zap.Fields(zap.String("service", "msg_gateway")),
 		),
 	)
@@ -102,10 +106,14 @@ func main() {
 	defer p.Shutdown(context.Background())
 	meter.InitMeter("msg_gateway")
 	meter.RegisterOnlineUsers(func(ctx context.Context, observer metric.Int64Observer) error {
-		observer.Observe(int64(len(core.GlobalManager.Clients)))
+		core.GlobalManager.Lock.RLock()
+		count := len(core.GlobalManager.Clients)
+		core.GlobalManager.Lock.RUnlock()
+		observer.Observe(int64(count))
 		return nil
 	})
 	jwtKey = []byte(viper.GetString("jwt.Key"))
+	core.InitPushSecret(viper.GetString("jwt.Key"))
 	gatewayAddr := viper.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)
 	rpc.Connect()
@@ -114,7 +122,7 @@ func main() {
 	http.Handle("/ws", corsMiddleware(wsHandler))
 	http.Handle("/push", corsMiddleware(http.HandlerFunc(core.HandlePush)))
 	klog.Infof("msg_gateway 启动, gatewayAddr=%s", gatewayAddr)
-	if err := http.ListenAndServe(":8081", nil); err != nil {
+	if err := http.ListenAndServe(":8082", nil); err != nil {
 		klog.Fatalf("服务启动失败: %v", err)
 	}
 }

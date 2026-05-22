@@ -1,11 +1,12 @@
 package producer
 
 import (
-	"answer/internal/mq"
-	"answer/pkg/logger"
+	"answer_pkg/logger"
+	"answer_pkg/mq"
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/common/json"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 

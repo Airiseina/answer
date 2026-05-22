@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -20,9 +21,17 @@ func (dao *onlineDao) onlineKey(userID int64) string {
 }
 
 func (dao *onlineDao) SetOnline(ctx context.Context, userID int64, gatewayAddr string) error {
-	err := dao.rdb.Set(ctx, dao.onlineKey(userID), gatewayAddr, 0).Err()
+	err := dao.rdb.Set(ctx, dao.onlineKey(userID), gatewayAddr, 60*time.Second).Err()
 	if err != nil {
 		return fmt.Errorf("设置在线状态失败: %w", err)
+	}
+	return nil
+}
+
+func (dao *onlineDao) RenewOnline(ctx context.Context, userID int64) error {
+	err := dao.rdb.Expire(ctx, dao.onlineKey(userID), 60*time.Second).Err()
+	if err != nil {
+		return fmt.Errorf("续期在线状态失败: %w", err)
 	}
 	return nil
 }

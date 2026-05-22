@@ -82,6 +82,25 @@ func (db *gro) ChangeOwner(groupId int64, newOwnerId int64) error {
 	return nil
 }
 
+func (db *gro) TransferOwner(groupId int64, oldOwnerId int64, newOwnerId int64) error {
+	err := db.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.Group{}).Where("id = ?", groupId).Update("owner_id", newOwnerId).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.GroupMember{}).Where("group_id = ? AND user_id = ?", groupId, oldOwnerId).Update("role", 0).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.GroupMember{}).Where("group_id = ? AND user_id = ?", groupId, newOwnerId).Update("role", 2).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("转让群主失败: %w", err)
+	}
+	return nil
+}
+
 func (db *gro) ChangeNotice(groupId int64, notice string) error {
 	err := db.db.Model(&model.Group{}).Where("id = ?", groupId).Update("notice", notice).Error
 	if err != nil {
@@ -214,6 +233,22 @@ func (db *gro) UpdateConversationID(groupId int64, conversationID int64) error {
 	err := db.db.Model(&model.Group{}).Where("id = ?", groupId).Update("conversation_id", conversationID).Error
 	if err != nil {
 		return fmt.Errorf("更新会话ID失败: %w", err)
+	}
+	return nil
+}
+
+func (db *gro) DeleteGroup(groupId int64) error {
+	err := db.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("group_id = ?", groupId).Delete(&model.GroupMember{}).Error; err != nil {
+			return fmt.Errorf("删除群成员失败: %w", err)
+		}
+		if err := tx.Where("id = ?", groupId).Delete(&model.Group{}).Error; err != nil {
+			return fmt.Errorf("删除群组失败: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("删除群组失败: %w", err)
 	}
 	return nil
 }

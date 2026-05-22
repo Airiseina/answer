@@ -241,8 +241,9 @@ var fieldIDToName_CreateGroupReq = map[int16]string{
 }
 
 type CreateGroupRes struct {
-	GroupId     int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
-	GroupNumber int64 `thrift:"group_number,2" frugal:"2,default,i64" json:"group_number"`
+	GroupId        int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	GroupNumber    int64 `thrift:"group_number,2" frugal:"2,default,i64" json:"group_number"`
+	ConversationId int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
 }
 
 func NewCreateGroupRes() *CreateGroupRes {
@@ -259,11 +260,18 @@ func (p *CreateGroupRes) GetGroupId() (v int64) {
 func (p *CreateGroupRes) GetGroupNumber() (v int64) {
 	return p.GroupNumber
 }
+
+func (p *CreateGroupRes) GetConversationId() (v int64) {
+	return p.ConversationId
+}
 func (p *CreateGroupRes) SetGroupId(val int64) {
 	p.GroupId = val
 }
 func (p *CreateGroupRes) SetGroupNumber(val int64) {
 	p.GroupNumber = val
+}
+func (p *CreateGroupRes) SetConversationId(val int64) {
+	p.ConversationId = val
 }
 
 func (p *CreateGroupRes) String() string {
@@ -276,6 +284,7 @@ func (p *CreateGroupRes) String() string {
 var fieldIDToName_CreateGroupRes = map[int16]string{
 	1: "group_id",
 	2: "group_number",
+	3: "conversation_id",
 }
 
 type InviteMembersReq struct {

@@ -1,17 +1,30 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../store/AppContext'
-import { api } from '../api/client'
+import { api, uploadFile, parseMessageContent, buildTextContent, buildMediaContent } from '../api/client'
 import './ChatPanel.css'
 
+interface PendingAttachment {
+  url: string
+  mediaType: 'image' | 'voice' | 'file'
+  fileName: string
+  fileSize: number
+}
+
 export default function ChatPanel() {
-  const { conversations, messages, activeConvId, sendMessage, setActiveConvId, friends, openChatWith, auth } = useApp()
+  const { conversations, messages, activeConvId, sendMessage, setActiveConvId, friends, openChatWith, auth, addConversation, loadConversations, onlineStatus, loadOnlineStatus, typingStatus, sendTyping, recallMessage, editMessage } = useApp()
   const [input, setInput] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
   const [newChatType, setNewChatType] = useState<number>(1)
-  const [newChatGroupId, setNewChatGroupId] = useState('')
   const [newChatName, setNewChatName] = useState('')
   const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; isSent: boolean; isRecalled: boolean } | null>(null)
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
+  const [editInput, setEditInput] = useState('')
+  const [editHistoryModal, setEditHistoryModal] = useState<{ msgId: string; histories: any[] } | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const conv = conversations.find(c => c.id === activeConvId)
   const msgs = activeConvId ? (messages[activeConvId] || []) : []
@@ -21,9 +34,32 @@ export default function ChatPanel() {
   }, [msgs.length])
 
   const handleSend = () => {
-    if (!input.trim() || !activeConvId) return
-    sendMessage(activeConvId, input.trim())
-    setInput('')
+    if (!activeConvId) return
+
+    if (pendingAttachment) {
+      const { url, mediaType, fileName, fileSize } = pendingAttachment
+      let content: string
+      if (mediaType === 'image') {
+        content = buildMediaContent('image', url, { size: fileSize })
+      } else if (mediaType === 'voice') {
+        content = buildMediaContent('voice', url, { size: fileSize })
+      } else {
+        content = buildMediaContent('file', url, { filename: fileName, size: fileSize })
+      }
+      sendMessage(activeConvId, content)
+      setPendingAttachment(null)
+
+      if (input.trim()) {
+        sendMessage(activeConvId, buildTextContent(input.trim()))
+        setInput('')
+      }
+      return
+    }
+
+    if (input.trim()) {
+      sendMessage(activeConvId, buildTextContent(input.trim()))
+      setInput('')
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -33,22 +69,55 @@ export default function ChatPanel() {
     }
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !activeConvId) return
+    setUploading(true)
+    try {
+      const res = await uploadFile(file)
+      if (res.code !== 0 || !res.data) {
+        alert(res.msg || '上传失败')
+        return
+      }
+      const { url, media_type, file_name, file_size } = res.data
+      setPendingAttachment({
+        url,
+        mediaType: media_type,
+        fileName: file_name,
+        fileSize: file_size,
+      })
+    } catch {
+      alert('上传失败')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const handleSelectFriend = (friendId: number, name: string) => {
-    openChatWith(friendId, name, 1)
+    openChatWith(String(friendId), name, 1)
     setShowNewChat(false)
   }
 
   const handleCreateGroupConversation = async () => {
     if (selectedFriendIds.length === 0) return
-    const allMemberIds = [Number(auth.userId), ...selectedFriendIds]
-    const res = await api('POST', '/api/v1/chat/conversation', {
-      type: 2,
+    const res = await api('POST', '/api/create_group', {
       name: newChatName || `群聊`,
-      member_ids: allMemberIds,
+      initial_members: selectedFriendIds,
     })
     if (res.code === 0 && res.data?.conversation_id) {
-      const convId = res.data.conversation_id
-      openChatWith(convId, newChatName || `群聊`, 2)
+      const convId = String(res.data.conversation_id)
+      const groupId = res.data.group_id
+      addConversation({
+        id: convId,
+        name: newChatName || `群聊`,
+        type: 2,
+        memberIds: [auth.userId, ...selectedFriendIds.map(String)],
+        groupId: groupId ? String(groupId) : undefined,
+        unread: 0,
+      })
+      setActiveConvId(convId)
+      loadConversations()
       setShowNewChat(false)
       setNewChatName('')
       setSelectedFriendIds([])
@@ -64,6 +133,102 @@ export default function ChatPanel() {
   const formatTime = (ts: number) => {
     const d = new Date(ts * 1000)
     return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
+  const handleContextMenu = (e: React.MouseEvent, msgId: string, isSent: boolean, isRecalled: boolean) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, msgId, isSent, isRecalled })
+  }
+
+  const handleRecall = () => {
+    if (contextMenu && activeConvId) {
+      recallMessage(activeConvId, contextMenu.msgId)
+      setContextMenu(null)
+    }
+  }
+
+  const handleStartEdit = (msgId: string, currentContent: string) => {
+    const parsed = parseMessageContent(currentContent)
+    setEditingMsgId(msgId)
+    setEditInput(parsed.text || '')
+    setContextMenu(null)
+  }
+
+  const handleSaveEdit = () => {
+    if (editingMsgId && activeConvId && editInput.trim()) {
+      editMessage(activeConvId, editingMsgId, editInput.trim())
+      setEditingMsgId(null)
+      setEditInput('')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMsgId(null)
+    setEditInput('')
+  }
+
+  const handleViewEditHistory = async (msgId: string) => {
+    if (!activeConvId) return
+    const res = await api('POST', `/api/chat/edit_history/${msgId}`, { conversation_id: activeConvId })
+    if (res.code === 0 && res.data?.histories) {
+      setEditHistoryModal({ msgId, histories: res.data.histories })
+    }
+  }
+
+  const renderMessageContent = (content: string) => {
+    const parsed = parseMessageContent(content)
+    switch (parsed.type) {
+      case 'image':
+        return (
+          <div className="msg-image">
+            <img src={parsed.url} alt="图片" loading="lazy" onClick={() => window.open(parsed.url, '_blank')} />
+          </div>
+        )
+      case 'file':
+        return (
+          <div className="msg-file" onClick={() => window.open(parsed.url, '_blank')}>
+            <div className="msg-file-icon">📎</div>
+            <div className="msg-file-info">
+              <div className="msg-file-name">{parsed.filename || '文件'}</div>
+              <div className="msg-file-size">{parsed.size ? formatFileSize(parsed.size) : ''}</div>
+            </div>
+          </div>
+        )
+      case 'voice':
+        return (
+          <div className="msg-voice">
+            <span className="msg-voice-icon">🎤</span>
+            <span>{parsed.duration || 0}″</span>
+            <audio controls src={parsed.url} style={{ height: 32, marginLeft: 8 }} />
+          </div>
+        )
+      default:
+        return <div className="msg-text">{parsed.text || content}</div>
+    }
+  }
+
+  const renderPendingAttachment = () => {
+    if (!pendingAttachment) return null
+    return (
+      <div className="pending-attachment">
+        <div className="pending-preview">
+          {pendingAttachment.mediaType === 'image' ? (
+            <img src={pendingAttachment.url} className="pending-thumb" alt="预览" />
+          ) : pendingAttachment.mediaType === 'voice' ? (
+            <div className="pending-file-badge">🎤 {pendingAttachment.fileName}</div>
+          ) : (
+            <div className="pending-file-badge">📎 {pendingAttachment.fileName}</div>
+          )}
+        </div>
+        <button className="pending-remove" onClick={() => setPendingAttachment(null)} title="移除附件">✕</button>
+      </div>
+    )
   }
 
   const renderNewChatModal = () => (
@@ -139,6 +304,27 @@ export default function ChatPanel() {
     </div>
   )
 
+  // 查询当前会话对方的在线状态
+  const peerId = conv?.type === 1 ? conv.memberIds.find(id => id !== auth.userId) : undefined
+  const isPeerOnline = peerId ? onlineStatus[peerId] === true : false
+
+  // 查询当前会话中正在输入的用户
+  const activeTypingUsers = activeConvId && typingStatus[activeConvId]
+    ? Object.entries(typingStatus[activeConvId])
+        .filter(([uid]) => uid !== auth.userId && Date.now() - typingStatus[activeConvId][uid] < 5000)
+        .map(([uid]) => {
+          const friend = friends.find(f => String(f.friend_id) === uid)
+          return friend?.remark || friend?.name || uid
+        })
+    : []
+
+  // 当切换到单聊会话时，查询对方在线状态
+  useEffect(() => {
+    if (peerId) {
+      loadOnlineStatus([peerId])
+    }
+  }, [peerId, loadOnlineStatus])
+
   if (!conv) {
     return (
       <div className="chat-panel empty">
@@ -158,33 +344,160 @@ export default function ChatPanel() {
         <div className="chat-header-info">
           <span className="chat-header-name">{conv.name}</span>
           <span className="chat-header-type">{conv.type === 2 ? '群聊' : '私聊'}</span>
+          {conv.type === 1 && (
+            <span className={`chat-header-online ${isPeerOnline ? 'online' : 'offline'}`}>
+              {isPeerOnline ? '在线' : '离线'}
+            </span>
+          )}
         </div>
         <button className="chat-new-btn" onClick={() => setShowNewChat(true)} title="新会话">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
-      <div className="chat-messages">
+      <div className="chat-messages" onClick={() => setContextMenu(null)}>
         {msgs.map(msg => (
-          <div key={msg.id} className={`msg-row ${msg.isSent ? 'sent' : 'received'}`}>
+          <div key={msg.id} className={`msg-row ${msg.isSent ? 'sent' : 'received'}`}
+            onContextMenu={(e) => handleContextMenu(e, msg.id, msg.isSent, msg.status === 1)}
+          >
             <div className="msg-bubble">
-              <div className="msg-content">{msg.content}</div>
-              <div className="msg-time">{formatTime(msg.time)}</div>
+              {!msg.isSent && msg.fromName && (
+                <div className="msg-sender-name">{msg.fromName}</div>
+              )}
+              {msg.status === 1 ? (
+                <div className="msg-recalled">
+                  {msg.isSent ? '你撤回了一条消息' : `${msg.fromName || '对方'}撤回了一条消息`}
+                </div>
+              ) : editingMsgId === msg.id ? (
+                <div className="msg-edit-area">
+                  <textarea
+                    value={editInput}
+                    onChange={e => setEditInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
+                      if (e.key === 'Escape') handleCancelEdit()
+                    }}
+                    rows={2}
+                    autoFocus
+                  />
+                  <div className="msg-edit-actions">
+                    <button className="edit-save-btn" onClick={handleSaveEdit}>保存</button>
+                    <button className="edit-cancel-btn" onClick={handleCancelEdit}>取消</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {renderMessageContent(msg.content)}
+                  {msg.isEdited && (
+                    <div className="msg-edited-tag" onClick={() => handleViewEditHistory(msg.id)} style={{ cursor: 'pointer' }}>
+                      已编辑
+                    </div>
+                  )}
+                </>
+              )}
+              {msg.status !== 1 && (
+                <div className="msg-time">{formatTime(msg.time)}</div>
+              )}
             </div>
           </div>
         ))}
         <div ref={msgEndRef} />
       </div>
+      {contextMenu && (
+        <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          {contextMenu.isSent && !contextMenu.isRecalled && (
+            <div className="context-menu-item" onClick={handleRecall}>撤回</div>
+          )}
+          {contextMenu.isSent && !contextMenu.isRecalled && (
+            <div className="context-menu-item" onClick={() => {
+              const m = msgs.find(m => m.id === contextMenu.msgId)
+              if (m) handleStartEdit(m.id, m.content)
+            }}>编辑</div>
+          )}
+        </div>
+      )}
+      {editHistoryModal && (
+        <div className="modal-overlay" onClick={() => setEditHistoryModal(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>编辑历史</h3>
+              <button className="modal-close" onClick={() => setEditHistoryModal(null)}>✕</button>
+            </div>
+            <div className="edit-history-list">
+              {editHistoryModal.histories.length === 0 ? (
+                <div className="edit-history-empty">暂无编辑历史</div>
+              ) : (
+                editHistoryModal.histories.map((h: any) => {
+                  const parsed = parseMessageContent(h.old_content)
+                  const timeSec = h.edited_at > 1e12 ? h.edited_at / 1000 : h.edited_at
+                  return (
+                    <div key={h.id} className="edit-history-item">
+                      <div className="edit-history-meta">
+                        版本 {h.version} · {new Date(timeSec * 1000).toLocaleString()}
+                      </div>
+                      <div className="edit-history-content">
+                        {parsed.type === 'text' ? parsed.text : parsed.type === 'image' ? '[图片]' : parsed.type === 'file' ? `[文件] ${parsed.filename || ''}` : parsed.type === 'voice' ? '[语音]' : h.old_content}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {activeTypingUsers.length > 0 && (
+        <div className="typing-indicator">
+          <span className="typing-dots">
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+          </span>
+          <span className="typing-text">
+            {activeTypingUsers.length === 1
+              ? `${activeTypingUsers[0]} 正在输入...`
+              : `${activeTypingUsers.length} 人正在输入...`}
+          </span>
+        </div>
+      )}
       <div className="chat-input-area">
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="输入消息，Enter 发送..."
-          rows={3}
-        />
-        <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <div className="chat-toolbar">
+          <button
+            className="toolbar-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="发送文件/图片"
+          >
+            {uploading ? '⏳' : '📎'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt"
+            onChange={handleFileSelect}
+          />
+        </div>
+        {renderPendingAttachment()}
+        <div className="chat-input-row">
+          <textarea
+            value={input}
+            onChange={e => {
+              setInput(e.target.value)
+              // 输入时发送 typing 事件，通知对方"我正在输入"
+              if (activeConvId && e.target.value.trim()) {
+                sendTyping(activeConvId)
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={pendingAttachment ? '添加消息说明（可选），Enter 发送...' : '输入消息，Enter 发送...'}
+            rows={3}
+          />
+          <button className="send-btn" onClick={handleSend} disabled={!input.trim() && !pendingAttachment}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
       </div>
       {showNewChat && renderNewChatModal()}
     </div>

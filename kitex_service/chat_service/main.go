@@ -31,7 +31,7 @@ func main() {
 		kitexzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		kitexzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(4),
+			zap.AddCallerSkip(3),
 			zap.Fields(zap.String("service", "chat_service")),
 		),
 	)
@@ -57,7 +57,8 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接PostgreSQL失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.Message{}, &model.Conversation{}, &model.ConversationMember{})
+	db.Exec("UPDATE message_table SET conversation_id = 0 WHERE conversation_id IS NULL")
+	err = db.AutoMigrate(&model.Message{}, &model.Conversation{}, &model.ConversationMember{}, &model.MessageEditHistory{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
@@ -68,7 +69,7 @@ func main() {
 	chatDao := dal.NewChatDao(db)
 	onlineDao := dal.NewOnlineDao(rdb)
 	conversationDao := dal.NewConversationDao(db, rdb)
-	chatService := service.NewChatService(chatDao, onlineDao, conversationDao)
+	chatService := service.NewChatService(chatDao, onlineDao, conversationDao, rdb)
 	svr := chat.NewServer(&ChatServiceImpl{chatService: chatService},
 		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "chatservice"}),

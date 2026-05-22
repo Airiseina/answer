@@ -28,7 +28,9 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/update_friend_group", handle.UpdateFriendGroup)
 	authGroup.POST("/delete_friend_group", handle.DeleteFriendGroup)
 	authGroup.POST("/move_friend_to_group", handle.MoveFriendToGroup)
+
 	authGroup.POST("/update_friend_remark", handle.UpdateFriendRemark)
+
 	authGroup.GET("/get_friend_groups", handle.GetFriendGroups)
 	authGroup.GET("/get_user_groups", handle.GetUserGroups)
 	authGroup.GET("/search_group", handle.SearchGroupByNumber)
@@ -36,6 +38,13 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/handle_join_req", handle.HandleJoinReq)
 	authGroup.GET("/get_join_requests", handle.GetJoinRequests)
 	authGroup.GET("/search_user", handle.SearchUserByAccount)
-	authGroup.GET("/v1/chat/history", handle.GetHistory)
-	authGroup.GET("/v1/chat/conversations", handle.GetConversations)
+	authGroup.GET("/chat/messages", handle.GetHistory)
+	authGroup.GET("/chat/conversations", handle.GetConversations)
+	authGroup.POST("/chat/mark_read/:conversation_id", handle.MarkRead)
+	authGroup.POST("/chat/online_status", handle.GetOnlineStatus)
+	authGroup.POST("/chat/recall/:msg_id", handle.RecallMessage)
+	authGroup.POST("/chat/edit/:msg_id", handle.EditMessage)
+	authGroup.POST("/chat/edit_history/:msg_id", handle.GetEditHistory)
+	authGroup.POST("/chat/sync", handle.SyncMessages)
+	authGroup.POST("/files", handle.Upload)
 }

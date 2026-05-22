@@ -39,6 +39,12 @@ func (s *FriendService) AddFriend(userID, receiver int64, message string) (bool,
 	if existingReq.ID != 0 && existingReq.Status == model.FriendRequestPending {
 		return false, nil
 	}
+	if existingReq.ID != 0 && existingReq.Status != model.FriendRequestPending {
+		err = s.dao.DeleteFriendRequest(existingReq.Sender, existingReq.Receiver)
+		if err != nil {
+			return false, err
+		}
+	}
 	err = s.dao.CreateFriendRequest(userID, receiver, message)
 	if err != nil {
 		return false, err
@@ -65,11 +71,7 @@ func (s *FriendService) HandleFriendReq(sender, userID int64, accept bool) (bool
 		if err != nil {
 			return false, err
 		}
-		err = s.dao.CreateFriend(req.Sender, req.Receiver, 0)
-		if err != nil {
-			return false, err
-		}
-		err = s.dao.CreateFriend(req.Receiver, req.Sender, 0)
+		err = s.dao.CreateFriendPair(req.Sender, req.Receiver, 0)
 		if err != nil {
 			return false, err
 		}
@@ -113,15 +115,27 @@ func (s *FriendService) GetFriendList(userID int64) ([]FriendDTO, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(friends) == 0 {
+		return nil, nil
+	}
+	friendIDs := make([]int64, len(friends))
+	for i, f := range friends {
+		friendIDs[i] = f.FriendID
+	}
+	users, err := s.dao.GetUsersByIds(friendIDs)
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[int64]model.User, len(users))
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
 	var result []FriendDTO
 	for _, f := range friends {
-		friendUser, err := s.dao.GetUserById(f.FriendID)
-		if err != nil {
-			return nil, err
-		}
+		friendUser := userMap[f.FriendID]
 		result = append(result, FriendDTO{
 			FriendID: f.FriendID,
-			Remark:   f.Remark, //并未有设置备注的函数
+			Remark:   f.Remark,
 			GroupID:  f.GroupID,
 			Name:     friendUser.Name,
 		})

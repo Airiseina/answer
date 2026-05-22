@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"group_service/internal/dal"
 	"group_service/internal/model"
 	"group_service/rpc"
 	"time"
 
 	"answer_pkg/snowflake"
+
+	"github.com/cloudwego/kitex/pkg/klog"
 )
 
 type GroupService struct {
@@ -32,7 +35,7 @@ func NewGroupService(dao dal.GroupDao) *GroupService {
 //   - 统一会话模型下，群聊消息的收发依赖 conversation_id
 //   - 如果不同步创建会话，群组存在但无法发送消息
 //   - conversationID 回写到 Group 表，后续邀请/踢人时需要用它同步会话成员
-func (service GroupService) CreateGroup(ctx context.Context, createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, error) {
+func (service GroupService) CreateGroup(ctx context.Context, createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, int64, error) {
 	groupNumber := service.snowNode.Generate()
 	group := model.Group{
 		Name:        name,
@@ -51,26 +54,25 @@ func (service GroupService) CreateGroup(ctx context.Context, createId int64, nam
 			Role:   role,
 		})
 	}
+
 	groupId, err := service.dao.CreateGorp(group, members)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
-	// 同步创建群聊会话：调用 chat_service 的 CreateConversation RPC
-	// 传入 groupID，让 chat_service 在会话记录中存储群组关联
-	// 前端通过 GetConversations 返回的 group_id 将会话与群组关联
 	conversationID, rpcErr := rpc.CreateConversation(ctx, name, membersId, groupId)
 	if rpcErr != nil {
-		// RPC 失败不影响群组创建（群组已持久化），但记录错误
-		// 后续可通过定时任务补偿同步
-		_ = rpcErr
-	} else {
-		// 将 conversationID 回写到群组记录，建立群组与会话的关联
-		// 后续邀请/踢人时通过此 ID 同步会话成员
-		_ = service.dao.UpdateConversationID(groupId, conversationID)
+		if delErr := service.dao.DeleteGroup(groupId); delErr != nil {
+			klog.Errorf("补偿删除群组%d失败: %v", groupId, delErr)
+		}
+		return 0, 0, 0, fmt.Errorf("创建群聊会话失败: %w", rpcErr)
 	}
 
-	return groupId, groupNumber, nil
+	if updateErr := service.dao.UpdateConversationID(groupId, conversationID); updateErr != nil {
+		klog.Errorf("回写conversationID到群组%d失败: %v", groupId, updateErr)
+	}
+
+	return groupId, groupNumber, conversationID, nil
 }
 
 // InviteMembers 邀请成员入群，并同步更新会话成员
@@ -271,15 +273,7 @@ func (service GroupService) ChangeOwner(operatorId int64, groupId int64, newOwne
 	if !isMember {
 		return false, nil
 	}
-	err = service.dao.ChangeOwner(groupId, newOwnerId)
-	if err != nil {
-		return false, err
-	}
-	err = service.dao.UpdateMemberRole(groupId, operatorId, 0)
-	if err != nil {
-		return false, err
-	}
-	err = service.dao.UpdateMemberRole(groupId, newOwnerId, 2)
+	err = service.dao.TransferOwner(groupId, operatorId, newOwnerId)
 	if err != nil {
 		return false, err
 	}

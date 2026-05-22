@@ -16,6 +16,17 @@ import (
 // convPairKey 生成单聊会话的用户对缓存 Key
 // 无论 userA、userB 传入顺序如何，始终按较小值在前，保证同一对用户映射到同一个 Key
 // 格式: conv:pair:{minUID}:{maxUID}
+func hasDuplicateMembers(members []int64) bool {
+	seen := make(map[int64]struct{}, len(members))
+	for _, m := range members {
+		if _, ok := seen[m]; ok {
+			return true
+		}
+		seen[m] = struct{}{}
+	}
+	return false
+}
+
 func (dao *conversationDao) convPairKey(userA, userB int64) string {
 	minUID, maxUID := userA, userB
 	if userA > userB {
@@ -95,7 +106,9 @@ func (dao *conversationDao) CreateConversation(ctx context.Context, conv *model.
 //
 // 参数 idGen: 会话ID生成函数，由 Service 层提供，DAL 层不持有 ID 生成策略
 func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, userA, userB int64, idGen func() int64) (int64, error) {
-	// 统一排序，保证同一对用户无论传入顺序如何都映射到同一个 Key
+	if userA == userB {
+		return 0, fmt.Errorf("单聊会话的两个用户不能相同")
+	}
 	minUID, maxUID := userA, userB
 	if userA > userB {
 		minUID, maxUID = userB, userA
@@ -124,7 +137,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 		if cacheErr := dao.rdb.Set(ctx, pairKey, existingConvID, 0).Err(); cacheErr != nil {
 			return 0, fmt.Errorf("回填会话缓存失败: %w", cacheErr)
 		}
-		dao.cacheMembers(ctx, existingConvID, []int64{minUID, maxUID})
+		dao.refreshMembersCache(ctx, existingConvID)
 		return existingConvID, nil
 	}
 
@@ -162,7 +175,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	}
 	if existingConvID > 0 {
 		dao.rdb.Set(ctx, pairKey, existingConvID, 0)
-		dao.cacheMembers(ctx, existingConvID, []int64{minUID, maxUID})
+		dao.refreshMembersCache(ctx, existingConvID)
 		return existingConvID, nil
 	}
 
@@ -208,7 +221,10 @@ func (dao *conversationDao) GetConversationMembers(ctx context.Context, conversa
 	if err == nil {
 		var members []int64
 		if jsonErr := json.Unmarshal([]byte(val), &members); jsonErr == nil {
-			return members, nil
+			if !hasDuplicateMembers(members) {
+				return members, nil
+			}
+			dao.refreshMembersCache(ctx, conversationID)
 		}
 	}
 	// 缓存未命中，回源数据库
@@ -272,11 +288,23 @@ func (dao *conversationDao) cacheMembers(ctx context.Context, conversationID int
 	if err != nil {
 		return
 	}
-	ttl := time.Hour // 群聊默认1小时过期
+	ttl := time.Hour
 	if len(members) == 2 {
-		ttl = 24 * time.Hour // 单聊24小时过期，防止异常数据永久驻留
+		ttl = 24 * time.Hour
 	}
 	_ = dao.rdb.Set(ctx, dao.convMembersKey(conversationID), string(data), ttl).Err()
+}
+
+func (dao *conversationDao) refreshMembersCache(ctx context.Context, conversationID int64) {
+	var members []int64
+	err := dao.db.WithContext(ctx).
+		Model(&model.ConversationMember{}).
+		Where("conversation_id = ?", conversationID).
+		Pluck("user_id", &members).Error
+	if err != nil {
+		return
+	}
+	dao.cacheMembers(ctx, conversationID, members)
 }
 
 // invalidateMembersCache 删除会话成员缓存
@@ -410,5 +438,205 @@ func (dao *conversationDao) batchGetMembersFromDB(ctx context.Context, conversat
 		dao.cacheMembers(ctx, convID, members)
 	}
 
+	return result, nil
+}
+
+func (dao *conversationDao) DeleteConversation(ctx context.Context, conversationID int64) error {
+	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("conversation_id = ?", conversationID).Delete(&model.ConversationMember{}).Error; err != nil {
+			return fmt.Errorf("删除会话成员失败: %w", err)
+		}
+		if err := tx.Where("id = ?", conversationID).Delete(&model.Conversation{}).Error; err != nil {
+			return fmt.Errorf("删除会话记录失败: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	dao.invalidateMembersCache(ctx, conversationID)
+	return nil
+}
+
+// convMaxSeqKey 生成会话最大消息序号的 Redis Key
+// 格式: conv:max_seq:{conversationID}
+// 用于写扩散模型：每条消息落库后递增此 Key，作为该会话内消息的单调递增序号
+func (dao *conversationDao) convMaxSeqKey(conversationID int64) string {
+	return fmt.Sprintf("conv:max_seq:%d", conversationID)
+}
+
+// memberReadSeqKey 生成会话成员已读序号的 Redis 缓存 Key
+// 格式: conv:member:read_seq:{conversationID}:{userID}
+// 缓存用户在该会话中的已读位置，加速未读数计算
+func (dao *conversationDao) memberReadSeqKey(conversationID int64, userID int64) string {
+	return fmt.Sprintf("conv:member:read_seq:%d:%d", conversationID, userID)
+}
+
+// IncrConvMaxSeq 原子递增会话的最大消息序号
+// 使用 Redis INCR 命令实现，天然保证原子性和单调递增
+// 首次调用时 Key 不存在，INCR 会自动从 0 递增到 1
+// 返回值: 递增后的 seq 值（即新消息的序号）
+func (dao *conversationDao) IncrConvMaxSeq(ctx context.Context, conversationID int64) (int64, error) {
+	seq, err := dao.rdb.Incr(ctx, dao.convMaxSeqKey(conversationID)).Result()
+	if err != nil {
+		return 0, fmt.Errorf("递增会话最大序号失败: %w", err)
+	}
+	return seq, nil
+}
+
+// GetConvMaxSeq 获取会话的当前最大消息序号
+// Key 不存在时返回 0，表示该会话尚无消息
+func (dao *conversationDao) GetConvMaxSeq(ctx context.Context, conversationID int64) (int64, error) {
+	val, err := dao.rdb.Get(ctx, dao.convMaxSeqKey(conversationID)).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("查询会话最大序号失败: %w", err)
+	}
+	seq, parseErr := strconv.ParseInt(val, 10, 64)
+	if parseErr != nil {
+		return 0, fmt.Errorf("解析会话最大序号失败: %w", parseErr)
+	}
+	return seq, nil
+}
+
+// BatchGetConvMaxSeq 批量获取多个会话的最大消息序号
+// 使用 Redis MGet 一次性读取所有 Key，减少网络往返
+// Key 不存在时对应值为 0
+func (dao *conversationDao) BatchGetConvMaxSeq(ctx context.Context, conversationIDs []int64) (map[int64]int64, error) {
+	result := make(map[int64]int64, len(conversationIDs))
+	if len(conversationIDs) == 0 {
+		return result, nil
+	}
+	keys := make([]string, len(conversationIDs))
+	for i, convID := range conversationIDs {
+		keys[i] = dao.convMaxSeqKey(convID)
+	}
+	vals, err := dao.rdb.MGet(ctx, keys...).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, fmt.Errorf("批量查询会话最大序号失败: %w", err)
+	}
+	for i, val := range vals {
+		convID := conversationIDs[i]
+		if val == nil {
+			result[convID] = 0
+			continue
+		}
+		if str, ok := val.(string); ok {
+			seq, parseErr := strconv.ParseInt(str, 10, 64)
+			if parseErr != nil {
+				result[convID] = 0
+				continue
+			}
+			result[convID] = seq
+		} else {
+			result[convID] = 0
+		}
+	}
+	return result, nil
+}
+
+// UpdateMemberReadSeq 更新会话成员的已读序号
+// 双写策略：先更新 PostgreSQL（持久化真相），再更新 Redis（缓存加速）
+// PG 更新使用 GORM 的 Conditions 更新，只更新 max_read_seq 字段
+// Redis 缓存设置 24 小时过期，防止异常数据永久驻留
+func (dao *conversationDao) UpdateMemberReadSeq(ctx context.Context, conversationID int64, userID int64, maxReadSeq int64) error {
+	err := dao.db.WithContext(ctx).
+		Model(&model.ConversationMember{}).
+		Where("conversation_id = ? AND user_id = ?", conversationID, userID).
+		Update("max_read_seq", maxReadSeq).Error
+	if err != nil {
+		return fmt.Errorf("更新成员已读序号失败: %w", err)
+	}
+	if cacheErr := dao.rdb.Set(ctx, dao.memberReadSeqKey(conversationID, userID), maxReadSeq, 24*time.Hour).Err(); cacheErr != nil {
+		return fmt.Errorf("缓存成员已读序号失败: %w", cacheErr)
+	}
+	return nil
+}
+
+// GetMemberReadSeq 获取会话成员的已读序号
+// 采用缓存优先策略：Redis 命中则直接返回，未命中则回源 PostgreSQL 并回填缓存
+func (dao *conversationDao) GetMemberReadSeq(ctx context.Context, conversationID int64, userID int64) (int64, error) {
+	val, err := dao.rdb.Get(ctx, dao.memberReadSeqKey(conversationID, userID)).Result()
+	if err == nil {
+		seq, parseErr := strconv.ParseInt(val, 10, 64)
+		if parseErr == nil {
+			return seq, nil
+		}
+	}
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return 0, fmt.Errorf("查询成员已读序号缓存失败: %w", err)
+	}
+	// 缓存未命中，回源数据库
+	var maxReadSeq int64
+	dbErr := dao.db.WithContext(ctx).
+		Model(&model.ConversationMember{}).
+		Where("conversation_id = ? AND user_id = ?", conversationID, userID).
+		Pluck("max_read_seq", &maxReadSeq).Error
+	if dbErr != nil {
+		return 0, fmt.Errorf("查询成员已读序号失败: %w", dbErr)
+	}
+	// 回填缓存
+	_ = dao.rdb.Set(ctx, dao.memberReadSeqKey(conversationID, userID), maxReadSeq, 24*time.Hour).Err()
+	return maxReadSeq, nil
+}
+
+// BatchGetMemberReadSeq 批量获取用户在多个会话中的已读序号
+// 先通过 Redis MGet 批量读取缓存，缓存未命中的再回源数据库并回填
+func (dao *conversationDao) BatchGetMemberReadSeq(ctx context.Context, userID int64, conversationIDs []int64) (map[int64]int64, error) {
+	result := make(map[int64]int64, len(conversationIDs))
+	if len(conversationIDs) == 0 {
+		return result, nil
+	}
+	// 第一级：Redis 批量读取
+	keys := make([]string, len(conversationIDs))
+	for i, convID := range conversationIDs {
+		keys[i] = dao.memberReadSeqKey(convID, userID)
+	}
+	vals, err := dao.rdb.MGet(ctx, keys...).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, fmt.Errorf("批量查询成员已读序号缓存失败: %w", err)
+	}
+	var missedIDs []int64
+	for i, val := range vals {
+		convID := conversationIDs[i]
+		if val == nil {
+			missedIDs = append(missedIDs, convID)
+			continue
+		}
+		if str, ok := val.(string); ok {
+			seq, parseErr := strconv.ParseInt(str, 10, 64)
+			if parseErr == nil {
+				result[convID] = seq
+				continue
+			}
+		}
+		missedIDs = append(missedIDs, convID)
+	}
+	// 全部命中缓存
+	if len(missedIDs) == 0 {
+		return result, nil
+	}
+	// 第二级：缓存未命中的回源数据库
+	var rows []model.ConversationMember
+	dbErr := dao.db.WithContext(ctx).
+		Select("conversation_id, max_read_seq").
+		Where("user_id = ? AND conversation_id IN ?", userID, missedIDs).
+		Find(&rows).Error
+	if dbErr != nil {
+		return nil, fmt.Errorf("批量查询成员已读序号失败: %w", dbErr)
+	}
+	for _, row := range rows {
+		result[row.ConversationID] = row.MaxReadSeq
+		// 回填缓存
+		_ = dao.rdb.Set(ctx, dao.memberReadSeqKey(row.ConversationID, userID), row.MaxReadSeq, 24*time.Hour).Err()
+	}
+	// 未查到的会话默认已读序号为 0
+	for _, convID := range missedIDs {
+		if _, exists := result[convID]; !exists {
+			result[convID] = 0
+		}
+	}
 	return result, nil
 }

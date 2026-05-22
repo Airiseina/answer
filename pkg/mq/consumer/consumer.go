@@ -1,12 +1,13 @@
 package consumer
 
 import (
-	"answer/internal/service"
-	"answer/pkg/logger"
+	"answer_pkg/logger"
+	"answer_pkg/service"
 	"context"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/common/json"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 

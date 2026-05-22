@@ -1,10 +1,11 @@
 package mq
 
 import (
-	"answer/pkg/logger"
+	"answer_pkg/logger"
 	"context"
 	"time"
 
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 

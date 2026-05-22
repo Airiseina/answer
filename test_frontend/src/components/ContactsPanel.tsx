@@ -15,7 +15,7 @@ interface FriendGroup {
   name: string
 }
 
-export default function ContactsPanel() {
+export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
   const { openChatWith, auth, setFriends, friends } = useApp()
   const [requests, setRequests] = useState<FriendReq[]>([])
   const [tab, setTab] = useState<'list' | 'req' | 'add' | 'group'>('list')
@@ -89,7 +89,8 @@ export default function ContactsPanel() {
   }
 
   const startChat = (friendId: number, name: string) => {
-    openChatWith(friendId, name, 1)
+    openChatWith(String(friendId), name, 1)
+    onSwitchToChat()
   }
 
   const getGroupName = (gid: number) => {

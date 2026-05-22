@@ -55,6 +55,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"RenewOnline": kitex.NewMethodInfo(
+		renewOnlineHandler,
+		newChatServiceRenewOnlineArgs,
+		newChatServiceRenewOnlineResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetOnlineStatus": kitex.NewMethodInfo(
 		getOnlineStatusHandler,
 		newChatServiceGetOnlineStatusArgs,
@@ -73,6 +80,55 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		removeConversationMembersHandler,
 		newChatServiceRemoveConversationMembersArgs,
 		newChatServiceRemoveConversationMembersResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteConversation": kitex.NewMethodInfo(
+		deleteConversationHandler,
+		newChatServiceDeleteConversationArgs,
+		newChatServiceDeleteConversationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"MarkRead": kitex.NewMethodInfo(
+		markReadHandler,
+		newChatServiceMarkReadArgs,
+		newChatServiceMarkReadResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetConversationMembers": kitex.NewMethodInfo(
+		getConversationMembersHandler,
+		newChatServiceGetConversationMembersArgs,
+		newChatServiceGetConversationMembersResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RecallMessage": kitex.NewMethodInfo(
+		recallMessageHandler,
+		newChatServiceRecallMessageArgs,
+		newChatServiceRecallMessageResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"EditMessage": kitex.NewMethodInfo(
+		editMessageHandler,
+		newChatServiceEditMessageArgs,
+		newChatServiceEditMessageResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEditHistory": kitex.NewMethodInfo(
+		getEditHistoryHandler,
+		newChatServiceGetEditHistoryArgs,
+		newChatServiceGetEditHistoryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SyncMessages": kitex.NewMethodInfo(
+		syncMessagesHandler,
+		newChatServiceSyncMessagesArgs,
+		newChatServiceSyncMessagesResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -250,6 +306,24 @@ func newChatServiceSetOfflineResult() interface{} {
 	return chat.NewChatServiceSetOfflineResult()
 }
 
+func renewOnlineHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceRenewOnlineArgs)
+	realResult := result.(*chat.ChatServiceRenewOnlineResult)
+	success, err := handler.(chat.ChatService).RenewOnline(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceRenewOnlineArgs() interface{} {
+	return chat.NewChatServiceRenewOnlineArgs()
+}
+
+func newChatServiceRenewOnlineResult() interface{} {
+	return chat.NewChatServiceRenewOnlineResult()
+}
+
 func getOnlineStatusHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*chat.ChatServiceGetOnlineStatusArgs)
 	realResult := result.(*chat.ChatServiceGetOnlineStatusResult)
@@ -302,6 +376,132 @@ func newChatServiceRemoveConversationMembersArgs() interface{} {
 
 func newChatServiceRemoveConversationMembersResult() interface{} {
 	return chat.NewChatServiceRemoveConversationMembersResult()
+}
+
+func deleteConversationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceDeleteConversationArgs)
+	realResult := result.(*chat.ChatServiceDeleteConversationResult)
+	success, err := handler.(chat.ChatService).DeleteConversation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceDeleteConversationArgs() interface{} {
+	return chat.NewChatServiceDeleteConversationArgs()
+}
+
+func newChatServiceDeleteConversationResult() interface{} {
+	return chat.NewChatServiceDeleteConversationResult()
+}
+
+func markReadHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceMarkReadArgs)
+	realResult := result.(*chat.ChatServiceMarkReadResult)
+	success, err := handler.(chat.ChatService).MarkRead(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceMarkReadArgs() interface{} {
+	return chat.NewChatServiceMarkReadArgs()
+}
+
+func newChatServiceMarkReadResult() interface{} {
+	return chat.NewChatServiceMarkReadResult()
+}
+
+func getConversationMembersHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceGetConversationMembersArgs)
+	realResult := result.(*chat.ChatServiceGetConversationMembersResult)
+	success, err := handler.(chat.ChatService).GetConversationMembers(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceGetConversationMembersArgs() interface{} {
+	return chat.NewChatServiceGetConversationMembersArgs()
+}
+
+func newChatServiceGetConversationMembersResult() interface{} {
+	return chat.NewChatServiceGetConversationMembersResult()
+}
+
+func recallMessageHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceRecallMessageArgs)
+	realResult := result.(*chat.ChatServiceRecallMessageResult)
+	success, err := handler.(chat.ChatService).RecallMessage(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceRecallMessageArgs() interface{} {
+	return chat.NewChatServiceRecallMessageArgs()
+}
+
+func newChatServiceRecallMessageResult() interface{} {
+	return chat.NewChatServiceRecallMessageResult()
+}
+
+func editMessageHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceEditMessageArgs)
+	realResult := result.(*chat.ChatServiceEditMessageResult)
+	success, err := handler.(chat.ChatService).EditMessage(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceEditMessageArgs() interface{} {
+	return chat.NewChatServiceEditMessageArgs()
+}
+
+func newChatServiceEditMessageResult() interface{} {
+	return chat.NewChatServiceEditMessageResult()
+}
+
+func getEditHistoryHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceGetEditHistoryArgs)
+	realResult := result.(*chat.ChatServiceGetEditHistoryResult)
+	success, err := handler.(chat.ChatService).GetEditHistory(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceGetEditHistoryArgs() interface{} {
+	return chat.NewChatServiceGetEditHistoryArgs()
+}
+
+func newChatServiceGetEditHistoryResult() interface{} {
+	return chat.NewChatServiceGetEditHistoryResult()
+}
+
+func syncMessagesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceSyncMessagesArgs)
+	realResult := result.(*chat.ChatServiceSyncMessagesResult)
+	success, err := handler.(chat.ChatService).SyncMessages(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceSyncMessagesArgs() interface{} {
+	return chat.NewChatServiceSyncMessagesArgs()
+}
+
+func newChatServiceSyncMessagesResult() interface{} {
+	return chat.NewChatServiceSyncMessagesResult()
 }
 
 type kClient struct {
@@ -374,6 +574,16 @@ func (p *kClient) SetOffline(ctx context.Context, req *chat.SetOfflineReq) (r *c
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) RenewOnline(ctx context.Context, req *chat.RenewOnlineReq) (r *chat.CommonRes, err error) {
+	var _args chat.ChatServiceRenewOnlineArgs
+	_args.Req = req
+	var _result chat.ChatServiceRenewOnlineResult
+	if err = p.c.Call(ctx, "RenewOnline", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) GetOnlineStatus(ctx context.Context, req *chat.GetOnlineStatusReq) (r *chat.GetOnlineStatusRes, err error) {
 	var _args chat.ChatServiceGetOnlineStatusArgs
 	_args.Req = req
@@ -399,6 +609,76 @@ func (p *kClient) RemoveConversationMembers(ctx context.Context, req *chat.Remov
 	_args.Req = req
 	var _result chat.ChatServiceRemoveConversationMembersResult
 	if err = p.c.Call(ctx, "RemoveConversationMembers", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteConversation(ctx context.Context, req *chat.DeleteConversationReq) (r *chat.DeleteConversationRes, err error) {
+	var _args chat.ChatServiceDeleteConversationArgs
+	_args.Req = req
+	var _result chat.ChatServiceDeleteConversationResult
+	if err = p.c.Call(ctx, "DeleteConversation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MarkRead(ctx context.Context, req *chat.MarkReadReq) (r *chat.MarkReadRes, err error) {
+	var _args chat.ChatServiceMarkReadArgs
+	_args.Req = req
+	var _result chat.ChatServiceMarkReadResult
+	if err = p.c.Call(ctx, "MarkRead", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq) (r *chat.GetConversationMembersRes, err error) {
+	var _args chat.ChatServiceGetConversationMembersArgs
+	_args.Req = req
+	var _result chat.ChatServiceGetConversationMembersResult
+	if err = p.c.Call(ctx, "GetConversationMembers", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RecallMessage(ctx context.Context, req *chat.RecallMessageReq) (r *chat.RecallMessageRes, err error) {
+	var _args chat.ChatServiceRecallMessageArgs
+	_args.Req = req
+	var _result chat.ChatServiceRecallMessageResult
+	if err = p.c.Call(ctx, "RecallMessage", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) EditMessage(ctx context.Context, req *chat.EditMessageReq) (r *chat.EditMessageRes, err error) {
+	var _args chat.ChatServiceEditMessageArgs
+	_args.Req = req
+	var _result chat.ChatServiceEditMessageResult
+	if err = p.c.Call(ctx, "EditMessage", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq) (r *chat.GetEditHistoryRes, err error) {
+	var _args chat.ChatServiceGetEditHistoryArgs
+	_args.Req = req
+	var _result chat.ChatServiceGetEditHistoryResult
+	if err = p.c.Call(ctx, "GetEditHistory", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SyncMessages(ctx context.Context, req *chat.SyncMessagesReq) (r *chat.SyncMessagesRes, err error) {
+	var _args chat.ChatServiceSyncMessagesArgs
+	_args.Req = req
+	var _result chat.ChatServiceSyncMessagesResult
+	if err = p.c.Call(ctx, "SyncMessages", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

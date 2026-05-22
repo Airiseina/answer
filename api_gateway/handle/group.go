@@ -45,8 +45,9 @@ func CreateGroup(ctx context.Context, c *app.RequestContext) {
 	}
 	hlog.CtxInfof(ctx, "创建群组成功, creator_id=%d, group_id=%d, group_name=%s, member_count=%d", id, resp.GroupId, param.Name, len(param.InitialMembers))
 	response.Success(c, map[string]interface{}{
-		"group_id":     resp.GroupId,
-		"group_number": strconv.FormatInt(resp.GroupNumber, 10),
+		"group_id":        strconv.FormatInt(resp.GroupId, 10),
+		"group_number":    strconv.FormatInt(resp.GroupNumber, 10),
+		"conversation_id": strconv.FormatInt(resp.ConversationId, 10),
 	})
 }
 
@@ -142,9 +143,9 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 	}
 	result := make(map[string]interface{}) //没有群主名字，也没有成员名，还没有群号
 	if resp.Group.GroupId != 0 {
-		result["group_id"] = resp.Group.GroupId
+		result["group_id"] = strconv.FormatInt(resp.Group.GroupId, 10)
 		result["name"] = resp.Group.Name
-		result["owner_id"] = resp.Group.OwnerId
+		result["owner_id"] = strconv.FormatInt(resp.Group.OwnerId, 10)
 		result["owner_name"] = resp.Group.OwnerName
 		result["notice"] = resp.Group.Notice
 		result["create_time"] = resp.Group.CreateTime
@@ -157,7 +158,7 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 	var members []map[string]interface{}
 	for _, m := range resp.Members {
 		members = append(members, map[string]interface{}{
-			"user_id":   m.UserId,
+			"user_id":   strconv.FormatInt(m.UserId, 10),
 			"name":      m.Name,
 			"role":      m.Role,
 			"is_muted":  m.IsMuted,
@@ -330,7 +331,7 @@ func GetUserGroups(ctx context.Context, c *app.RequestContext) {
 	var list []map[string]interface{}
 	for _, g := range resp.Groups {
 		list = append(list, map[string]interface{}{
-			"group_id":     g.GroupId,
+			"group_id":     strconv.FormatInt(g.GroupId, 10),
 			"name":         g.Name,
 			"group_number": strconv.FormatInt(g.GroupNumber, 10),
 		})
@@ -370,7 +371,7 @@ func SearchGroupByNumber(ctx context.Context, c *app.RequestContext) {
 	}
 	hlog.CtxInfof(ctx, "搜索群号成功, group_number=%s, group_id=%d", param.GroupNumber, resp.GroupInfo.GroupId)
 	response.Success(c, map[string]interface{}{
-		"group_id":     resp.GroupInfo.GroupId,
+		"group_id":     strconv.FormatInt(resp.GroupInfo.GroupId, 10),
 		"name":         resp.GroupInfo.Name,
 		"owner_name":   resp.GroupInfo.OwnerName,
 		"group_number": strconv.FormatInt(resp.GroupInfo.GroupNumber, 10),

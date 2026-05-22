@@ -1,7 +1,7 @@
 package qdrant
 
 import (
-	"answer/pkg/logger"
+	"answer_pkg/logger"
 	"context"
 	"fmt"
 

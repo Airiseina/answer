@@ -22,6 +22,7 @@ type GroupDao interface {
 	GetGroupAllInfo(groupId int64) (model.Group, error)
 	KickMembers(groupId int64, userIds []int64) error
 	ChangeOwner(groupId int64, newOwnerId int64) error
+	TransferOwner(groupId int64, oldOwnerId int64, newOwnerId int64) error
 	ChangeNotice(groupId int64, notice string) error
 	Muted(groupId int64, mutedId int64, isMute bool) error
 	SetAdmin(groupId int64, targetId int64, role int64) error
@@ -36,4 +37,8 @@ type GroupDao interface {
 	// UpdateConversationID 将 chat_service 返回的 conversationID 回写到群组记录
 	// 建立群组与会话的关联，后续邀请/踢人时通过此 ID 同步会话成员
 	UpdateConversationID(groupId int64, conversationID int64) error
+
+	// DeleteGroup 删除群组及其所有成员记录（事务操作）
+	// 用于 CreateGroup 补偿回滚：会话创建失败时删除已创建的群组
+	DeleteGroup(groupId int64) error
 }

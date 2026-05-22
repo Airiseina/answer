@@ -95,6 +95,14 @@ func (db *gor) GetFriendRequestBetweenUsers(userA, userB int64) (model.FriendReq
 	return req, nil
 }
 
+func (db *gor) DeleteFriendRequest(sender, receiver int64) error {
+	err := db.db.Where("sender = ? AND receiver = ?", sender, receiver).Delete(&model.FriendRequest{}).Error
+	if err != nil {
+		return fmt.Errorf("删除好友请求失败: %w", err)
+	}
+	return nil
+}
+
 func (db *gor) UpdateFriendRequestStatus(sender, receiver, status int64) error {
 	err := db.db.Model(&model.FriendRequest{}).
 		Where("sender = ? AND receiver = ?", sender, receiver).
@@ -123,6 +131,22 @@ func (db *gor) CreateFriend(userID, friendID, groupID int64) error {
 	err := db.db.Create(&friend).Error
 	if err != nil {
 		return fmt.Errorf("创建好友关系失败: %w", err)
+	}
+	return nil
+}
+
+func (db *gor) CreateFriendPair(userA, userB int64, groupID int64) error {
+	err := db.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&model.Friend{UserID: userA, FriendID: userB, GroupID: groupID}).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&model.Friend{UserID: userB, FriendID: userA, GroupID: 0}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("创建双向好友关系失败: %w", err)
 	}
 	return nil
 }

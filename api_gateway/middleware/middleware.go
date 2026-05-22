@@ -48,7 +48,7 @@ func JwtMiddleware() {
 			if err != nil {
 				return nil, errors.New("内部错误")
 			}
-			if res == nil {
+			if res.Id == 0 {
 				return nil, errors.New("账号密码错误")
 			}
 			c.Set("user_id", res.Id)

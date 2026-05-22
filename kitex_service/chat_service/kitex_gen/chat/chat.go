@@ -102,11 +102,14 @@ var fieldIDToName_SendMessageReq = map[int16]string{
 }
 
 type SendMessageRes struct {
-	Success        bool    `thrift:"success,1" frugal:"1,default,bool" json:"success"`
-	MsgId          int64   `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
-	Timestamp      int64   `thrift:"timestamp,3" frugal:"3,default,i64" json:"timestamp"`
-	ConversationId int64   `thrift:"conversation_id,4" frugal:"4,default,i64" json:"conversation_id"`
-	MemberIds      []int64 `thrift:"member_ids,5" frugal:"5,default,list<i64>" json:"member_ids"`
+	Success          bool    `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	MsgId            int64   `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	Timestamp        int64   `thrift:"timestamp,3" frugal:"3,default,i64" json:"timestamp"`
+	ConversationId   int64   `thrift:"conversation_id,4" frugal:"4,default,i64" json:"conversation_id"`
+	MemberIds        []int64 `thrift:"member_ids,5" frugal:"5,default,list<i64>" json:"member_ids"`
+	Content          *string `thrift:"content,6,optional" frugal:"6,optional,string" json:"content,omitempty"`
+	ConversationType *int16  `thrift:"conversation_type,7,optional" frugal:"7,optional,i16" json:"conversation_type,omitempty"`
+	Seq              *int64  `thrift:"seq,8,optional" frugal:"8,optional,i64" json:"seq,omitempty"`
 }
 
 func NewSendMessageRes() *SendMessageRes {
@@ -135,6 +138,33 @@ func (p *SendMessageRes) GetConversationId() (v int64) {
 func (p *SendMessageRes) GetMemberIds() (v []int64) {
 	return p.MemberIds
 }
+
+var SendMessageRes_Content_DEFAULT string
+
+func (p *SendMessageRes) GetContent() (v string) {
+	if !p.IsSetContent() {
+		return SendMessageRes_Content_DEFAULT
+	}
+	return *p.Content
+}
+
+var SendMessageRes_ConversationType_DEFAULT int16
+
+func (p *SendMessageRes) GetConversationType() (v int16) {
+	if !p.IsSetConversationType() {
+		return SendMessageRes_ConversationType_DEFAULT
+	}
+	return *p.ConversationType
+}
+
+var SendMessageRes_Seq_DEFAULT int64
+
+func (p *SendMessageRes) GetSeq() (v int64) {
+	if !p.IsSetSeq() {
+		return SendMessageRes_Seq_DEFAULT
+	}
+	return *p.Seq
+}
 func (p *SendMessageRes) SetSuccess(val bool) {
 	p.Success = val
 }
@@ -150,6 +180,27 @@ func (p *SendMessageRes) SetConversationId(val int64) {
 func (p *SendMessageRes) SetMemberIds(val []int64) {
 	p.MemberIds = val
 }
+func (p *SendMessageRes) SetContent(val *string) {
+	p.Content = val
+}
+func (p *SendMessageRes) SetConversationType(val *int16) {
+	p.ConversationType = val
+}
+func (p *SendMessageRes) SetSeq(val *int64) {
+	p.Seq = val
+}
+
+func (p *SendMessageRes) IsSetContent() bool {
+	return p.Content != nil
+}
+
+func (p *SendMessageRes) IsSetConversationType() bool {
+	return p.ConversationType != nil
+}
+
+func (p *SendMessageRes) IsSetSeq() bool {
+	return p.Seq != nil
+}
 
 func (p *SendMessageRes) String() string {
 	if p == nil {
@@ -164,15 +215,22 @@ var fieldIDToName_SendMessageRes = map[int16]string{
 	3: "timestamp",
 	4: "conversation_id",
 	5: "member_ids",
+	6: "content",
+	7: "conversation_type",
+	8: "seq",
 }
 
 type Message struct {
-	MsgId          int64  `thrift:"msg_id,1" frugal:"1,default,i64" json:"msg_id"`
-	ClientSeq      int64  `thrift:"client_seq,2" frugal:"2,default,i64" json:"client_seq"`
-	SenderId       int64  `thrift:"sender_id,3" frugal:"3,default,i64" json:"sender_id"`
-	ConversationId int64  `thrift:"conversation_id,4" frugal:"4,default,i64" json:"conversation_id"`
-	Content        string `thrift:"content,5" frugal:"5,default,string" json:"content"`
-	Timestamp      int64  `thrift:"timestamp,6" frugal:"6,default,i64" json:"timestamp"`
+	MsgId          int64   `thrift:"msg_id,1" frugal:"1,default,i64" json:"msg_id"`
+	ClientSeq      int64   `thrift:"client_seq,2" frugal:"2,default,i64" json:"client_seq"`
+	SenderId       int64   `thrift:"sender_id,3" frugal:"3,default,i64" json:"sender_id"`
+	ConversationId int64   `thrift:"conversation_id,4" frugal:"4,default,i64" json:"conversation_id"`
+	Content        string  `thrift:"content,5" frugal:"5,default,string" json:"content"`
+	Timestamp      int64   `thrift:"timestamp,6" frugal:"6,default,i64" json:"timestamp"`
+	SenderName     *string `thrift:"sender_name,7,optional" frugal:"7,optional,string" json:"sender_name,omitempty"`
+	Seq            *int64  `thrift:"seq,8,optional" frugal:"8,optional,i64" json:"seq,omitempty"`
+	Status         *int16  `thrift:"status,9,optional" frugal:"9,optional,i16" json:"status,omitempty"`
+	IsEdited       *bool   `thrift:"is_edited,10,optional" frugal:"10,optional,bool" json:"is_edited,omitempty"`
 }
 
 func NewMessage() *Message {
@@ -205,6 +263,42 @@ func (p *Message) GetContent() (v string) {
 func (p *Message) GetTimestamp() (v int64) {
 	return p.Timestamp
 }
+
+var Message_SenderName_DEFAULT string
+
+func (p *Message) GetSenderName() (v string) {
+	if !p.IsSetSenderName() {
+		return Message_SenderName_DEFAULT
+	}
+	return *p.SenderName
+}
+
+var Message_Seq_DEFAULT int64
+
+func (p *Message) GetSeq() (v int64) {
+	if !p.IsSetSeq() {
+		return Message_Seq_DEFAULT
+	}
+	return *p.Seq
+}
+
+var Message_Status_DEFAULT int16
+
+func (p *Message) GetStatus() (v int16) {
+	if !p.IsSetStatus() {
+		return Message_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var Message_IsEdited_DEFAULT bool
+
+func (p *Message) GetIsEdited() (v bool) {
+	if !p.IsSetIsEdited() {
+		return Message_IsEdited_DEFAULT
+	}
+	return *p.IsEdited
+}
 func (p *Message) SetMsgId(val int64) {
 	p.MsgId = val
 }
@@ -223,6 +317,34 @@ func (p *Message) SetContent(val string) {
 func (p *Message) SetTimestamp(val int64) {
 	p.Timestamp = val
 }
+func (p *Message) SetSenderName(val *string) {
+	p.SenderName = val
+}
+func (p *Message) SetSeq(val *int64) {
+	p.Seq = val
+}
+func (p *Message) SetStatus(val *int16) {
+	p.Status = val
+}
+func (p *Message) SetIsEdited(val *bool) {
+	p.IsEdited = val
+}
+
+func (p *Message) IsSetSenderName() bool {
+	return p.SenderName != nil
+}
+
+func (p *Message) IsSetSeq() bool {
+	return p.Seq != nil
+}
+
+func (p *Message) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *Message) IsSetIsEdited() bool {
+	return p.IsEdited != nil
+}
 
 func (p *Message) String() string {
 	if p == nil {
@@ -232,12 +354,16 @@ func (p *Message) String() string {
 }
 
 var fieldIDToName_Message = map[int16]string{
-	1: "msg_id",
-	2: "client_seq",
-	3: "sender_id",
-	4: "conversation_id",
-	5: "content",
-	6: "timestamp",
+	1:  "msg_id",
+	2:  "client_seq",
+	3:  "sender_id",
+	4:  "conversation_id",
+	5:  "content",
+	6:  "timestamp",
+	7:  "sender_name",
+	8:  "seq",
+	9:  "status",
+	10: "is_edited",
 }
 
 type GetHistoryReq struct {
@@ -463,6 +589,9 @@ type ConversationInfo struct {
 	Name           string  `thrift:"name,3" frugal:"3,default,string" json:"name"`
 	MemberIds      []int64 `thrift:"member_ids,4" frugal:"4,default,list<i64>" json:"member_ids"`
 	GroupId        *int64  `thrift:"group_id,5,optional" frugal:"5,optional,i64" json:"group_id,omitempty"`
+	MaxSeq         *int64  `thrift:"max_seq,6,optional" frugal:"6,optional,i64" json:"max_seq,omitempty"`
+	MaxReadSeq     *int64  `thrift:"max_read_seq,7,optional" frugal:"7,optional,i64" json:"max_read_seq,omitempty"`
+	UnreadCount    *int64  `thrift:"unread_count,8,optional" frugal:"8,optional,i64" json:"unread_count,omitempty"`
 }
 
 func NewConversationInfo() *ConversationInfo {
@@ -496,6 +625,33 @@ func (p *ConversationInfo) GetGroupId() (v int64) {
 	}
 	return *p.GroupId
 }
+
+var ConversationInfo_MaxSeq_DEFAULT int64
+
+func (p *ConversationInfo) GetMaxSeq() (v int64) {
+	if !p.IsSetMaxSeq() {
+		return ConversationInfo_MaxSeq_DEFAULT
+	}
+	return *p.MaxSeq
+}
+
+var ConversationInfo_MaxReadSeq_DEFAULT int64
+
+func (p *ConversationInfo) GetMaxReadSeq() (v int64) {
+	if !p.IsSetMaxReadSeq() {
+		return ConversationInfo_MaxReadSeq_DEFAULT
+	}
+	return *p.MaxReadSeq
+}
+
+var ConversationInfo_UnreadCount_DEFAULT int64
+
+func (p *ConversationInfo) GetUnreadCount() (v int64) {
+	if !p.IsSetUnreadCount() {
+		return ConversationInfo_UnreadCount_DEFAULT
+	}
+	return *p.UnreadCount
+}
 func (p *ConversationInfo) SetConversationId(val int64) {
 	p.ConversationId = val
 }
@@ -511,9 +667,30 @@ func (p *ConversationInfo) SetMemberIds(val []int64) {
 func (p *ConversationInfo) SetGroupId(val *int64) {
 	p.GroupId = val
 }
+func (p *ConversationInfo) SetMaxSeq(val *int64) {
+	p.MaxSeq = val
+}
+func (p *ConversationInfo) SetMaxReadSeq(val *int64) {
+	p.MaxReadSeq = val
+}
+func (p *ConversationInfo) SetUnreadCount(val *int64) {
+	p.UnreadCount = val
+}
 
 func (p *ConversationInfo) IsSetGroupId() bool {
 	return p.GroupId != nil
+}
+
+func (p *ConversationInfo) IsSetMaxSeq() bool {
+	return p.MaxSeq != nil
+}
+
+func (p *ConversationInfo) IsSetMaxReadSeq() bool {
+	return p.MaxReadSeq != nil
+}
+
+func (p *ConversationInfo) IsSetUnreadCount() bool {
+	return p.UnreadCount != nil
 }
 
 func (p *ConversationInfo) String() string {
@@ -529,6 +706,9 @@ var fieldIDToName_ConversationInfo = map[int16]string{
 	3: "name",
 	4: "member_ids",
 	5: "group_id",
+	6: "max_seq",
+	7: "max_read_seq",
+	8: "unread_count",
 }
 
 type GetConversationsRes struct {
@@ -633,6 +813,35 @@ func (p *SetOfflineReq) String() string {
 }
 
 var fieldIDToName_SetOfflineReq = map[int16]string{
+	1: "user_id",
+}
+
+type RenewOnlineReq struct {
+	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+}
+
+func NewRenewOnlineReq() *RenewOnlineReq {
+	return &RenewOnlineReq{}
+}
+
+func (p *RenewOnlineReq) InitDefault() {
+}
+
+func (p *RenewOnlineReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *RenewOnlineReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *RenewOnlineReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RenewOnlineReq(%+v)", *p)
+}
+
+var fieldIDToName_RenewOnlineReq = map[int16]string{
 	1: "user_id",
 }
 
@@ -875,6 +1084,769 @@ var fieldIDToName_RemoveConversationMembersRes = map[int16]string{
 	1: "success",
 }
 
+type DeleteConversationReq struct {
+	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+}
+
+func NewDeleteConversationReq() *DeleteConversationReq {
+	return &DeleteConversationReq{}
+}
+
+func (p *DeleteConversationReq) InitDefault() {
+}
+
+func (p *DeleteConversationReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *DeleteConversationReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *DeleteConversationReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteConversationReq(%+v)", *p)
+}
+
+var fieldIDToName_DeleteConversationReq = map[int16]string{
+	1: "conversation_id",
+}
+
+type DeleteConversationRes struct {
+	Success bool `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+}
+
+func NewDeleteConversationRes() *DeleteConversationRes {
+	return &DeleteConversationRes{}
+}
+
+func (p *DeleteConversationRes) InitDefault() {
+}
+
+func (p *DeleteConversationRes) GetSuccess() (v bool) {
+	return p.Success
+}
+func (p *DeleteConversationRes) SetSuccess(val bool) {
+	p.Success = val
+}
+
+func (p *DeleteConversationRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteConversationRes(%+v)", *p)
+}
+
+var fieldIDToName_DeleteConversationRes = map[int16]string{
+	1: "success",
+}
+
+type MarkReadReq struct {
+	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	ConversationId int64 `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
+}
+
+func NewMarkReadReq() *MarkReadReq {
+	return &MarkReadReq{}
+}
+
+func (p *MarkReadReq) InitDefault() {
+}
+
+func (p *MarkReadReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *MarkReadReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *MarkReadReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *MarkReadReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *MarkReadReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MarkReadReq(%+v)", *p)
+}
+
+var fieldIDToName_MarkReadReq = map[int16]string{
+	1: "user_id",
+	2: "conversation_id",
+}
+
+type MarkReadRes struct {
+	Success    bool   `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	MaxReadSeq *int64 `thrift:"max_read_seq,2,optional" frugal:"2,optional,i64" json:"max_read_seq,omitempty"`
+}
+
+func NewMarkReadRes() *MarkReadRes {
+	return &MarkReadRes{}
+}
+
+func (p *MarkReadRes) InitDefault() {
+}
+
+func (p *MarkReadRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var MarkReadRes_MaxReadSeq_DEFAULT int64
+
+func (p *MarkReadRes) GetMaxReadSeq() (v int64) {
+	if !p.IsSetMaxReadSeq() {
+		return MarkReadRes_MaxReadSeq_DEFAULT
+	}
+	return *p.MaxReadSeq
+}
+func (p *MarkReadRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *MarkReadRes) SetMaxReadSeq(val *int64) {
+	p.MaxReadSeq = val
+}
+
+func (p *MarkReadRes) IsSetMaxReadSeq() bool {
+	return p.MaxReadSeq != nil
+}
+
+func (p *MarkReadRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MarkReadRes(%+v)", *p)
+}
+
+var fieldIDToName_MarkReadRes = map[int16]string{
+	1: "success",
+	2: "max_read_seq",
+}
+
+type GetConversationMembersReq struct {
+	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+}
+
+func NewGetConversationMembersReq() *GetConversationMembersReq {
+	return &GetConversationMembersReq{}
+}
+
+func (p *GetConversationMembersReq) InitDefault() {
+}
+
+func (p *GetConversationMembersReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *GetConversationMembersReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *GetConversationMembersReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetConversationMembersReq(%+v)", *p)
+}
+
+var fieldIDToName_GetConversationMembersReq = map[int16]string{
+	1: "conversation_id",
+}
+
+type GetConversationMembersRes struct {
+	Success   bool    `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	MemberIds []int64 `thrift:"member_ids,2" frugal:"2,default,list<i64>" json:"member_ids"`
+}
+
+func NewGetConversationMembersRes() *GetConversationMembersRes {
+	return &GetConversationMembersRes{}
+}
+
+func (p *GetConversationMembersRes) InitDefault() {
+}
+
+func (p *GetConversationMembersRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *GetConversationMembersRes) GetMemberIds() (v []int64) {
+	return p.MemberIds
+}
+func (p *GetConversationMembersRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetConversationMembersRes) SetMemberIds(val []int64) {
+	p.MemberIds = val
+}
+
+func (p *GetConversationMembersRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetConversationMembersRes(%+v)", *p)
+}
+
+var fieldIDToName_GetConversationMembersRes = map[int16]string{
+	1: "success",
+	2: "member_ids",
+}
+
+type RecallMessageReq struct {
+	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	MsgId          int64 `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	ConversationId int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+}
+
+func NewRecallMessageReq() *RecallMessageReq {
+	return &RecallMessageReq{}
+}
+
+func (p *RecallMessageReq) InitDefault() {
+}
+
+func (p *RecallMessageReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *RecallMessageReq) GetMsgId() (v int64) {
+	return p.MsgId
+}
+
+func (p *RecallMessageReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *RecallMessageReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *RecallMessageReq) SetMsgId(val int64) {
+	p.MsgId = val
+}
+func (p *RecallMessageReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *RecallMessageReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallMessageReq(%+v)", *p)
+}
+
+var fieldIDToName_RecallMessageReq = map[int16]string{
+	1: "user_id",
+	2: "msg_id",
+	3: "conversation_id",
+}
+
+type RecallMessageRes struct {
+	Success        bool    `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	ConversationId *int64  `thrift:"conversation_id,2,optional" frugal:"2,optional,i64" json:"conversation_id,omitempty"`
+	MemberIds      []int64 `thrift:"member_ids,3,optional" frugal:"3,optional,list<i64>" json:"member_ids,omitempty"`
+}
+
+func NewRecallMessageRes() *RecallMessageRes {
+	return &RecallMessageRes{}
+}
+
+func (p *RecallMessageRes) InitDefault() {
+}
+
+func (p *RecallMessageRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var RecallMessageRes_ConversationId_DEFAULT int64
+
+func (p *RecallMessageRes) GetConversationId() (v int64) {
+	if !p.IsSetConversationId() {
+		return RecallMessageRes_ConversationId_DEFAULT
+	}
+	return *p.ConversationId
+}
+
+var RecallMessageRes_MemberIds_DEFAULT []int64
+
+func (p *RecallMessageRes) GetMemberIds() (v []int64) {
+	if !p.IsSetMemberIds() {
+		return RecallMessageRes_MemberIds_DEFAULT
+	}
+	return p.MemberIds
+}
+func (p *RecallMessageRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *RecallMessageRes) SetConversationId(val *int64) {
+	p.ConversationId = val
+}
+func (p *RecallMessageRes) SetMemberIds(val []int64) {
+	p.MemberIds = val
+}
+
+func (p *RecallMessageRes) IsSetConversationId() bool {
+	return p.ConversationId != nil
+}
+
+func (p *RecallMessageRes) IsSetMemberIds() bool {
+	return p.MemberIds != nil
+}
+
+func (p *RecallMessageRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallMessageRes(%+v)", *p)
+}
+
+var fieldIDToName_RecallMessageRes = map[int16]string{
+	1: "success",
+	2: "conversation_id",
+	3: "member_ids",
+}
+
+type EditMessageReq struct {
+	UserId         int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	MsgId          int64  `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	ConversationId int64  `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	NewContent_    string `thrift:"new_content,4" frugal:"4,default,string" json:"new_content"`
+}
+
+func NewEditMessageReq() *EditMessageReq {
+	return &EditMessageReq{}
+}
+
+func (p *EditMessageReq) InitDefault() {
+}
+
+func (p *EditMessageReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *EditMessageReq) GetMsgId() (v int64) {
+	return p.MsgId
+}
+
+func (p *EditMessageReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *EditMessageReq) GetNewContent_() (v string) {
+	return p.NewContent_
+}
+func (p *EditMessageReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *EditMessageReq) SetMsgId(val int64) {
+	p.MsgId = val
+}
+func (p *EditMessageReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *EditMessageReq) SetNewContent_(val string) {
+	p.NewContent_ = val
+}
+
+func (p *EditMessageReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EditMessageReq(%+v)", *p)
+}
+
+var fieldIDToName_EditMessageReq = map[int16]string{
+	1: "user_id",
+	2: "msg_id",
+	3: "conversation_id",
+	4: "new_content",
+}
+
+type EditMessageRes struct {
+	Success        bool    `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	ConversationId *int64  `thrift:"conversation_id,2,optional" frugal:"2,optional,i64" json:"conversation_id,omitempty"`
+	MemberIds      []int64 `thrift:"member_ids,3,optional" frugal:"3,optional,list<i64>" json:"member_ids,omitempty"`
+}
+
+func NewEditMessageRes() *EditMessageRes {
+	return &EditMessageRes{}
+}
+
+func (p *EditMessageRes) InitDefault() {
+}
+
+func (p *EditMessageRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var EditMessageRes_ConversationId_DEFAULT int64
+
+func (p *EditMessageRes) GetConversationId() (v int64) {
+	if !p.IsSetConversationId() {
+		return EditMessageRes_ConversationId_DEFAULT
+	}
+	return *p.ConversationId
+}
+
+var EditMessageRes_MemberIds_DEFAULT []int64
+
+func (p *EditMessageRes) GetMemberIds() (v []int64) {
+	if !p.IsSetMemberIds() {
+		return EditMessageRes_MemberIds_DEFAULT
+	}
+	return p.MemberIds
+}
+func (p *EditMessageRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *EditMessageRes) SetConversationId(val *int64) {
+	p.ConversationId = val
+}
+func (p *EditMessageRes) SetMemberIds(val []int64) {
+	p.MemberIds = val
+}
+
+func (p *EditMessageRes) IsSetConversationId() bool {
+	return p.ConversationId != nil
+}
+
+func (p *EditMessageRes) IsSetMemberIds() bool {
+	return p.MemberIds != nil
+}
+
+func (p *EditMessageRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EditMessageRes(%+v)", *p)
+}
+
+var fieldIDToName_EditMessageRes = map[int16]string{
+	1: "success",
+	2: "conversation_id",
+	3: "member_ids",
+}
+
+type EditHistoryItem struct {
+	Id         int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	MsgId      int64  `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	Version    int32  `thrift:"version,3" frugal:"3,default,i32" json:"version"`
+	OldContent string `thrift:"old_content,4" frugal:"4,default,string" json:"old_content"`
+	EditorId   int64  `thrift:"editor_id,5" frugal:"5,default,i64" json:"editor_id"`
+	EditedAt   int64  `thrift:"edited_at,6" frugal:"6,default,i64" json:"edited_at"`
+}
+
+func NewEditHistoryItem() *EditHistoryItem {
+	return &EditHistoryItem{}
+}
+
+func (p *EditHistoryItem) InitDefault() {
+}
+
+func (p *EditHistoryItem) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *EditHistoryItem) GetMsgId() (v int64) {
+	return p.MsgId
+}
+
+func (p *EditHistoryItem) GetVersion() (v int32) {
+	return p.Version
+}
+
+func (p *EditHistoryItem) GetOldContent() (v string) {
+	return p.OldContent
+}
+
+func (p *EditHistoryItem) GetEditorId() (v int64) {
+	return p.EditorId
+}
+
+func (p *EditHistoryItem) GetEditedAt() (v int64) {
+	return p.EditedAt
+}
+func (p *EditHistoryItem) SetId(val int64) {
+	p.Id = val
+}
+func (p *EditHistoryItem) SetMsgId(val int64) {
+	p.MsgId = val
+}
+func (p *EditHistoryItem) SetVersion(val int32) {
+	p.Version = val
+}
+func (p *EditHistoryItem) SetOldContent(val string) {
+	p.OldContent = val
+}
+func (p *EditHistoryItem) SetEditorId(val int64) {
+	p.EditorId = val
+}
+func (p *EditHistoryItem) SetEditedAt(val int64) {
+	p.EditedAt = val
+}
+
+func (p *EditHistoryItem) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EditHistoryItem(%+v)", *p)
+}
+
+var fieldIDToName_EditHistoryItem = map[int16]string{
+	1: "id",
+	2: "msg_id",
+	3: "version",
+	4: "old_content",
+	5: "editor_id",
+	6: "edited_at",
+}
+
+type GetEditHistoryReq struct {
+	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	MsgId          int64 `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	ConversationId int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+}
+
+func NewGetEditHistoryReq() *GetEditHistoryReq {
+	return &GetEditHistoryReq{}
+}
+
+func (p *GetEditHistoryReq) InitDefault() {
+}
+
+func (p *GetEditHistoryReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *GetEditHistoryReq) GetMsgId() (v int64) {
+	return p.MsgId
+}
+
+func (p *GetEditHistoryReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *GetEditHistoryReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *GetEditHistoryReq) SetMsgId(val int64) {
+	p.MsgId = val
+}
+func (p *GetEditHistoryReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *GetEditHistoryReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetEditHistoryReq(%+v)", *p)
+}
+
+var fieldIDToName_GetEditHistoryReq = map[int16]string{
+	1: "user_id",
+	2: "msg_id",
+	3: "conversation_id",
+}
+
+type GetEditHistoryRes struct {
+	Success   bool               `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Histories []*EditHistoryItem `thrift:"histories,2" frugal:"2,default,list<EditHistoryItem>" json:"histories"`
+}
+
+func NewGetEditHistoryRes() *GetEditHistoryRes {
+	return &GetEditHistoryRes{}
+}
+
+func (p *GetEditHistoryRes) InitDefault() {
+}
+
+func (p *GetEditHistoryRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *GetEditHistoryRes) GetHistories() (v []*EditHistoryItem) {
+	return p.Histories
+}
+func (p *GetEditHistoryRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetEditHistoryRes) SetHistories(val []*EditHistoryItem) {
+	p.Histories = val
+}
+
+func (p *GetEditHistoryRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetEditHistoryRes(%+v)", *p)
+}
+
+var fieldIDToName_GetEditHistoryRes = map[int16]string{
+	1: "success",
+	2: "histories",
+}
+
+type ConvSeqPair struct {
+	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	LastSeq        int64 `thrift:"last_seq,2" frugal:"2,default,i64" json:"last_seq"`
+}
+
+func NewConvSeqPair() *ConvSeqPair {
+	return &ConvSeqPair{}
+}
+
+func (p *ConvSeqPair) InitDefault() {
+}
+
+func (p *ConvSeqPair) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *ConvSeqPair) GetLastSeq() (v int64) {
+	return p.LastSeq
+}
+func (p *ConvSeqPair) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *ConvSeqPair) SetLastSeq(val int64) {
+	p.LastSeq = val
+}
+
+func (p *ConvSeqPair) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConvSeqPair(%+v)", *p)
+}
+
+var fieldIDToName_ConvSeqPair = map[int16]string{
+	1: "conversation_id",
+	2: "last_seq",
+}
+
+type SyncMessagesReq struct {
+	UserId   int64          `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	ConvSeqs []*ConvSeqPair `thrift:"conv_seqs,2" frugal:"2,default,list<ConvSeqPair>" json:"conv_seqs"`
+	Limit    int16          `thrift:"limit,3" frugal:"3,default,i16" json:"limit"`
+}
+
+func NewSyncMessagesReq() *SyncMessagesReq {
+	return &SyncMessagesReq{}
+}
+
+func (p *SyncMessagesReq) InitDefault() {
+}
+
+func (p *SyncMessagesReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SyncMessagesReq) GetConvSeqs() (v []*ConvSeqPair) {
+	return p.ConvSeqs
+}
+
+func (p *SyncMessagesReq) GetLimit() (v int16) {
+	return p.Limit
+}
+func (p *SyncMessagesReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SyncMessagesReq) SetConvSeqs(val []*ConvSeqPair) {
+	p.ConvSeqs = val
+}
+func (p *SyncMessagesReq) SetLimit(val int16) {
+	p.Limit = val
+}
+
+func (p *SyncMessagesReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SyncMessagesReq(%+v)", *p)
+}
+
+var fieldIDToName_SyncMessagesReq = map[int16]string{
+	1: "user_id",
+	2: "conv_seqs",
+	3: "limit",
+}
+
+type ConvMessages struct {
+	ConversationId int64      `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	Messages       []*Message `thrift:"messages,2" frugal:"2,default,list<Message>" json:"messages"`
+}
+
+func NewConvMessages() *ConvMessages {
+	return &ConvMessages{}
+}
+
+func (p *ConvMessages) InitDefault() {
+}
+
+func (p *ConvMessages) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *ConvMessages) GetMessages() (v []*Message) {
+	return p.Messages
+}
+func (p *ConvMessages) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *ConvMessages) SetMessages(val []*Message) {
+	p.Messages = val
+}
+
+func (p *ConvMessages) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ConvMessages(%+v)", *p)
+}
+
+var fieldIDToName_ConvMessages = map[int16]string{
+	1: "conversation_id",
+	2: "messages",
+}
+
+type SyncMessagesRes struct {
+	Success      bool            `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	ConvMessages []*ConvMessages `thrift:"conv_messages,2" frugal:"2,default,list<ConvMessages>" json:"conv_messages"`
+}
+
+func NewSyncMessagesRes() *SyncMessagesRes {
+	return &SyncMessagesRes{}
+}
+
+func (p *SyncMessagesRes) InitDefault() {
+}
+
+func (p *SyncMessagesRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SyncMessagesRes) GetConvMessages() (v []*ConvMessages) {
+	return p.ConvMessages
+}
+func (p *SyncMessagesRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SyncMessagesRes) SetConvMessages(val []*ConvMessages) {
+	p.ConvMessages = val
+}
+
+func (p *SyncMessagesRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SyncMessagesRes(%+v)", *p)
+}
+
+var fieldIDToName_SyncMessagesRes = map[int16]string{
+	1: "success",
+	2: "conv_messages",
+}
+
 type ChatService interface {
 	SendMessage(ctx context.Context, req *SendMessageReq) (r *SendMessageRes, err error)
 
@@ -888,11 +1860,27 @@ type ChatService interface {
 
 	SetOffline(ctx context.Context, req *SetOfflineReq) (r *CommonRes, err error)
 
+	RenewOnline(ctx context.Context, req *RenewOnlineReq) (r *CommonRes, err error)
+
 	GetOnlineStatus(ctx context.Context, req *GetOnlineStatusReq) (r *GetOnlineStatusRes, err error)
 
 	AddConversationMembers(ctx context.Context, req *AddConversationMembersReq) (r *AddConversationMembersRes, err error)
 
 	RemoveConversationMembers(ctx context.Context, req *RemoveConversationMembersReq) (r *RemoveConversationMembersRes, err error)
+
+	DeleteConversation(ctx context.Context, req *DeleteConversationReq) (r *DeleteConversationRes, err error)
+
+	MarkRead(ctx context.Context, req *MarkReadReq) (r *MarkReadRes, err error)
+
+	GetConversationMembers(ctx context.Context, req *GetConversationMembersReq) (r *GetConversationMembersRes, err error)
+
+	RecallMessage(ctx context.Context, req *RecallMessageReq) (r *RecallMessageRes, err error)
+
+	EditMessage(ctx context.Context, req *EditMessageReq) (r *EditMessageRes, err error)
+
+	GetEditHistory(ctx context.Context, req *GetEditHistoryReq) (r *GetEditHistoryRes, err error)
+
+	SyncMessages(ctx context.Context, req *SyncMessagesReq) (r *SyncMessagesRes, err error)
 }
 
 type ChatServiceSendMessageArgs struct {
@@ -1351,6 +2339,82 @@ var fieldIDToName_ChatServiceSetOfflineResult = map[int16]string{
 	0: "success",
 }
 
+type ChatServiceRenewOnlineArgs struct {
+	Req *RenewOnlineReq `thrift:"req,1" frugal:"1,default,RenewOnlineReq" json:"req"`
+}
+
+func NewChatServiceRenewOnlineArgs() *ChatServiceRenewOnlineArgs {
+	return &ChatServiceRenewOnlineArgs{}
+}
+
+func (p *ChatServiceRenewOnlineArgs) InitDefault() {
+}
+
+var ChatServiceRenewOnlineArgs_Req_DEFAULT *RenewOnlineReq
+
+func (p *ChatServiceRenewOnlineArgs) GetReq() (v *RenewOnlineReq) {
+	if !p.IsSetReq() {
+		return ChatServiceRenewOnlineArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceRenewOnlineArgs) SetReq(val *RenewOnlineReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceRenewOnlineArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceRenewOnlineArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceRenewOnlineArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceRenewOnlineArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceRenewOnlineResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewChatServiceRenewOnlineResult() *ChatServiceRenewOnlineResult {
+	return &ChatServiceRenewOnlineResult{}
+}
+
+func (p *ChatServiceRenewOnlineResult) InitDefault() {
+}
+
+var ChatServiceRenewOnlineResult_Success_DEFAULT *CommonRes
+
+func (p *ChatServiceRenewOnlineResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceRenewOnlineResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceRenewOnlineResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *ChatServiceRenewOnlineResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceRenewOnlineResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceRenewOnlineResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceRenewOnlineResult = map[int16]string{
+	0: "success",
+}
+
 type ChatServiceGetOnlineStatusArgs struct {
 	Req *GetOnlineStatusReq `thrift:"req,1" frugal:"1,default,GetOnlineStatusReq" json:"req"`
 }
@@ -1576,5 +2640,537 @@ func (p *ChatServiceRemoveConversationMembersResult) String() string {
 }
 
 var fieldIDToName_ChatServiceRemoveConversationMembersResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceDeleteConversationArgs struct {
+	Req *DeleteConversationReq `thrift:"req,1" frugal:"1,default,DeleteConversationReq" json:"req"`
+}
+
+func NewChatServiceDeleteConversationArgs() *ChatServiceDeleteConversationArgs {
+	return &ChatServiceDeleteConversationArgs{}
+}
+
+func (p *ChatServiceDeleteConversationArgs) InitDefault() {
+}
+
+var ChatServiceDeleteConversationArgs_Req_DEFAULT *DeleteConversationReq
+
+func (p *ChatServiceDeleteConversationArgs) GetReq() (v *DeleteConversationReq) {
+	if !p.IsSetReq() {
+		return ChatServiceDeleteConversationArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceDeleteConversationArgs) SetReq(val *DeleteConversationReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceDeleteConversationArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceDeleteConversationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceDeleteConversationArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceDeleteConversationArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceDeleteConversationResult struct {
+	Success *DeleteConversationRes `thrift:"success,0,optional" frugal:"0,optional,DeleteConversationRes" json:"success,omitempty"`
+}
+
+func NewChatServiceDeleteConversationResult() *ChatServiceDeleteConversationResult {
+	return &ChatServiceDeleteConversationResult{}
+}
+
+func (p *ChatServiceDeleteConversationResult) InitDefault() {
+}
+
+var ChatServiceDeleteConversationResult_Success_DEFAULT *DeleteConversationRes
+
+func (p *ChatServiceDeleteConversationResult) GetSuccess() (v *DeleteConversationRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceDeleteConversationResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceDeleteConversationResult) SetSuccess(x interface{}) {
+	p.Success = x.(*DeleteConversationRes)
+}
+
+func (p *ChatServiceDeleteConversationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceDeleteConversationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceDeleteConversationResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceDeleteConversationResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceMarkReadArgs struct {
+	Req *MarkReadReq `thrift:"req,1" frugal:"1,default,MarkReadReq" json:"req"`
+}
+
+func NewChatServiceMarkReadArgs() *ChatServiceMarkReadArgs {
+	return &ChatServiceMarkReadArgs{}
+}
+
+func (p *ChatServiceMarkReadArgs) InitDefault() {
+}
+
+var ChatServiceMarkReadArgs_Req_DEFAULT *MarkReadReq
+
+func (p *ChatServiceMarkReadArgs) GetReq() (v *MarkReadReq) {
+	if !p.IsSetReq() {
+		return ChatServiceMarkReadArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceMarkReadArgs) SetReq(val *MarkReadReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceMarkReadArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceMarkReadArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceMarkReadArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceMarkReadArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceMarkReadResult struct {
+	Success *MarkReadRes `thrift:"success,0,optional" frugal:"0,optional,MarkReadRes" json:"success,omitempty"`
+}
+
+func NewChatServiceMarkReadResult() *ChatServiceMarkReadResult {
+	return &ChatServiceMarkReadResult{}
+}
+
+func (p *ChatServiceMarkReadResult) InitDefault() {
+}
+
+var ChatServiceMarkReadResult_Success_DEFAULT *MarkReadRes
+
+func (p *ChatServiceMarkReadResult) GetSuccess() (v *MarkReadRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceMarkReadResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceMarkReadResult) SetSuccess(x interface{}) {
+	p.Success = x.(*MarkReadRes)
+}
+
+func (p *ChatServiceMarkReadResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceMarkReadResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceMarkReadResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceMarkReadResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceGetConversationMembersArgs struct {
+	Req *GetConversationMembersReq `thrift:"req,1" frugal:"1,default,GetConversationMembersReq" json:"req"`
+}
+
+func NewChatServiceGetConversationMembersArgs() *ChatServiceGetConversationMembersArgs {
+	return &ChatServiceGetConversationMembersArgs{}
+}
+
+func (p *ChatServiceGetConversationMembersArgs) InitDefault() {
+}
+
+var ChatServiceGetConversationMembersArgs_Req_DEFAULT *GetConversationMembersReq
+
+func (p *ChatServiceGetConversationMembersArgs) GetReq() (v *GetConversationMembersReq) {
+	if !p.IsSetReq() {
+		return ChatServiceGetConversationMembersArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceGetConversationMembersArgs) SetReq(val *GetConversationMembersReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceGetConversationMembersArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceGetConversationMembersArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetConversationMembersArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetConversationMembersArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceGetConversationMembersResult struct {
+	Success *GetConversationMembersRes `thrift:"success,0,optional" frugal:"0,optional,GetConversationMembersRes" json:"success,omitempty"`
+}
+
+func NewChatServiceGetConversationMembersResult() *ChatServiceGetConversationMembersResult {
+	return &ChatServiceGetConversationMembersResult{}
+}
+
+func (p *ChatServiceGetConversationMembersResult) InitDefault() {
+}
+
+var ChatServiceGetConversationMembersResult_Success_DEFAULT *GetConversationMembersRes
+
+func (p *ChatServiceGetConversationMembersResult) GetSuccess() (v *GetConversationMembersRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceGetConversationMembersResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceGetConversationMembersResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetConversationMembersRes)
+}
+
+func (p *ChatServiceGetConversationMembersResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceGetConversationMembersResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetConversationMembersResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetConversationMembersResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceRecallMessageArgs struct {
+	Req *RecallMessageReq `thrift:"req,1" frugal:"1,default,RecallMessageReq" json:"req"`
+}
+
+func NewChatServiceRecallMessageArgs() *ChatServiceRecallMessageArgs {
+	return &ChatServiceRecallMessageArgs{}
+}
+
+func (p *ChatServiceRecallMessageArgs) InitDefault() {
+}
+
+var ChatServiceRecallMessageArgs_Req_DEFAULT *RecallMessageReq
+
+func (p *ChatServiceRecallMessageArgs) GetReq() (v *RecallMessageReq) {
+	if !p.IsSetReq() {
+		return ChatServiceRecallMessageArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceRecallMessageArgs) SetReq(val *RecallMessageReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceRecallMessageArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceRecallMessageArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceRecallMessageArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceRecallMessageArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceRecallMessageResult struct {
+	Success *RecallMessageRes `thrift:"success,0,optional" frugal:"0,optional,RecallMessageRes" json:"success,omitempty"`
+}
+
+func NewChatServiceRecallMessageResult() *ChatServiceRecallMessageResult {
+	return &ChatServiceRecallMessageResult{}
+}
+
+func (p *ChatServiceRecallMessageResult) InitDefault() {
+}
+
+var ChatServiceRecallMessageResult_Success_DEFAULT *RecallMessageRes
+
+func (p *ChatServiceRecallMessageResult) GetSuccess() (v *RecallMessageRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceRecallMessageResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceRecallMessageResult) SetSuccess(x interface{}) {
+	p.Success = x.(*RecallMessageRes)
+}
+
+func (p *ChatServiceRecallMessageResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceRecallMessageResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceRecallMessageResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceRecallMessageResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceEditMessageArgs struct {
+	Req *EditMessageReq `thrift:"req,1" frugal:"1,default,EditMessageReq" json:"req"`
+}
+
+func NewChatServiceEditMessageArgs() *ChatServiceEditMessageArgs {
+	return &ChatServiceEditMessageArgs{}
+}
+
+func (p *ChatServiceEditMessageArgs) InitDefault() {
+}
+
+var ChatServiceEditMessageArgs_Req_DEFAULT *EditMessageReq
+
+func (p *ChatServiceEditMessageArgs) GetReq() (v *EditMessageReq) {
+	if !p.IsSetReq() {
+		return ChatServiceEditMessageArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceEditMessageArgs) SetReq(val *EditMessageReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceEditMessageArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceEditMessageArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceEditMessageArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceEditMessageArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceEditMessageResult struct {
+	Success *EditMessageRes `thrift:"success,0,optional" frugal:"0,optional,EditMessageRes" json:"success,omitempty"`
+}
+
+func NewChatServiceEditMessageResult() *ChatServiceEditMessageResult {
+	return &ChatServiceEditMessageResult{}
+}
+
+func (p *ChatServiceEditMessageResult) InitDefault() {
+}
+
+var ChatServiceEditMessageResult_Success_DEFAULT *EditMessageRes
+
+func (p *ChatServiceEditMessageResult) GetSuccess() (v *EditMessageRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceEditMessageResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceEditMessageResult) SetSuccess(x interface{}) {
+	p.Success = x.(*EditMessageRes)
+}
+
+func (p *ChatServiceEditMessageResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceEditMessageResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceEditMessageResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceEditMessageResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceGetEditHistoryArgs struct {
+	Req *GetEditHistoryReq `thrift:"req,1" frugal:"1,default,GetEditHistoryReq" json:"req"`
+}
+
+func NewChatServiceGetEditHistoryArgs() *ChatServiceGetEditHistoryArgs {
+	return &ChatServiceGetEditHistoryArgs{}
+}
+
+func (p *ChatServiceGetEditHistoryArgs) InitDefault() {
+}
+
+var ChatServiceGetEditHistoryArgs_Req_DEFAULT *GetEditHistoryReq
+
+func (p *ChatServiceGetEditHistoryArgs) GetReq() (v *GetEditHistoryReq) {
+	if !p.IsSetReq() {
+		return ChatServiceGetEditHistoryArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceGetEditHistoryArgs) SetReq(val *GetEditHistoryReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceGetEditHistoryArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceGetEditHistoryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetEditHistoryArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetEditHistoryArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceGetEditHistoryResult struct {
+	Success *GetEditHistoryRes `thrift:"success,0,optional" frugal:"0,optional,GetEditHistoryRes" json:"success,omitempty"`
+}
+
+func NewChatServiceGetEditHistoryResult() *ChatServiceGetEditHistoryResult {
+	return &ChatServiceGetEditHistoryResult{}
+}
+
+func (p *ChatServiceGetEditHistoryResult) InitDefault() {
+}
+
+var ChatServiceGetEditHistoryResult_Success_DEFAULT *GetEditHistoryRes
+
+func (p *ChatServiceGetEditHistoryResult) GetSuccess() (v *GetEditHistoryRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceGetEditHistoryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceGetEditHistoryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetEditHistoryRes)
+}
+
+func (p *ChatServiceGetEditHistoryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceGetEditHistoryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetEditHistoryResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetEditHistoryResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceSyncMessagesArgs struct {
+	Req *SyncMessagesReq `thrift:"req,1" frugal:"1,default,SyncMessagesReq" json:"req"`
+}
+
+func NewChatServiceSyncMessagesArgs() *ChatServiceSyncMessagesArgs {
+	return &ChatServiceSyncMessagesArgs{}
+}
+
+func (p *ChatServiceSyncMessagesArgs) InitDefault() {
+}
+
+var ChatServiceSyncMessagesArgs_Req_DEFAULT *SyncMessagesReq
+
+func (p *ChatServiceSyncMessagesArgs) GetReq() (v *SyncMessagesReq) {
+	if !p.IsSetReq() {
+		return ChatServiceSyncMessagesArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceSyncMessagesArgs) SetReq(val *SyncMessagesReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceSyncMessagesArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceSyncMessagesArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSyncMessagesArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSyncMessagesArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceSyncMessagesResult struct {
+	Success *SyncMessagesRes `thrift:"success,0,optional" frugal:"0,optional,SyncMessagesRes" json:"success,omitempty"`
+}
+
+func NewChatServiceSyncMessagesResult() *ChatServiceSyncMessagesResult {
+	return &ChatServiceSyncMessagesResult{}
+}
+
+func (p *ChatServiceSyncMessagesResult) InitDefault() {
+}
+
+var ChatServiceSyncMessagesResult_Success_DEFAULT *SyncMessagesRes
+
+func (p *ChatServiceSyncMessagesResult) GetSuccess() (v *SyncMessagesRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceSyncMessagesResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceSyncMessagesResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SyncMessagesRes)
+}
+
+func (p *ChatServiceSyncMessagesResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceSyncMessagesResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSyncMessagesResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSyncMessagesResult = map[int16]string{
 	0: "success",
 }

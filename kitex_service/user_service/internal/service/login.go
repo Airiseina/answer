@@ -20,7 +20,7 @@ func (dao *UserService) Register(account, name, password string) (bool, error) {
 	}
 	userInfo, err := dao.dao.GetUser(account)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	if userInfo.Account != "" {
 		return false, nil

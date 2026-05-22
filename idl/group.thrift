@@ -32,6 +32,7 @@ struct CreateGroupReq {
 struct CreateGroupRes {
     1: i64 group_id
     2: i64 group_number
+    3: i64 conversation_id
 }
 
 struct InviteMembersReq {

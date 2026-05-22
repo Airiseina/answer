@@ -1,18 +1,20 @@
 package snowflake
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
 
 const (
-	epoch        = int64(1700000000000)
-	workerBits   = uint(10)
-	sequenceBits = uint(12)
-	maxWorkerID  = int64(-1) ^ (int64(-1) << workerBits)
-	maxSequence  = int64(-1) ^ (int64(-1) << sequenceBits)
-	workerShift  = sequenceBits
-	timeShift    = sequenceBits + workerBits
+	epoch         = int64(1700000000000)
+	workerBits    = uint(10)
+	sequenceBits  = uint(12)
+	maxWorkerID   = int64(-1) ^ (int64(-1) << workerBits)
+	maxSequence   = int64(-1) ^ (int64(-1) << sequenceBits)
+	workerShift   = sequenceBits
+	timeShift     = sequenceBits + workerBits
+	maxClockDrift = int64(500)
 )
 
 type Node struct {
@@ -34,6 +36,16 @@ func (n *Node) Generate() int64 {
 	defer n.mu.Unlock()
 
 	now := time.Now().UnixMilli()
+	if now < n.timestamp {
+		drift := n.timestamp - now
+		if drift <= maxClockDrift {
+			time.Sleep(time.Duration(drift) * time.Millisecond)
+			now = time.Now().UnixMilli()
+		}
+		if now < n.timestamp {
+			panic(fmt.Sprintf("时钟回拨超过%dms，拒绝生成ID", maxClockDrift))
+		}
+	}
 	if now == n.timestamp {
 		n.sequence = (n.sequence + 1) & maxSequence
 		if n.sequence == 0 {

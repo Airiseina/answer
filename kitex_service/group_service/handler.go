@@ -23,7 +23,15 @@ func (s *GroupServiceImpl) CreateGroup(ctx context.Context, req *group.CreateGro
 		}
 	}
 	if !creatorInMembers {
-		members = append(members, req.CreatorId)
+		members = append([]int64{req.CreatorId}, members...)
+	} else {
+		newMembers := []int64{req.CreatorId}
+		for _, m := range members {
+			if m != req.CreatorId {
+				newMembers = append(newMembers, m)
+			}
+		}
+		members = newMembers
 	}
 	f, err := rpc.CheckUsersExist(ctx, members)
 	if err != nil {
@@ -37,14 +45,15 @@ func (s *GroupServiceImpl) CreateGroup(ctx context.Context, req *group.CreateGro
 		klog.CtxErrorf(ctx, "创建群聊时获取用户名失败:%v", err)
 		nameMap = make(map[int64]string)
 	}
-	groupId, groupNumber, err := s.groupService.CreateGroup(ctx, req.CreatorId, req.Name, members, nameMap)
+	groupId, groupNumber, conversationID, err := s.groupService.CreateGroup(ctx, req.CreatorId, req.Name, members, nameMap)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建群聊时发生系统错误:%v", req.CreatorId, err)
 		return nil, err
 	}
 	resp = &group.CreateGroupRes{
-		GroupId:     groupId,
-		GroupNumber: groupNumber,
+		GroupId:        groupId,
+		GroupNumber:    groupNumber,
+		ConversationId: conversationID,
 	}
 	return resp, nil
 }

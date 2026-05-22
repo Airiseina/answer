@@ -17,9 +17,17 @@ type Client interface {
 	GetConversations(ctx context.Context, req *chat.GetConversationsReq, callOptions ...callopt.Option) (r *chat.GetConversationsRes, err error)
 	SetOnline(ctx context.Context, req *chat.SetOnlineReq, callOptions ...callopt.Option) (r *chat.CommonRes, err error)
 	SetOffline(ctx context.Context, req *chat.SetOfflineReq, callOptions ...callopt.Option) (r *chat.CommonRes, err error)
+	RenewOnline(ctx context.Context, req *chat.RenewOnlineReq, callOptions ...callopt.Option) (r *chat.CommonRes, err error)
 	GetOnlineStatus(ctx context.Context, req *chat.GetOnlineStatusReq, callOptions ...callopt.Option) (r *chat.GetOnlineStatusRes, err error)
 	AddConversationMembers(ctx context.Context, req *chat.AddConversationMembersReq, callOptions ...callopt.Option) (r *chat.AddConversationMembersRes, err error)
 	RemoveConversationMembers(ctx context.Context, req *chat.RemoveConversationMembersReq, callOptions ...callopt.Option) (r *chat.RemoveConversationMembersRes, err error)
+	DeleteConversation(ctx context.Context, req *chat.DeleteConversationReq, callOptions ...callopt.Option) (r *chat.DeleteConversationRes, err error)
+	MarkRead(ctx context.Context, req *chat.MarkReadReq, callOptions ...callopt.Option) (r *chat.MarkReadRes, err error)
+	GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq, callOptions ...callopt.Option) (r *chat.GetConversationMembersRes, err error)
+	RecallMessage(ctx context.Context, req *chat.RecallMessageReq, callOptions ...callopt.Option) (r *chat.RecallMessageRes, err error)
+	EditMessage(ctx context.Context, req *chat.EditMessageReq, callOptions ...callopt.Option) (r *chat.EditMessageRes, err error)
+	GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq, callOptions ...callopt.Option) (r *chat.GetEditHistoryRes, err error)
+	SyncMessages(ctx context.Context, req *chat.SyncMessagesReq, callOptions ...callopt.Option) (r *chat.SyncMessagesRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -81,6 +89,11 @@ func (p *kChatServiceClient) SetOffline(ctx context.Context, req *chat.SetOfflin
 	return p.kClient.SetOffline(ctx, req)
 }
 
+func (p *kChatServiceClient) RenewOnline(ctx context.Context, req *chat.RenewOnlineReq, callOptions ...callopt.Option) (r *chat.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RenewOnline(ctx, req)
+}
+
 func (p *kChatServiceClient) GetOnlineStatus(ctx context.Context, req *chat.GetOnlineStatusReq, callOptions ...callopt.Option) (r *chat.GetOnlineStatusRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetOnlineStatus(ctx, req)
@@ -94,4 +107,39 @@ func (p *kChatServiceClient) AddConversationMembers(ctx context.Context, req *ch
 func (p *kChatServiceClient) RemoveConversationMembers(ctx context.Context, req *chat.RemoveConversationMembersReq, callOptions ...callopt.Option) (r *chat.RemoveConversationMembersRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.RemoveConversationMembers(ctx, req)
+}
+
+func (p *kChatServiceClient) DeleteConversation(ctx context.Context, req *chat.DeleteConversationReq, callOptions ...callopt.Option) (r *chat.DeleteConversationRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteConversation(ctx, req)
+}
+
+func (p *kChatServiceClient) MarkRead(ctx context.Context, req *chat.MarkReadReq, callOptions ...callopt.Option) (r *chat.MarkReadRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.MarkRead(ctx, req)
+}
+
+func (p *kChatServiceClient) GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq, callOptions ...callopt.Option) (r *chat.GetConversationMembersRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetConversationMembers(ctx, req)
+}
+
+func (p *kChatServiceClient) RecallMessage(ctx context.Context, req *chat.RecallMessageReq, callOptions ...callopt.Option) (r *chat.RecallMessageRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RecallMessage(ctx, req)
+}
+
+func (p *kChatServiceClient) EditMessage(ctx context.Context, req *chat.EditMessageReq, callOptions ...callopt.Option) (r *chat.EditMessageRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.EditMessage(ctx, req)
+}
+
+func (p *kChatServiceClient) GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq, callOptions ...callopt.Option) (r *chat.GetEditHistoryRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEditHistory(ctx, req)
+}
+
+func (p *kChatServiceClient) SyncMessages(ctx context.Context, req *chat.SyncMessagesReq, callOptions ...callopt.Option) (r *chat.SyncMessagesRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SyncMessages(ctx, req)
 }

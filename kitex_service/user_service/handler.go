@@ -45,7 +45,7 @@ func (s *LoginServiceImpl) Login(ctx context.Context, req *user.LoginReq) (resp 
 	}
 	if userInfo.Account != req.Account {
 		meter.M.UserLoginTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "failed")))
-		return nil, nil
+		return &user.LoginRes{}, nil
 	}
 	meter.M.UserLoginTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
 	return &user.LoginRes{Account: userInfo.Account, Id: userInfo.Id}, nil

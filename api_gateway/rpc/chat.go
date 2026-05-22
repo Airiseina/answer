@@ -63,3 +63,34 @@ func GetHistory(ctx context.Context, req *chat.GetHistoryReq) (*chat.GetHistoryR
 func GetConversations(ctx context.Context, req *chat.GetConversationsReq) (*chat.GetConversationsRes, error) {
 	return chatCli.GetConversations(ctx, req)
 }
+
+// MarkRead 调用 chat_service 标记会话已读
+func MarkRead(ctx context.Context, req *chat.MarkReadReq) (*chat.MarkReadRes, error) {
+	return chatCli.MarkRead(ctx, req)
+}
+
+// GetOnlineStatus 调用 chat_service 批量查询用户在线状态
+func GetOnlineStatus(ctx context.Context, req *chat.GetOnlineStatusReq) (*chat.GetOnlineStatusRes, error) {
+	return chatCli.GetOnlineStatus(ctx, req)
+}
+
+// RecallMessage 调用 chat_service 撤回消息
+func RecallMessage(ctx context.Context, req *chat.RecallMessageReq) (*chat.RecallMessageRes, error) {
+	return chatCli.RecallMessage(ctx, req)
+}
+
+// EditMessage 调用 chat_service 编辑消息
+func EditMessage(ctx context.Context, req *chat.EditMessageReq) (*chat.EditMessageRes, error) {
+	return chatCli.EditMessage(ctx, req)
+}
+
+// GetEditHistory 调用 chat_service 查询编辑历史
+func GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq) (*chat.GetEditHistoryRes, error) {
+	return chatCli.GetEditHistory(ctx, req)
+}
+
+// SyncMessages 调用 chat_service 同步消息
+// 客户端断线重连后，携带每个会话的本地最大 seq，服务端返回增量消息
+func SyncMessages(ctx context.Context, req *chat.SyncMessagesReq) (*chat.SyncMessagesRes, error) {
+	return chatCli.SyncMessages(ctx, req)
+}
