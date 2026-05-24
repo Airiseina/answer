@@ -104,6 +104,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetOrCreatePrivateConversation": kitex.NewMethodInfo(
+		getOrCreatePrivateConversationHandler,
+		newChatServiceGetOrCreatePrivateConversationArgs,
+		newChatServiceGetOrCreatePrivateConversationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"RecallMessage": kitex.NewMethodInfo(
 		recallMessageHandler,
 		newChatServiceRecallMessageArgs,
@@ -432,6 +439,24 @@ func newChatServiceGetConversationMembersResult() interface{} {
 	return chat.NewChatServiceGetConversationMembersResult()
 }
 
+func getOrCreatePrivateConversationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceGetOrCreatePrivateConversationArgs)
+	realResult := result.(*chat.ChatServiceGetOrCreatePrivateConversationResult)
+	success, err := handler.(chat.ChatService).GetOrCreatePrivateConversation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceGetOrCreatePrivateConversationArgs() interface{} {
+	return chat.NewChatServiceGetOrCreatePrivateConversationArgs()
+}
+
+func newChatServiceGetOrCreatePrivateConversationResult() interface{} {
+	return chat.NewChatServiceGetOrCreatePrivateConversationResult()
+}
+
 func recallMessageHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*chat.ChatServiceRecallMessageArgs)
 	realResult := result.(*chat.ChatServiceRecallMessageResult)
@@ -639,6 +664,16 @@ func (p *kClient) GetConversationMembers(ctx context.Context, req *chat.GetConve
 	_args.Req = req
 	var _result chat.ChatServiceGetConversationMembersResult
 	if err = p.c.Call(ctx, "GetConversationMembers", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetOrCreatePrivateConversation(ctx context.Context, req *chat.GetOrCreatePrivateConversationReq) (r *chat.GetOrCreatePrivateConversationRes, err error) {
+	var _args chat.ChatServiceGetOrCreatePrivateConversationArgs
+	_args.Req = req
+	var _result chat.ChatServiceGetOrCreatePrivateConversationResult
+	if err = p.c.Call(ctx, "GetOrCreatePrivateConversation", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

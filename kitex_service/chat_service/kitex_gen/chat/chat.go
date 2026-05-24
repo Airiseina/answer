@@ -1294,6 +1294,82 @@ var fieldIDToName_GetConversationMembersRes = map[int16]string{
 	2: "member_ids",
 }
 
+type GetOrCreatePrivateConversationReq struct {
+	UserIdA int64 `thrift:"user_id_a,1" frugal:"1,default,i64" json:"user_id_a"`
+	UserIdB int64 `thrift:"user_id_b,2" frugal:"2,default,i64" json:"user_id_b"`
+}
+
+func NewGetOrCreatePrivateConversationReq() *GetOrCreatePrivateConversationReq {
+	return &GetOrCreatePrivateConversationReq{}
+}
+
+func (p *GetOrCreatePrivateConversationReq) InitDefault() {
+}
+
+func (p *GetOrCreatePrivateConversationReq) GetUserIdA() (v int64) {
+	return p.UserIdA
+}
+
+func (p *GetOrCreatePrivateConversationReq) GetUserIdB() (v int64) {
+	return p.UserIdB
+}
+func (p *GetOrCreatePrivateConversationReq) SetUserIdA(val int64) {
+	p.UserIdA = val
+}
+func (p *GetOrCreatePrivateConversationReq) SetUserIdB(val int64) {
+	p.UserIdB = val
+}
+
+func (p *GetOrCreatePrivateConversationReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetOrCreatePrivateConversationReq(%+v)", *p)
+}
+
+var fieldIDToName_GetOrCreatePrivateConversationReq = map[int16]string{
+	1: "user_id_a",
+	2: "user_id_b",
+}
+
+type GetOrCreatePrivateConversationRes struct {
+	Success        bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	ConversationId int64 `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
+}
+
+func NewGetOrCreatePrivateConversationRes() *GetOrCreatePrivateConversationRes {
+	return &GetOrCreatePrivateConversationRes{}
+}
+
+func (p *GetOrCreatePrivateConversationRes) InitDefault() {
+}
+
+func (p *GetOrCreatePrivateConversationRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *GetOrCreatePrivateConversationRes) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+func (p *GetOrCreatePrivateConversationRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetOrCreatePrivateConversationRes) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+
+func (p *GetOrCreatePrivateConversationRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetOrCreatePrivateConversationRes(%+v)", *p)
+}
+
+var fieldIDToName_GetOrCreatePrivateConversationRes = map[int16]string{
+	1: "success",
+	2: "conversation_id",
+}
+
 type RecallMessageReq struct {
 	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
 	MsgId          int64 `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
@@ -1873,6 +1949,8 @@ type ChatService interface {
 	MarkRead(ctx context.Context, req *MarkReadReq) (r *MarkReadRes, err error)
 
 	GetConversationMembers(ctx context.Context, req *GetConversationMembersReq) (r *GetConversationMembersRes, err error)
+
+	GetOrCreatePrivateConversation(ctx context.Context, req *GetOrCreatePrivateConversationReq) (r *GetOrCreatePrivateConversationRes, err error)
 
 	RecallMessage(ctx context.Context, req *RecallMessageReq) (r *RecallMessageRes, err error)
 
@@ -2868,6 +2946,82 @@ func (p *ChatServiceGetConversationMembersResult) String() string {
 }
 
 var fieldIDToName_ChatServiceGetConversationMembersResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceGetOrCreatePrivateConversationArgs struct {
+	Req *GetOrCreatePrivateConversationReq `thrift:"req,1" frugal:"1,default,GetOrCreatePrivateConversationReq" json:"req"`
+}
+
+func NewChatServiceGetOrCreatePrivateConversationArgs() *ChatServiceGetOrCreatePrivateConversationArgs {
+	return &ChatServiceGetOrCreatePrivateConversationArgs{}
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationArgs) InitDefault() {
+}
+
+var ChatServiceGetOrCreatePrivateConversationArgs_Req_DEFAULT *GetOrCreatePrivateConversationReq
+
+func (p *ChatServiceGetOrCreatePrivateConversationArgs) GetReq() (v *GetOrCreatePrivateConversationReq) {
+	if !p.IsSetReq() {
+		return ChatServiceGetOrCreatePrivateConversationArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceGetOrCreatePrivateConversationArgs) SetReq(val *GetOrCreatePrivateConversationReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetOrCreatePrivateConversationArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetOrCreatePrivateConversationArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceGetOrCreatePrivateConversationResult struct {
+	Success *GetOrCreatePrivateConversationRes `thrift:"success,0,optional" frugal:"0,optional,GetOrCreatePrivateConversationRes" json:"success,omitempty"`
+}
+
+func NewChatServiceGetOrCreatePrivateConversationResult() *ChatServiceGetOrCreatePrivateConversationResult {
+	return &ChatServiceGetOrCreatePrivateConversationResult{}
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationResult) InitDefault() {
+}
+
+var ChatServiceGetOrCreatePrivateConversationResult_Success_DEFAULT *GetOrCreatePrivateConversationRes
+
+func (p *ChatServiceGetOrCreatePrivateConversationResult) GetSuccess() (v *GetOrCreatePrivateConversationRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceGetOrCreatePrivateConversationResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceGetOrCreatePrivateConversationResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetOrCreatePrivateConversationRes)
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceGetOrCreatePrivateConversationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetOrCreatePrivateConversationResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetOrCreatePrivateConversationResult = map[int16]string{
 	0: "success",
 }
 

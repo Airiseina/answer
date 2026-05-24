@@ -149,6 +149,14 @@ struct UpdateAvatarReq{
 1:i64 user_id,
 2:string avatar_url,
 }
+struct CreateBotUserReq{
+1:string name,
+2:string avatar_url,
+}
+struct CreateBotUserRes{
+1:bool success,
+2:i64 user_id,
+}
 service LoginService{
 RegisterRes Register(1:RegisterReq req)
 LoginRes Login(1:LoginReq req)
@@ -169,4 +177,5 @@ GetUserNamesRes GetUserNames(1:GetUserNamesReq req)
 GetUserIdsByAccountsRes GetUserIdsByAccounts(1:GetUserIdsByAccountsReq req)
 GetUsersInfoByAccountsRes GetUsersInfoByAccounts(1:GetUsersInfoByAccountsReq req)
 CommonRes UpdateAvatar(1:UpdateAvatarReq req)
+CreateBotUserRes CreateBotUser(1:CreateBotUserReq req)
 }

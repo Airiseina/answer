@@ -43,6 +43,7 @@ type WsMessage struct {
 	ConvSeqs         []ConvSeqItem      `json:"conv_seqs,omitempty"`
 	Limit            int16              `json:"limit,omitempty"`
 	ConvMessages     []ConvMessagesItem `json:"conv_messages,omitempty"`
+	MentionedIds     []int64            `json:"mentioned_ids,omitempty"`
 }
 
 type ConvSeqItem struct {

@@ -293,3 +293,12 @@ func (s *LoginServiceImpl) UpdateAvatar(ctx context.Context, req *user.UpdateAva
 	}
 	return &user.CommonRes{Success: success}, nil
 }
+
+func (s *LoginServiceImpl) CreateBotUser(ctx context.Context, req *user.CreateBotUserReq) (resp *user.CreateBotUserRes, err error) {
+	userID, err := s.userService.CreateBotUser(req.Name, req.AvatarUrl)
+	if err != nil {
+		klog.CtxErrorf(ctx, "创建Bot用户时发生系统错误: %v", err)
+		return &user.CreateBotUserRes{Success: false}, err
+	}
+	return &user.CreateBotUserRes{Success: true, UserId: userID}, nil
+}

@@ -104,7 +104,7 @@ interface AppContextType extends AppState {
   logout: () => void;
   wsConnect: () => void;
   wsDisconnect: () => void;
-  sendMessage: (convId: string, content: string) => void;
+  sendMessage: (convId: string, content: string, mentionedIds?: number[]) => void;
   setActiveConvId: (id: string | null) => void;
   addConversation: (conv: Conversation) => void;
   setFriends: (friends: FriendInfo[]) => void;
@@ -538,7 +538,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
   }, []);
 
-  const sendMessage = useCallback((convId: string, content: string) => {
+  const sendMessage = useCallback((convId: string, content: string, mentionedIds?: number[]) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     const conv = conversationsRef.current.find(c => c.id === convId);
     if (!conv) return;
@@ -549,6 +549,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content,
       client_seq: clientSeqRef.current,
     };
+    if (mentionedIds && mentionedIds.length > 0) {
+      msg.mentioned_ids = mentionedIds;
+    }
     if (conv.type === 1) {
       const myAccount = auth.account;
       const peerAccount = conv.peerAccount || conv.memberAccounts.find(a => a !== myAccount);

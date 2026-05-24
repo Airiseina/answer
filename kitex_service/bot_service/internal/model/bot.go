@@ -4,6 +4,7 @@ import "time"
 
 type Bot struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	UserID       int64     `gorm:"not null;index" json:"user_id"`
 	CreatorID    int64     `gorm:"not null;index" json:"creator_id"`
 	Name         string    `gorm:"type:varchar(50);not null" json:"name"`
 	AvatarURL    string    `gorm:"type:varchar(500);default:''" json:"avatar_url"`

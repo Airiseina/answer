@@ -3,6 +3,7 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"time"
 	"user_service/internal/model"
 
 	"gorm.io/gorm"
@@ -292,4 +293,19 @@ func (db *gor) UpdateAvatar(userID int64, avatarURL string) error {
 		return fmt.Errorf("更新头像失败: %w", err)
 	}
 	return nil
+}
+
+func (db *gor) CreateBotUser(name, avatarURL string) (int64, error) {
+	botUser := model.User{
+		Account:   fmt.Sprintf("bot_%d", time.Now().UnixMilli()),
+		Name:      name,
+		Hash:      "-",
+		AvatarURL: avatarURL,
+		IsBot:     true,
+	}
+	err := db.db.Create(&botUser).Error
+	if err != nil {
+		return 0, fmt.Errorf("创建Bot用户记录失败: %w", err)
+	}
+	return botUser.ID, nil
 }

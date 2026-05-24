@@ -165,6 +165,16 @@ struct GetConversationMembersRes {
     2: list<i64> member_ids
 }
 
+struct GetOrCreatePrivateConversationReq {
+    1: i64 user_id_a
+    2: i64 user_id_b
+}
+
+struct GetOrCreatePrivateConversationRes {
+    1: bool success
+    2: i64 conversation_id
+}
+
 // 撤回消息请求
 // 发送者在 2 分钟内可撤回自己发送的消息
 struct RecallMessageReq {
@@ -266,6 +276,7 @@ service ChatService {
     MarkReadRes MarkRead(1: MarkReadReq req)
     // 查询会话成员列表：用于 typing 等场景获取推送目标
     GetConversationMembersRes GetConversationMembers(1: GetConversationMembersReq req)
+    GetOrCreatePrivateConversationRes GetOrCreatePrivateConversation(1: GetOrCreatePrivateConversationReq req)
     // 撤回消息：2 分钟内可撤回，更新 PG 状态并通过 WS 通知对方
     RecallMessageRes RecallMessage(1: RecallMessageReq req)
     // 编辑消息：更新 PG 内容并标记 is_edited，通过 WS 通知对方

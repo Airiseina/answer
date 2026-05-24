@@ -146,6 +146,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateBotUser": kitex.NewMethodInfo(
+		createBotUserHandler,
+		newLoginServiceCreateBotUserArgs,
+		newLoginServiceCreateBotUserResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -554,6 +561,24 @@ func newLoginServiceUpdateAvatarResult() interface{} {
 	return user.NewLoginServiceUpdateAvatarResult()
 }
 
+func createBotUserHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceCreateBotUserArgs)
+	realResult := result.(*user.LoginServiceCreateBotUserResult)
+	success, err := handler.(user.LoginService).CreateBotUser(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceCreateBotUserArgs() interface{} {
+	return user.NewLoginServiceCreateBotUserArgs()
+}
+
+func newLoginServiceCreateBotUserResult() interface{} {
+	return user.NewLoginServiceCreateBotUserResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -749,6 +774,16 @@ func (p *kClient) UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq) (
 	_args.Req = req
 	var _result user.LoginServiceUpdateAvatarResult
 	if err = p.c.Call(ctx, "UpdateAvatar", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateBotUser(ctx context.Context, req *user.CreateBotUserReq) (r *user.CreateBotUserRes, err error) {
+	var _args user.LoginServiceCreateBotUserArgs
+	_args.Req = req
+	var _result user.LoginServiceCreateBotUserResult
+	if err = p.c.Call(ctx, "CreateBotUser", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

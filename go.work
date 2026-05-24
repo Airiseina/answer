@@ -5,6 +5,7 @@ use (
 	./kitex_service/bot_service
 	./kitex_service/chat_service
 	./kitex_service/user_service
+	./kitex_service/work_service
 	./msg_gateway
 	./pkg
 	kitex_service/group_service

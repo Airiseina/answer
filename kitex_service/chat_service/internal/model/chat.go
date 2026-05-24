@@ -34,9 +34,15 @@ type BaseContent struct {
 	Type string `json:"type"`
 }
 
+type MentionItem struct {
+	UserID int64  `json:"user_id"`
+	Name   string `json:"name"`
+}
+
 type TextContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Type     string        `json:"type"`
+	Text     string        `json:"text"`
+	Mentions []MentionItem `json:"mentions,omitempty"`
 }
 
 type ImageContent struct {

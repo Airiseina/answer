@@ -4,12 +4,14 @@ go 1.26.1
 
 require (
 	answer_pkg v0.0.0
+	bot_service v0.0.0
 	github.com/cloudwego/kitex v0.16.2
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/kitex-contrib/obs-opentelemetry v0.3.0
 	github.com/kitex-contrib/obs-opentelemetry/logging/zap v0.0.0-20251121033812-f6c3e41f13e9
 	github.com/kitex-contrib/registry-etcd v0.3.0
+	github.com/redis/go-redis/v9 v9.19.0
 	github.com/spf13/viper v1.21.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
 	go.opentelemetry.io/otel v1.43.0

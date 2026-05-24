@@ -41,16 +41,25 @@ export async function uploadFile(file: File): Promise<{ code: number; msg: strin
   }
 }
 
-export function parseMessageContent(content: string): { type: string; text?: string; url?: string; filename?: string; size?: number; width?: number; height?: number; duration?: number } {
-  try {
-    const parsed = JSON.parse(content);
-    if (parsed && parsed.type) return parsed;
-  } catch {}
-  return { type: 'text', text: content };
+export interface MentionItem {
+  user_id: number
+  name: string
 }
 
-export function buildTextContent(text: string): string {
-  return JSON.stringify({ type: 'text', text });
+export function parseMessageContent(content: string): { type: string; text?: string; url?: string; filename?: string; size?: number; width?: number; height?: number; duration?: number; mentions?: MentionItem[] } {
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed && parsed.type) return parsed
+  } catch {}
+  return { type: 'text', text: content }
+}
+
+export function buildTextContent(text: string, mentions?: MentionItem[]): string {
+  const obj: any = { type: 'text', text }
+  if (mentions && mentions.length > 0) {
+    obj.mentions = mentions
+  }
+  return JSON.stringify(obj)
 }
 
 export function buildMediaContent(mediaType: 'image' | 'file' | 'voice', url: string, extra: Record<string, any> = {}): string {

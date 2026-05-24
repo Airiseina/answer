@@ -38,7 +38,7 @@ struct GetBotRes {
     2: optional BotInfo bot_info
 }
 
-struct GetSystemBotReq {}
+
 
 struct GetSystemBotRes {
     1: bool success
@@ -75,6 +75,7 @@ struct IsBotReq {
 
 struct IsBotRes {
     1: bool is_bot
+    2: optional i64 bot_id
 }
 
 struct GetBotConfigReq {
@@ -86,15 +87,29 @@ struct GetBotConfigRes {
     2: optional string api_key
     3: optional string model
     4: optional string system_prompt
+    5: optional i64 user_id
+}
+
+struct AddBotToConversationReq {
+    1: i64 operator_id
+    2: i64 bot_id
+    3: i64 conversation_id
+    4: i16 conversation_type
+}
+
+struct AddBotToConversationRes {
+    1: bool success
+    2: optional i64 conversation_id
 }
 
 service BotService {
     CreateBotRes CreateBot(1: CreateBotReq req)
     GetBotRes GetBot(1: GetBotReq req)
-    GetSystemBotRes GetSystemBot(1: GetSystemBotReq req)
+    GetSystemBotRes GetSystemBot()
     GetUserBotsRes GetUserBots(1: GetUserBotsReq req)
     CommonRes UpdateBot(1: UpdateBotReq req)
     CommonRes DeleteBot(1: DeleteBotReq req)
     IsBotRes IsBot(1: IsBotReq req)
     GetBotConfigRes GetBotConfig(1: GetBotConfigReq req)
+    AddBotToConversationRes AddBotToConversation(1: AddBotToConversationReq req)
 }

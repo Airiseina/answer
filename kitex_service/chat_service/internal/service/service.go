@@ -125,7 +125,6 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	if convInfo != nil {
 		convType = convInfo.Type
 	}
-
 	if convType == model.ConvTypeGroup && convInfo.GroupID != 0 {
 		muted, muteErr := rpc.CheckMuted(ctx, convInfo.GroupID, senderID)
 		if muteErr != nil {
@@ -134,7 +133,6 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 			return nil, fmt.Errorf("你已被禁言")
 		}
 	}
-
 	if clientSeq > 0 {
 		dedupeKey := fmt.Sprintf("msg:dedup:%d:%d", senderID, clientSeq)
 		locked, err := svc.rdb.SetNX(ctx, dedupeKey, 1, 5*time.Minute).Result()
@@ -390,8 +388,8 @@ func (svc *ChatService) AddConversationMembers(ctx context.Context, conversation
 	if conv == nil || conv.ID == 0 {
 		return fmt.Errorf("会话不存在")
 	}
-	if conv.Type != model.ConvTypeGroup {
-		return fmt.Errorf("仅群聊会话支持添加成员")
+	if conv.Type != model.ConvTypeGroup && conv.Type != model.ConvTypePrivate {
+		return fmt.Errorf("仅群聊和私聊会话支持添加成员")
 	}
 	return svc.conversationDao.AddMembers(ctx, conversationID, memberIDs)
 }
@@ -478,6 +476,19 @@ func (svc *ChatService) GetConversationMembers(ctx context.Context, conversation
 		return nil, fmt.Errorf("查询会话成员失败: %w", err)
 	}
 	return members, nil
+}
+
+func (svc *ChatService) GetOrCreatePrivateConversation(ctx context.Context, userIDA, userIDB int64) (int64, error) {
+	if userIDA == userIDB {
+		return 0, fmt.Errorf("不能与自己创建会话")
+	}
+	convID, err := svc.conversationDao.GetOrCreatePrivateConversation(ctx, userIDA, userIDB, func() int64 {
+		return getConvSnowNode().Generate()
+	})
+	if err != nil {
+		return 0, fmt.Errorf("获取或创建单聊会话失败: %w", err)
+	}
+	return convID, nil
 }
 
 // RecallMessageResult 撤回消息的返回结果

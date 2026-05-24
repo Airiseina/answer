@@ -1,6 +1,7 @@
 package main
 
 import (
+	"answer_pkg/connect"
 	"answer_pkg/meter"
 	"answer_pkg/tracer"
 	"context"
@@ -119,6 +120,11 @@ func main() {
 	core.InitPushSecret(viper.GetString("jwt.Key"))
 	gatewayAddr := viper.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)
+	rdb, err := connect.ConnectRedis()
+	if err != nil {
+		klog.Fatalf("连接Redis失败: %v", err)
+	}
+	core.InitRedis(rdb)
 	rpc.Connect()
 	go core.GlobalManager.Start()
 	wsHandler := otelhttp.NewHandler(http.HandlerFunc(handleWebSocket), "/ws")

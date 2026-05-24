@@ -210,6 +210,18 @@ func (s *ChatServiceImpl) GetConversationMembers(ctx context.Context, req *chat.
 	}, nil
 }
 
+func (s *ChatServiceImpl) GetOrCreatePrivateConversation(ctx context.Context, req *chat.GetOrCreatePrivateConversationReq) (resp *chat.GetOrCreatePrivateConversationRes, err error) {
+	convID, err := s.chatService.GetOrCreatePrivateConversation(ctx, req.UserIdA, req.UserIdB)
+	if err != nil {
+		klog.CtxErrorf(ctx, "获取或创建单聊会话失败, userA=%d, userB=%d: %v", req.UserIdA, req.UserIdB, err)
+		return &chat.GetOrCreatePrivateConversationRes{Success: false}, nil
+	}
+	return &chat.GetOrCreatePrivateConversationRes{
+		Success:        true,
+		ConversationId: convID,
+	}, nil
+}
+
 func (s *ChatServiceImpl) RecallMessage(ctx context.Context, req *chat.RecallMessageReq) (resp *chat.RecallMessageRes, err error) {
 	result, err := s.chatService.RecallMessage(ctx, req.UserId, req.MsgId, req.ConversationId)
 	if err != nil {

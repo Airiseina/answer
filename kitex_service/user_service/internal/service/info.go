@@ -90,6 +90,14 @@ func (dao *UserService) UpdateAvatar(userID int64, avatarURL string) (bool, erro
 	return true, nil
 }
 
+func (dao *UserService) CreateBotUser(name, avatarURL string) (int64, error) {
+	userID, err := dao.dao.CreateBotUser(name, avatarURL)
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
+}
+
 func (dao *UserService) GetUserIdsByAccounts(accounts []string) ([]UserAccountDTO, error) {
 	users, err := dao.dao.GetUsersByAccounts(accounts)
 	if err != nil {

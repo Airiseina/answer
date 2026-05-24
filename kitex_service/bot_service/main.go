@@ -9,6 +9,7 @@ import (
 	"bot_service/internal/model"
 	"bot_service/internal/service"
 	"bot_service/kitex_gen/bot/botservice"
+	"bot_service/rpc"
 	"context"
 	"net"
 	"os"
@@ -49,6 +50,12 @@ func main() {
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
+	resolver, err := etcd.NewEtcdResolver([]string{etcdAddr})
+	if err != nil {
+		klog.Fatalf("服务发现出错: %v", err)
+	}
+	rpc.ConnectUserService(resolver)
+	rpc.ConnectChatService(resolver)
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4323")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
@@ -63,7 +70,7 @@ func main() {
 	}
 	botDao := dal.NewBotDao(db)
 	botService := service.NewBotService(botDao)
-	systemBotId, err := botService.InitSystemBot()
+	systemBotId, err := botService.InitSystemBot(context.Background())
 	if err != nil {
 		klog.Fatalf("系统Bot初始化失败:%v", err)
 	}

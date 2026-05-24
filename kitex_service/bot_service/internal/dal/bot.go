@@ -2,7 +2,10 @@ package dal
 
 import (
 	"bot_service/internal/model"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 func (d *botDao) CreateBot(bot model.Bot) error {
@@ -17,6 +20,9 @@ func (d *botDao) GetBot(botId int64) (model.Bot, error) {
 	var bot model.Bot
 	err := d.db.Where("id = ?", botId).First(&bot).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Bot{}, nil
+		}
 		return model.Bot{}, fmt.Errorf("查询Bot失败: %w", err)
 	}
 	return bot, nil
@@ -26,6 +32,9 @@ func (d *botDao) GetSystemBot() (model.Bot, error) {
 	var bot model.Bot
 	err := d.db.Where("is_system = ?", true).First(&bot).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Bot{}, nil
+		}
 		return model.Bot{}, fmt.Errorf("查询系统Bot失败: %w", err)
 	}
 	return bot, nil
@@ -58,9 +67,21 @@ func (d *botDao) DeleteBot(botId int64) error {
 
 func (d *botDao) IsBot(userId int64) (bool, error) {
 	var count int64
-	err := d.db.Model(&model.Bot{}).Where("id = ?", userId).Count(&count).Error
+	err := d.db.Model(&model.Bot{}).Where("user_id = ?", userId).Count(&count).Error
 	if err != nil {
 		return false, fmt.Errorf("查询IsBot失败: %w", err)
 	}
 	return count > 0, nil
+}
+
+func (d *botDao) GetBotByUserId(userId int64) (model.Bot, error) {
+	var bot model.Bot
+	err := d.db.Where("user_id = ?", userId).First(&bot).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return model.Bot{}, nil
+		}
+		return model.Bot{}, fmt.Errorf("查询Bot失败: %w", err)
+	}
+	return bot, nil
 }

@@ -21,5 +21,6 @@ type BotDao interface {
 	GetUserBots(creatorId int64) ([]model.Bot, error)
 	UpdateBot(botId int64, updates map[string]interface{}) error
 	DeleteBot(botId int64) error
-	IsBot(userId int64) (bool, error)
+	IsBot(userId int64) (bool, error) //未用上，是废代码
+	GetBotByUserId(userId int64) (model.Bot, error)
 }

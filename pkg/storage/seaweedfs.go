@@ -35,7 +35,6 @@ func InitSeaweedFS() {
 	FilerURL = viper.GetString("seaweedfs.filer_url")
 	BasePath = viper.GetString("seaweedfs.base_path")
 	PublicURL = viper.GetString("seaweedfs.public_url")
-
 	if FilerURL == "" {
 		FilerURL = "http://127.0.0.1:8888"
 	}
@@ -56,7 +55,7 @@ func InitSeaweedFS() {
 			lastErr = nil
 			break
 		}
-		lastErr = fmt.Errorf("Filer未就绪")
+		lastErr = fmt.Errorf("filer未就绪")
 		logger.Warn("SeaweedFS未就绪，3秒后重试...", zap.Int("attempt", i+1))
 		time.Sleep(3 * time.Second)
 	}
@@ -71,7 +70,6 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 		contentType = "application/octet-stream"
 	}
 	uploadURL := s.filerURL + s.basePath + "/" + objectName
-
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 	part, err := writer.CreateFormFile("file", filepath.Base(objectName))
@@ -84,7 +82,6 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 		return fmt.Errorf("写入文件数据失败: %w", err)
 	}
 	writer.Close()
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, &buf)
 	if err != nil {
 		logger.Error("创建上传请求失败", zap.Error(err))
@@ -92,14 +89,12 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Accept", "application/json")
-
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		logger.Error("SeaweedFS上传文件失败", zap.Error(err))
 		return fmt.Errorf("上传文件失败: %w", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		logger.Error("SeaweedFS上传失败", zap.Int("status", resp.StatusCode), zap.String("body", string(body)))

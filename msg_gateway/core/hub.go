@@ -19,12 +19,18 @@ import (
 	"msg_gateway/rpc"
 
 	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/redis/go-redis/v9"
 )
 
 var pushSecret []byte
+var rdb *redis.Client
 
 func InitPushSecret(secret string) {
 	pushSecret = []byte(secret)
+}
+
+func InitRedis(client *redis.Client) {
+	rdb = client
 }
 
 type Manager struct {
@@ -119,11 +125,9 @@ func (manager *Manager) renewAllOnline() {
 		userIDs = append(userIDs, uid)
 	}
 	manager.Lock.RUnlock()
-
 	if len(userIDs) == 0 {
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	for _, uid := range userIDs {
@@ -137,37 +141,31 @@ func (manager *Manager) renewAllOnline() {
 func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 	wsMsg := clientMsg.Message
 	sender := clientMsg.Client
-
 	// 处理标记已读消息
 	if wsMsg.Type == "mark_read" {
 		manager.handleMarkRead(sender, wsMsg)
 		return
 	}
-
 	// 处理输入状态消息：完全不落库，直接透传给会话中的其他在线成员
 	if wsMsg.Type == "typing" {
 		manager.handleTyping(sender, wsMsg)
 		return
 	}
-
 	// 处理撤回消息请求：调用 RPC 撤回后，向会话成员推送 recall 事件
 	if wsMsg.Type == "recall" {
 		manager.handleRecall(sender, wsMsg)
 		return
 	}
-
 	// 处理编辑消息请求：调用 RPC 编辑后，向会话成员推送 edit 事件
 	if wsMsg.Type == "edit" {
 		manager.handleEdit(sender, wsMsg)
 		return
 	}
-
 	// 处理同步消息请求：客户端断线重连后，携带各会话本地最大 seq，拉取增量消息
 	if wsMsg.Type == "sync" {
 		manager.handleSync(sender, wsMsg)
 		return
 	}
-
 	if wsMsg.Type != "chat" {
 		sender.Send(&WsMessage{
 			Type:      "system",
@@ -256,13 +254,13 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 	sender.Send(chatMsg)
 	meter.M.MessageSentTotal.Add(context.Background(), 1)
 	go manager.pushToMembers(resp.MemberIds, sender.UserId, chatMsg)
+	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, wsMsg.MentionedIds, pushContent) //此处应该改为account、、、、、、
 }
 
 func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg *WsMessage) {
 	if len(memberIDs) == 0 {
 		return
 	}
-
 	var otherMemberIDs []int64
 	for _, uid := range memberIDs {
 		if uid != senderID {
@@ -677,7 +675,6 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 	if limit > 200 {
 		limit = 200
 	}
-
 	var convSeqs []*chat.ConvSeqPair
 	for _, pair := range wsMsg.ConvSeqs {
 		if pair.ConversationID == 0 {
@@ -696,10 +693,8 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		})
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	resp, err := rpc.SyncMessages(ctx, &chat.SyncMessagesReq{
 		UserId:   sender.UserId,
 		ConvSeqs: convSeqs,
@@ -730,7 +725,6 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		}
 	}
 	accountMap := rpc.GetUserAccountMap(context.Background(), allSenderIDs)
-
 	var convMessages []ConvMessagesItem
 	for _, cm := range resp.ConvMessages {
 		var msgs []SyncMsgItem
@@ -763,4 +757,77 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		Success:      true,
 		ConvMessages: convMessages,
 	})
+}
+
+const (
+	convTypePrivate int16 = 1
+	convTypeGroup   int16 = 2
+	botTaskStream         = "bot:task:stream"
+)
+
+func (manager *Manager) triggerBots(senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string) {
+	if len(memberIDs) == 0 {
+		return
+	}
+	isMember := false
+	for _, m := range memberIDs {
+		if m == senderID {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		klog.Errorf("发送者[%d]不在会话[%d]成员列表中，拒绝触发Bot", senderID, conversationID)
+		return
+	}
+	mentionedSet := make(map[int64]struct{})
+	for _, id := range mentionedIDs {
+		mentionedSet[id] = struct{}{}
+	}
+	for _, memberID := range memberIDs {
+		if memberID == senderID {
+			continue
+		}
+		isBot, botId, err := rpc.IsBot(context.Background(), memberID)
+		if err != nil {
+			klog.Errorf("查询用户[%d]是否为Bot失败: %v", memberID, err)
+			continue
+		}
+		if !isBot {
+			continue
+		}
+		_, isMentioned := mentionedSet[memberID]
+		if convType == convTypeGroup {
+			if !isMentioned {
+				continue
+			}
+		} else if convType == convTypePrivate {
+			if len(memberIDs) == 2 {
+				continue
+			}
+			if !isMentioned {
+				continue
+			}
+		} else {
+			continue
+		}
+		task := map[string]interface{}{
+			"bot_id":          fmt.Sprintf("%d", botId),
+			"conversation_id": fmt.Sprintf("%d", conversationID),
+			"sender_id":       fmt.Sprintf("%d", senderID),
+			"content":         content,
+		}
+		taskJSON, _ := json.Marshal(task)
+		err = rdb.XAdd(context.Background(), &redis.XAddArgs{
+			Stream: botTaskStream,
+			Values: map[string]interface{}{
+				"task": string(taskJSON),
+			},
+			MaxLen: 10000,
+			Approx: true,
+		}).Err()
+		if err != nil {
+			klog.Errorf("推送Bot任务到Redis Stream失败: %v", err)
+		}
+	}
 }

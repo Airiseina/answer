@@ -30,6 +30,7 @@ type Client interface {
 	GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq, callOptions ...callopt.Option) (r *user.GetUserIdsByAccountsRes, err error)
 	GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq, callOptions ...callopt.Option) (r *user.GetUsersInfoByAccountsRes, err error)
 	UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	CreateBotUser(ctx context.Context, req *user.CreateBotUserReq, callOptions ...callopt.Option) (r *user.CreateBotUserRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -154,4 +155,9 @@ func (p *kLoginServiceClient) GetUsersInfoByAccounts(ctx context.Context, req *u
 func (p *kLoginServiceClient) UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdateAvatar(ctx, req)
+}
+
+func (p *kLoginServiceClient) CreateBotUser(ctx context.Context, req *user.CreateBotUserReq, callOptions ...callopt.Option) (r *user.CreateBotUserRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateBotUser(ctx, req)
 }

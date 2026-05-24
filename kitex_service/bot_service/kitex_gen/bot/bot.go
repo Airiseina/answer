@@ -316,25 +316,6 @@ var fieldIDToName_GetBotRes = map[int16]string{
 	2: "bot_info",
 }
 
-type GetSystemBotReq struct {
-}
-
-func NewGetSystemBotReq() *GetSystemBotReq {
-	return &GetSystemBotReq{}
-}
-
-func (p *GetSystemBotReq) InitDefault() {
-}
-
-func (p *GetSystemBotReq) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("GetSystemBotReq(%+v)", *p)
-}
-
-var fieldIDToName_GetSystemBotReq = map[int16]string{}
-
 type GetSystemBotRes struct {
 	Success bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
 	BotId   int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
@@ -636,7 +617,8 @@ var fieldIDToName_IsBotReq = map[int16]string{
 }
 
 type IsBotRes struct {
-	IsBot bool `thrift:"is_bot,1" frugal:"1,default,bool" json:"is_bot"`
+	IsBot bool   `thrift:"is_bot,1" frugal:"1,default,bool" json:"is_bot"`
+	BotId *int64 `thrift:"bot_id,2,optional" frugal:"2,optional,i64" json:"bot_id,omitempty"`
 }
 
 func NewIsBotRes() *IsBotRes {
@@ -649,8 +631,24 @@ func (p *IsBotRes) InitDefault() {
 func (p *IsBotRes) GetIsBot() (v bool) {
 	return p.IsBot
 }
+
+var IsBotRes_BotId_DEFAULT int64
+
+func (p *IsBotRes) GetBotId() (v int64) {
+	if !p.IsSetBotId() {
+		return IsBotRes_BotId_DEFAULT
+	}
+	return *p.BotId
+}
 func (p *IsBotRes) SetIsBot(val bool) {
 	p.IsBot = val
+}
+func (p *IsBotRes) SetBotId(val *int64) {
+	p.BotId = val
+}
+
+func (p *IsBotRes) IsSetBotId() bool {
+	return p.BotId != nil
 }
 
 func (p *IsBotRes) String() string {
@@ -662,6 +660,7 @@ func (p *IsBotRes) String() string {
 
 var fieldIDToName_IsBotRes = map[int16]string{
 	1: "is_bot",
+	2: "bot_id",
 }
 
 type GetBotConfigReq struct {
@@ -698,6 +697,7 @@ type GetBotConfigRes struct {
 	ApiKey       *string `thrift:"api_key,2,optional" frugal:"2,optional,string" json:"api_key,omitempty"`
 	Model        *string `thrift:"model,3,optional" frugal:"3,optional,string" json:"model,omitempty"`
 	SystemPrompt *string `thrift:"system_prompt,4,optional" frugal:"4,optional,string" json:"system_prompt,omitempty"`
+	UserId       *int64  `thrift:"user_id,5,optional" frugal:"5,optional,i64" json:"user_id,omitempty"`
 }
 
 func NewGetBotConfigRes() *GetBotConfigRes {
@@ -737,6 +737,15 @@ func (p *GetBotConfigRes) GetSystemPrompt() (v string) {
 	}
 	return *p.SystemPrompt
 }
+
+var GetBotConfigRes_UserId_DEFAULT int64
+
+func (p *GetBotConfigRes) GetUserId() (v int64) {
+	if !p.IsSetUserId() {
+		return GetBotConfigRes_UserId_DEFAULT
+	}
+	return *p.UserId
+}
 func (p *GetBotConfigRes) SetSuccess(val bool) {
 	p.Success = val
 }
@@ -748,6 +757,9 @@ func (p *GetBotConfigRes) SetModel(val *string) {
 }
 func (p *GetBotConfigRes) SetSystemPrompt(val *string) {
 	p.SystemPrompt = val
+}
+func (p *GetBotConfigRes) SetUserId(val *int64) {
+	p.UserId = val
 }
 
 func (p *GetBotConfigRes) IsSetApiKey() bool {
@@ -762,6 +774,10 @@ func (p *GetBotConfigRes) IsSetSystemPrompt() bool {
 	return p.SystemPrompt != nil
 }
 
+func (p *GetBotConfigRes) IsSetUserId() bool {
+	return p.UserId != nil
+}
+
 func (p *GetBotConfigRes) String() string {
 	if p == nil {
 		return "<nil>"
@@ -774,6 +790,110 @@ var fieldIDToName_GetBotConfigRes = map[int16]string{
 	2: "api_key",
 	3: "model",
 	4: "system_prompt",
+	5: "user_id",
+}
+
+type AddBotToConversationReq struct {
+	OperatorId       int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	BotId            int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	ConversationId   int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	ConversationType int16 `thrift:"conversation_type,4" frugal:"4,default,i16" json:"conversation_type"`
+}
+
+func NewAddBotToConversationReq() *AddBotToConversationReq {
+	return &AddBotToConversationReq{}
+}
+
+func (p *AddBotToConversationReq) InitDefault() {
+}
+
+func (p *AddBotToConversationReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *AddBotToConversationReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *AddBotToConversationReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *AddBotToConversationReq) GetConversationType() (v int16) {
+	return p.ConversationType
+}
+func (p *AddBotToConversationReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *AddBotToConversationReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *AddBotToConversationReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *AddBotToConversationReq) SetConversationType(val int16) {
+	p.ConversationType = val
+}
+
+func (p *AddBotToConversationReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AddBotToConversationReq(%+v)", *p)
+}
+
+var fieldIDToName_AddBotToConversationReq = map[int16]string{
+	1: "operator_id",
+	2: "bot_id",
+	3: "conversation_id",
+	4: "conversation_type",
+}
+
+type AddBotToConversationRes struct {
+	Success        bool   `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	ConversationId *int64 `thrift:"conversation_id,2,optional" frugal:"2,optional,i64" json:"conversation_id,omitempty"`
+}
+
+func NewAddBotToConversationRes() *AddBotToConversationRes {
+	return &AddBotToConversationRes{}
+}
+
+func (p *AddBotToConversationRes) InitDefault() {
+}
+
+func (p *AddBotToConversationRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var AddBotToConversationRes_ConversationId_DEFAULT int64
+
+func (p *AddBotToConversationRes) GetConversationId() (v int64) {
+	if !p.IsSetConversationId() {
+		return AddBotToConversationRes_ConversationId_DEFAULT
+	}
+	return *p.ConversationId
+}
+func (p *AddBotToConversationRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *AddBotToConversationRes) SetConversationId(val *int64) {
+	p.ConversationId = val
+}
+
+func (p *AddBotToConversationRes) IsSetConversationId() bool {
+	return p.ConversationId != nil
+}
+
+func (p *AddBotToConversationRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AddBotToConversationRes(%+v)", *p)
+}
+
+var fieldIDToName_AddBotToConversationRes = map[int16]string{
+	1: "success",
+	2: "conversation_id",
 }
 
 type BotService interface {
@@ -781,7 +901,7 @@ type BotService interface {
 
 	GetBot(ctx context.Context, req *GetBotReq) (r *GetBotRes, err error)
 
-	GetSystemBot(ctx context.Context, req *GetSystemBotReq) (r *GetSystemBotRes, err error)
+	GetSystemBot(ctx context.Context) (r *GetSystemBotRes, err error)
 
 	GetUserBots(ctx context.Context, req *GetUserBotsReq) (r *GetUserBotsRes, err error)
 
@@ -792,6 +912,8 @@ type BotService interface {
 	IsBot(ctx context.Context, req *IsBotReq) (r *IsBotRes, err error)
 
 	GetBotConfig(ctx context.Context, req *GetBotConfigReq) (r *GetBotConfigRes, err error)
+
+	AddBotToConversation(ctx context.Context, req *AddBotToConversationReq) (r *AddBotToConversationRes, err error)
 }
 
 type BotServiceCreateBotArgs struct {
@@ -947,7 +1069,6 @@ var fieldIDToName_BotServiceGetBotResult = map[int16]string{
 }
 
 type BotServiceGetSystemBotArgs struct {
-	Req *GetSystemBotReq `thrift:"req,1" frugal:"1,default,GetSystemBotReq" json:"req"`
 }
 
 func NewBotServiceGetSystemBotArgs() *BotServiceGetSystemBotArgs {
@@ -957,22 +1078,6 @@ func NewBotServiceGetSystemBotArgs() *BotServiceGetSystemBotArgs {
 func (p *BotServiceGetSystemBotArgs) InitDefault() {
 }
 
-var BotServiceGetSystemBotArgs_Req_DEFAULT *GetSystemBotReq
-
-func (p *BotServiceGetSystemBotArgs) GetReq() (v *GetSystemBotReq) {
-	if !p.IsSetReq() {
-		return BotServiceGetSystemBotArgs_Req_DEFAULT
-	}
-	return p.Req
-}
-func (p *BotServiceGetSystemBotArgs) SetReq(val *GetSystemBotReq) {
-	p.Req = val
-}
-
-func (p *BotServiceGetSystemBotArgs) IsSetReq() bool {
-	return p.Req != nil
-}
-
 func (p *BotServiceGetSystemBotArgs) String() string {
 	if p == nil {
 		return "<nil>"
@@ -980,9 +1085,7 @@ func (p *BotServiceGetSystemBotArgs) String() string {
 	return fmt.Sprintf("BotServiceGetSystemBotArgs(%+v)", *p)
 }
 
-var fieldIDToName_BotServiceGetSystemBotArgs = map[int16]string{
-	1: "req",
-}
+var fieldIDToName_BotServiceGetSystemBotArgs = map[int16]string{}
 
 type BotServiceGetSystemBotResult struct {
 	Success *GetSystemBotRes `thrift:"success,0,optional" frugal:"0,optional,GetSystemBotRes" json:"success,omitempty"`
@@ -1399,5 +1502,81 @@ func (p *BotServiceGetBotConfigResult) String() string {
 }
 
 var fieldIDToName_BotServiceGetBotConfigResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceAddBotToConversationArgs struct {
+	Req *AddBotToConversationReq `thrift:"req,1" frugal:"1,default,AddBotToConversationReq" json:"req"`
+}
+
+func NewBotServiceAddBotToConversationArgs() *BotServiceAddBotToConversationArgs {
+	return &BotServiceAddBotToConversationArgs{}
+}
+
+func (p *BotServiceAddBotToConversationArgs) InitDefault() {
+}
+
+var BotServiceAddBotToConversationArgs_Req_DEFAULT *AddBotToConversationReq
+
+func (p *BotServiceAddBotToConversationArgs) GetReq() (v *AddBotToConversationReq) {
+	if !p.IsSetReq() {
+		return BotServiceAddBotToConversationArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceAddBotToConversationArgs) SetReq(val *AddBotToConversationReq) {
+	p.Req = val
+}
+
+func (p *BotServiceAddBotToConversationArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceAddBotToConversationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceAddBotToConversationArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceAddBotToConversationArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceAddBotToConversationResult struct {
+	Success *AddBotToConversationRes `thrift:"success,0,optional" frugal:"0,optional,AddBotToConversationRes" json:"success,omitempty"`
+}
+
+func NewBotServiceAddBotToConversationResult() *BotServiceAddBotToConversationResult {
+	return &BotServiceAddBotToConversationResult{}
+}
+
+func (p *BotServiceAddBotToConversationResult) InitDefault() {
+}
+
+var BotServiceAddBotToConversationResult_Success_DEFAULT *AddBotToConversationRes
+
+func (p *BotServiceAddBotToConversationResult) GetSuccess() (v *AddBotToConversationRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceAddBotToConversationResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceAddBotToConversationResult) SetSuccess(x interface{}) {
+	p.Success = x.(*AddBotToConversationRes)
+}
+
+func (p *BotServiceAddBotToConversationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceAddBotToConversationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceAddBotToConversationResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceAddBotToConversationResult = map[int16]string{
 	0: "success",
 }

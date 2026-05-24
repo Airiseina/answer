@@ -708,6 +708,73 @@
   margin-top: 2px;
 }
 
+.mention-tag {
+  color: #1e90ff;
+  background: rgba(30, 144, 255, 0.1);
+  border-radius: 3px;
+  padding: 0 2px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.mention-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  margin-bottom: 4px;
+}
+
+.mention-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mention-picker-item:hover {
+  background: #f0f6ff;
+}
+
+.mp-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mp-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.mp-account {
+  font-size: 12px;
+  color: #999;
+}
+
 .msg-voice {
   display: flex;
   align-items: center;
@@ -731,6 +798,7 @@
   padding: 10px 20px 16px;
   background: var(--bg-white);
   border-top: 1px solid var(--border-light);
+  position: relative;
 }
 
 .pending-attachment {

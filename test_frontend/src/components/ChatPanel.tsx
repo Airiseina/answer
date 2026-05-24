@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../store/AppContext'
-import { api, uploadFile, parseMessageContent, buildTextContent, buildMediaContent } from '../api/client'
+import { api, uploadFile, parseMessageContent, buildTextContent, buildMediaContent, type MentionItem } from '../api/client'
 import './ChatPanel.css'
 
 interface PendingAttachment {
@@ -23,8 +23,13 @@ export default function ChatPanel() {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editInput, setEditInput] = useState('')
   const [editHistoryModal, setEditHistoryModal] = useState<{ msgId: string; histories: any[] } | null>(null)
+  const [mentionPickerVisible, setMentionPickerVisible] = useState(false)
+  const [mentionSearch, setMentionSearch] = useState('')
+  const [mentionStartPos, setMentionStartPos] = useState(-1)
+  const [pendingMentions, setPendingMentions] = useState<MentionItem[]>([])
   const msgEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const conv = conversations.find(c => c.id === activeConvId)
   const msgs = activeConvId ? (messages[activeConvId] || []) : []
@@ -50,19 +55,31 @@ export default function ChatPanel() {
       setPendingAttachment(null)
 
       if (input.trim()) {
-        sendMessage(activeConvId, buildTextContent(input.trim()))
+        const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
+        sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id))
         setInput('')
+        setPendingMentions([])
       }
       return
     }
 
     if (input.trim()) {
-      sendMessage(activeConvId, buildTextContent(input.trim()))
+      const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
+      sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id))
       setInput('')
+      setPendingMentions([])
+      setMentionPickerVisible(false)
+      setMentionStartPos(-1)
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (mentionPickerVisible && e.key === 'Escape') {
+      e.preventDefault()
+      setMentionPickerVisible(false)
+      setMentionStartPos(-1)
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -181,6 +198,112 @@ export default function ChatPanel() {
     }
   }
 
+  const renderTextWithMentions = (text: string, mentions?: MentionItem[]) => {
+    if (!mentions || mentions.length === 0) {
+      return text
+    }
+    const parts: React.ReactNode[] = []
+    let remaining = text
+    for (const mention of mentions) {
+      const mentionTag = `@${mention.name}`
+      const idx = remaining.indexOf(mentionTag)
+      if (idx === -1) continue
+      if (idx > 0) {
+        parts.push(remaining.substring(0, idx))
+      }
+      parts.push(
+        <span key={`mention-${mention.user_id}-${idx}`} className="mention-tag">
+          {mentionTag}
+        </span>
+      )
+      remaining = remaining.substring(idx + mentionTag.length)
+    }
+    if (remaining) {
+      parts.push(remaining)
+    }
+    return parts.length > 0 ? parts : text
+  }
+
+  const getMentionCandidates = () => {
+    if (!conv) return []
+    const myAccount = auth.account
+    const candidates: { account: string; name: string; userId: number }[] = []
+    const seen = new Set<string>()
+    for (const account of conv.memberAccounts) {
+      if (account === myAccount) continue
+      if (seen.has(account)) continue
+      seen.add(account)
+      const info = memberInfo[account]
+      const name = info?.name || account
+      candidates.push({ account, name, userId: parseInt(account) || 0 })
+    }
+    for (const f of friends) {
+      if (seen.has(f.friend_account)) continue
+      if (conv.type === 2) continue
+      seen.add(f.friend_account)
+      const name = f.remark || f.name
+      candidates.push({ account: f.friend_account, name, userId: parseInt(f.friend_account) || 0 })
+    }
+    return candidates
+  }
+
+  const handleInputChange = (value: string) => {
+    setInput(value)
+    if (activeConvId && value.trim()) {
+      sendTyping(activeConvId)
+    }
+    if (textareaRef.current) {
+      const cursorPos = textareaRef.current.selectionStart
+      const textBeforeCursor = value.substring(0, cursorPos)
+      const atMatch = textBeforeCursor.match(/@([^\s@]*)$/)
+      if (atMatch) {
+        setMentionPickerVisible(true)
+        setMentionSearch(atMatch[1])
+        setMentionStartPos(cursorPos - atMatch[0].length)
+      } else {
+        setMentionPickerVisible(false)
+        setMentionStartPos(-1)
+      }
+    }
+  }
+
+  const handleMentionSelect = (candidate: { account: string; name: string; userId: number }) => {
+    if (mentionStartPos === -1) return
+    const before = input.substring(0, mentionStartPos)
+    const after = input.substring(textareaRef.current?.selectionStart || input.length)
+    const newText = `${before}@${candidate.name} ${after}`
+    setInput(newText)
+    setMentionPickerVisible(false)
+    setMentionStartPos(-1)
+    setMentionSearch('')
+    setPendingMentions(prev => {
+      if (prev.find(m => m.user_id === candidate.userId)) return prev
+      return [...prev, { user_id: candidate.userId, name: candidate.name }]
+    })
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  const renderMentionPicker = () => {
+    const candidates = getMentionCandidates()
+    const filtered = mentionSearch
+      ? candidates.filter(c => c.name.toLowerCase().includes(mentionSearch.toLowerCase()) || c.account.toLowerCase().includes(mentionSearch.toLowerCase()))
+      : candidates
+    if (filtered.length === 0) return null
+    return (
+      <div className="mention-picker">
+        {filtered.map(c => (
+          <div key={c.account} className="mention-picker-item" onClick={() => handleMentionSelect(c)}>
+            <div className="mp-avatar">{c.name[0]?.toUpperCase() || '?'}</div>
+            <div className="mp-info">
+              <div className="mp-name">{c.name}</div>
+              <div className="mp-account">{c.account}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const renderMessageContent = (content: string) => {
     const parsed = parseMessageContent(content)
     switch (parsed.type) {
@@ -209,7 +332,11 @@ export default function ChatPanel() {
           </div>
         )
       default:
-        return <div className="msg-text">{parsed.text || content}</div>
+        return (
+          <div className="msg-text">
+            {renderTextWithMentions(parsed.text || content, parsed.mentions)}
+          </div>
+        )
     }
   }
 
@@ -504,17 +631,14 @@ export default function ChatPanel() {
           />
         </div>
         {renderPendingAttachment()}
+        {mentionPickerVisible && renderMentionPicker()}
         <div className="chat-input-row">
           <textarea
+            ref={textareaRef}
             value={input}
-            onChange={e => {
-              setInput(e.target.value)
-              if (activeConvId && e.target.value.trim()) {
-                sendTyping(activeConvId)
-              }
-            }}
+            onChange={e => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={pendingAttachment ? '添加消息说明（可选），Enter 发送...' : '输入消息，Enter 发送...'}
+            placeholder={pendingAttachment ? '添加消息说明（可选），Enter 发送...' : '输入消息，Enter 发送... @提及成员'}
             rows={3}
           />
           <button className="send-btn" onClick={handleSend} disabled={!input.trim() && !pendingAttachment}>

@@ -24,6 +24,7 @@ type Client interface {
 	DeleteConversation(ctx context.Context, req *chat.DeleteConversationReq, callOptions ...callopt.Option) (r *chat.DeleteConversationRes, err error)
 	MarkRead(ctx context.Context, req *chat.MarkReadReq, callOptions ...callopt.Option) (r *chat.MarkReadRes, err error)
 	GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq, callOptions ...callopt.Option) (r *chat.GetConversationMembersRes, err error)
+	GetOrCreatePrivateConversation(ctx context.Context, req *chat.GetOrCreatePrivateConversationReq, callOptions ...callopt.Option) (r *chat.GetOrCreatePrivateConversationRes, err error)
 	RecallMessage(ctx context.Context, req *chat.RecallMessageReq, callOptions ...callopt.Option) (r *chat.RecallMessageRes, err error)
 	EditMessage(ctx context.Context, req *chat.EditMessageReq, callOptions ...callopt.Option) (r *chat.EditMessageRes, err error)
 	GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq, callOptions ...callopt.Option) (r *chat.GetEditHistoryRes, err error)
@@ -122,6 +123,11 @@ func (p *kChatServiceClient) MarkRead(ctx context.Context, req *chat.MarkReadReq
 func (p *kChatServiceClient) GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq, callOptions ...callopt.Option) (r *chat.GetConversationMembersRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetConversationMembers(ctx, req)
+}
+
+func (p *kChatServiceClient) GetOrCreatePrivateConversation(ctx context.Context, req *chat.GetOrCreatePrivateConversationReq, callOptions ...callopt.Option) (r *chat.GetOrCreatePrivateConversationRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetOrCreatePrivateConversation(ctx, req)
 }
 
 func (p *kChatServiceClient) RecallMessage(ctx context.Context, req *chat.RecallMessageReq, callOptions ...callopt.Option) (r *chat.RecallMessageRes, err error) {

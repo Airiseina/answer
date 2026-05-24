@@ -69,6 +69,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"AddBotToConversation": kitex.NewMethodInfo(
+		addBotToConversationHandler,
+		newBotServiceAddBotToConversationArgs,
+		newBotServiceAddBotToConversationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -172,9 +179,9 @@ func newBotServiceGetBotResult() interface{} {
 }
 
 func getSystemBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*bot.BotServiceGetSystemBotArgs)
+	_ = arg.(*bot.BotServiceGetSystemBotArgs)
 	realResult := result.(*bot.BotServiceGetSystemBotResult)
-	success, err := handler.(bot.BotService).GetSystemBot(ctx, realArg.Req)
+	success, err := handler.(bot.BotService).GetSystemBot(ctx)
 	if err != nil {
 		return err
 	}
@@ -279,6 +286,24 @@ func newBotServiceGetBotConfigResult() interface{} {
 	return bot.NewBotServiceGetBotConfigResult()
 }
 
+func addBotToConversationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceAddBotToConversationArgs)
+	realResult := result.(*bot.BotServiceAddBotToConversationResult)
+	success, err := handler.(bot.BotService).AddBotToConversation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceAddBotToConversationArgs() interface{} {
+	return bot.NewBotServiceAddBotToConversationArgs()
+}
+
+func newBotServiceAddBotToConversationResult() interface{} {
+	return bot.NewBotServiceAddBotToConversationResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -309,9 +334,8 @@ func (p *kClient) GetBot(ctx context.Context, req *bot.GetBotReq) (r *bot.GetBot
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetSystemBot(ctx context.Context, req *bot.GetSystemBotReq) (r *bot.GetSystemBotRes, err error) {
+func (p *kClient) GetSystemBot(ctx context.Context) (r *bot.GetSystemBotRes, err error) {
 	var _args bot.BotServiceGetSystemBotArgs
-	_args.Req = req
 	var _result bot.BotServiceGetSystemBotResult
 	if err = p.c.Call(ctx, "GetSystemBot", &_args, &_result); err != nil {
 		return
@@ -364,6 +388,16 @@ func (p *kClient) GetBotConfig(ctx context.Context, req *bot.GetBotConfigReq) (r
 	_args.Req = req
 	var _result bot.BotServiceGetBotConfigResult
 	if err = p.c.Call(ctx, "GetBotConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq) (r *bot.AddBotToConversationRes, err error) {
+	var _args bot.BotServiceAddBotToConversationArgs
+	_args.Req = req
+	var _result bot.BotServiceAddBotToConversationResult
+	if err = p.c.Call(ctx, "AddBotToConversation", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

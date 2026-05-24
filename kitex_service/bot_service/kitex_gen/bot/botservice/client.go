@@ -13,12 +13,13 @@ import (
 type Client interface {
 	CreateBot(ctx context.Context, req *bot.CreateBotReq, callOptions ...callopt.Option) (r *bot.CreateBotRes, err error)
 	GetBot(ctx context.Context, req *bot.GetBotReq, callOptions ...callopt.Option) (r *bot.GetBotRes, err error)
-	GetSystemBot(ctx context.Context, req *bot.GetSystemBotReq, callOptions ...callopt.Option) (r *bot.GetSystemBotRes, err error)
+	GetSystemBot(ctx context.Context, callOptions ...callopt.Option) (r *bot.GetSystemBotRes, err error)
 	GetUserBots(ctx context.Context, req *bot.GetUserBotsReq, callOptions ...callopt.Option) (r *bot.GetUserBotsRes, err error)
 	UpdateBot(ctx context.Context, req *bot.UpdateBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
 	DeleteBot(ctx context.Context, req *bot.DeleteBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
 	IsBot(ctx context.Context, req *bot.IsBotReq, callOptions ...callopt.Option) (r *bot.IsBotRes, err error)
 	GetBotConfig(ctx context.Context, req *bot.GetBotConfigReq, callOptions ...callopt.Option) (r *bot.GetBotConfigRes, err error)
+	AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq, callOptions ...callopt.Option) (r *bot.AddBotToConversationRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -60,9 +61,9 @@ func (p *kBotServiceClient) GetBot(ctx context.Context, req *bot.GetBotReq, call
 	return p.kClient.GetBot(ctx, req)
 }
 
-func (p *kBotServiceClient) GetSystemBot(ctx context.Context, req *bot.GetSystemBotReq, callOptions ...callopt.Option) (r *bot.GetSystemBotRes, err error) {
+func (p *kBotServiceClient) GetSystemBot(ctx context.Context, callOptions ...callopt.Option) (r *bot.GetSystemBotRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetSystemBot(ctx, req)
+	return p.kClient.GetSystemBot(ctx)
 }
 
 func (p *kBotServiceClient) GetUserBots(ctx context.Context, req *bot.GetUserBotsReq, callOptions ...callopt.Option) (r *bot.GetUserBotsRes, err error) {
@@ -88,4 +89,9 @@ func (p *kBotServiceClient) IsBot(ctx context.Context, req *bot.IsBotReq, callOp
 func (p *kBotServiceClient) GetBotConfig(ctx context.Context, req *bot.GetBotConfigReq, callOptions ...callopt.Option) (r *bot.GetBotConfigRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetBotConfig(ctx, req)
+}
+
+func (p *kBotServiceClient) AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq, callOptions ...callopt.Option) (r *bot.AddBotToConversationRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AddBotToConversation(ctx, req)
 }
