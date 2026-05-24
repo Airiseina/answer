@@ -5,8 +5,12 @@ import (
 	"api_gateway/middleware"
 	"api_gateway/response"
 	"context"
+	"io"
+	"net/http"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
 
 const maxUploadSize = 50 * 1024 * 1024
@@ -32,8 +36,7 @@ func Upload(ctx context.Context, c *app.RequestContext) {
 	}
 	defer src.Close()
 	contentType := storage.GetContentType(file.Filename)
-	objectName := storage.GenerateObjectName(userId, file.Filename)
-	result, err := storage.UploadFile(ctx, userId, objectName, src, file.Size, contentType)
+	result, err := storage.UploadFile(ctx, userId, file.Filename, src, file.Size, contentType)
 	if err != nil {
 		response.Error(c, "上传失败", "请稍后重试")
 		return
@@ -45,4 +48,36 @@ func Upload(ctx context.Context, c *app.RequestContext) {
 		"file_size":  result.FileSize,
 		"media_type": mediaType,
 	})
+}
+
+func FileProxy(ctx context.Context, c *app.RequestContext) {
+	filepath := c.Param("filepath")
+	if filepath == "" || filepath == "/" {
+		c.SetStatusCode(http.StatusNotFound)
+		return
+	}
+	if !strings.HasPrefix(filepath, "/") {
+		filepath = "/" + filepath
+	}
+	targetURL := storage.FilerURL + filepath
+	hlog.CtxInfof(ctx, "FileProxy: %s -> %s", c.Request.URI().String(), targetURL)
+	resp, err := http.Get(targetURL)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "FileProxy请求SeaweedFS失败: url=%s, err=%v", targetURL, err)
+		c.SetStatusCode(http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "FileProxy读取响应体失败: url=%s, err=%v", targetURL, err)
+		c.SetStatusCode(http.StatusInternalServerError)
+		return
+	}
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	c.Header("Cache-Control", "public, max-age=86400")
+	c.Data(resp.StatusCode, contentType, body)
 }

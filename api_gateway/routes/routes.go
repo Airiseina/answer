@@ -10,6 +10,7 @@ import (
 func Routes(h *server.Hertz) {
 	h.POST("/register", handle.Register)
 	h.POST("/login", middleware.Authmiddleware.LoginHandler)
+	h.GET("/files/*filepath", handle.FileProxy)
 	authGroup := h.Group("/api", middleware.Authmiddleware.MiddlewareFunc())
 	authGroup.POST("/create_group", handle.CreateGroup)
 	authGroup.POST("/invite_members", handle.InviteMembers)
@@ -46,5 +47,7 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/chat/edit/:msg_id", handle.EditMessage)
 	authGroup.POST("/chat/edit_history/:msg_id", handle.GetEditHistory)
 	authGroup.POST("/chat/sync", handle.SyncMessages)
+	authGroup.POST("/chat/conversation_members", handle.GetConversationMembers)
+	authGroup.POST("/update_avatar", handle.UpdateAvatar)
 	authGroup.POST("/files", handle.Upload)
 }

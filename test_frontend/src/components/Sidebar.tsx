@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { useApp } from '../store/AppContext'
+import { uploadFile } from '../api/client'
 import './Sidebar.css'
 
 interface Props {
@@ -10,11 +13,47 @@ interface Props {
 }
 
 export default function Sidebar({ account, wsConnected, tab, onTabChange, onWsToggle, onLogout }: Props) {
+  const { memberInfo, updateAvatar } = useApp()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const avatar = memberInfo[account]?.avatar
+
+  const handleAvatarClick = () => {
+    avatarInputRef.current?.click()
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const res = await uploadFile(file)
+      if (res.code !== 0 || !res.data?.url) {
+        alert(res.msg || '上传失败')
+        return
+      }
+      await updateAvatar(res.data.url)
+    } catch {
+      alert('上传头像失败')
+    }
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+  }
+
   return (
     <div className="sidebar">
-      <div className="sidebar-avatar">
-        <div className="avatar-circle">{account ? account[0].toUpperCase() : '?'}</div>
+      <div className="sidebar-avatar" onClick={handleAvatarClick} title="点击更换头像">
+        {avatar ? (
+          <img src={avatar} alt={account} className="sidebar-avatar-img" />
+        ) : (
+          <div className="avatar-circle">{account ? account[0].toUpperCase() : '?'}</div>
+        )}
+        <div className="sidebar-avatar-overlay">📷</div>
       </div>
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleAvatarChange}
+      />
 
       <nav className="sidebar-nav">
         <button className={`sidebar-btn ${tab === 'chat' ? 'active' : ''}`} onClick={() => onTabChange('chat')} title="聊天">

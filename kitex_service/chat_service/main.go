@@ -9,6 +9,7 @@ import (
 	"chat_service/internal/model"
 	"chat_service/internal/service"
 	chat "chat_service/kitex_gen/chat/chatservice"
+	"chat_service/rpc"
 	"context"
 	"net"
 	"os"
@@ -49,6 +50,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
+	rpc.ConnectGroupService()
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4322")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)

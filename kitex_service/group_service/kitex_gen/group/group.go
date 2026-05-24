@@ -1108,6 +1108,73 @@ var fieldIDToName_GetJoinRequestsRes = map[int16]string{
 	1: "requests",
 }
 
+type CheckMutedReq struct {
+	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	UserId  int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+}
+
+func NewCheckMutedReq() *CheckMutedReq {
+	return &CheckMutedReq{}
+}
+
+func (p *CheckMutedReq) InitDefault() {
+}
+
+func (p *CheckMutedReq) GetGroupId() (v int64) {
+	return p.GroupId
+}
+
+func (p *CheckMutedReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *CheckMutedReq) SetGroupId(val int64) {
+	p.GroupId = val
+}
+func (p *CheckMutedReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *CheckMutedReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckMutedReq(%+v)", *p)
+}
+
+var fieldIDToName_CheckMutedReq = map[int16]string{
+	1: "group_id",
+	2: "user_id",
+}
+
+type CheckMutedRes struct {
+	IsMuted bool `thrift:"is_muted,1" frugal:"1,default,bool" json:"is_muted"`
+}
+
+func NewCheckMutedRes() *CheckMutedRes {
+	return &CheckMutedRes{}
+}
+
+func (p *CheckMutedRes) InitDefault() {
+}
+
+func (p *CheckMutedRes) GetIsMuted() (v bool) {
+	return p.IsMuted
+}
+func (p *CheckMutedRes) SetIsMuted(val bool) {
+	p.IsMuted = val
+}
+
+func (p *CheckMutedRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckMutedRes(%+v)", *p)
+}
+
+var fieldIDToName_CheckMutedRes = map[int16]string{
+	1: "is_muted",
+}
+
 type GroupService interface {
 	CreateGroup(ctx context.Context, req *CreateGroupReq) (r *CreateGroupRes, err error)
 
@@ -1134,6 +1201,8 @@ type GroupService interface {
 	HandleJoinReq(ctx context.Context, req *HandleJoinReqReq) (r *CommonRes, err error)
 
 	GetJoinRequests(ctx context.Context, req *GetJoinRequestsReq) (r *GetJoinRequestsRes, err error)
+
+	CheckMuted(ctx context.Context, req *CheckMutedReq) (r *CheckMutedRes, err error)
 }
 
 type GroupServiceCreateGroupArgs struct {
@@ -2121,5 +2190,81 @@ func (p *GroupServiceGetJoinRequestsResult) String() string {
 }
 
 var fieldIDToName_GroupServiceGetJoinRequestsResult = map[int16]string{
+	0: "success",
+}
+
+type GroupServiceCheckMutedArgs struct {
+	Req *CheckMutedReq `thrift:"req,1" frugal:"1,default,CheckMutedReq" json:"req"`
+}
+
+func NewGroupServiceCheckMutedArgs() *GroupServiceCheckMutedArgs {
+	return &GroupServiceCheckMutedArgs{}
+}
+
+func (p *GroupServiceCheckMutedArgs) InitDefault() {
+}
+
+var GroupServiceCheckMutedArgs_Req_DEFAULT *CheckMutedReq
+
+func (p *GroupServiceCheckMutedArgs) GetReq() (v *CheckMutedReq) {
+	if !p.IsSetReq() {
+		return GroupServiceCheckMutedArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *GroupServiceCheckMutedArgs) SetReq(val *CheckMutedReq) {
+	p.Req = val
+}
+
+func (p *GroupServiceCheckMutedArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *GroupServiceCheckMutedArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceCheckMutedArgs(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceCheckMutedArgs = map[int16]string{
+	1: "req",
+}
+
+type GroupServiceCheckMutedResult struct {
+	Success *CheckMutedRes `thrift:"success,0,optional" frugal:"0,optional,CheckMutedRes" json:"success,omitempty"`
+}
+
+func NewGroupServiceCheckMutedResult() *GroupServiceCheckMutedResult {
+	return &GroupServiceCheckMutedResult{}
+}
+
+func (p *GroupServiceCheckMutedResult) InitDefault() {
+}
+
+var GroupServiceCheckMutedResult_Success_DEFAULT *CheckMutedRes
+
+func (p *GroupServiceCheckMutedResult) GetSuccess() (v *CheckMutedRes) {
+	if !p.IsSetSuccess() {
+		return GroupServiceCheckMutedResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *GroupServiceCheckMutedResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CheckMutedRes)
+}
+
+func (p *GroupServiceCheckMutedResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *GroupServiceCheckMutedResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GroupServiceCheckMutedResult(%+v)", *p)
+}
+
+var fieldIDToName_GroupServiceCheckMutedResult = map[int16]string{
 	0: "success",
 }

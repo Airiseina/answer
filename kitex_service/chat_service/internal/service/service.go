@@ -4,6 +4,7 @@ import (
 	"answer_pkg/snowflake"
 	"chat_service/internal/dal"
 	"chat_service/internal/model"
+	"chat_service/rpc"
 	"context"
 	"fmt"
 	"strings"
@@ -123,6 +124,15 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	var convType int16
 	if convInfo != nil {
 		convType = convInfo.Type
+	}
+
+	if convType == model.ConvTypeGroup && convInfo.GroupID != 0 {
+		muted, muteErr := rpc.CheckMuted(ctx, convInfo.GroupID, senderID)
+		if muteErr != nil {
+			klog.CtxWarnf(ctx, "查询禁言状态失败, group_id=%d, user_id=%d: %v", convInfo.GroupID, senderID, muteErr)
+		} else if muted {
+			return nil, fmt.Errorf("你已被禁言")
+		}
 	}
 
 	if clientSeq > 0 {

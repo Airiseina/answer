@@ -151,8 +151,9 @@ var fieldIDToName_LoginReq = map[int16]string{
 }
 
 type LoginRes struct {
-	Id      int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
-	Account string `thrift:"account,2" frugal:"2,default,string" json:"account"`
+	Id        int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Account   string `thrift:"account,2" frugal:"2,default,string" json:"account"`
+	AvatarUrl string `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
 }
 
 func NewLoginRes() *LoginRes {
@@ -169,11 +170,18 @@ func (p *LoginRes) GetId() (v int64) {
 func (p *LoginRes) GetAccount() (v string) {
 	return p.Account
 }
+
+func (p *LoginRes) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
 func (p *LoginRes) SetId(val int64) {
 	p.Id = val
 }
 func (p *LoginRes) SetAccount(val string) {
 	p.Account = val
+}
+func (p *LoginRes) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
 }
 
 func (p *LoginRes) String() string {
@@ -186,6 +194,7 @@ func (p *LoginRes) String() string {
 var fieldIDToName_LoginRes = map[int16]string{
 	1: "id",
 	2: "account",
+	3: "avatar_url",
 }
 
 type CheckUsersExistReq struct {
@@ -852,6 +861,578 @@ var fieldIDToName_UpdateFriendRemarkReq = map[int16]string{
 	3: "remark",
 }
 
+type GetFriendGroupsReq struct {
+	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+}
+
+func NewGetFriendGroupsReq() *GetFriendGroupsReq {
+	return &GetFriendGroupsReq{}
+}
+
+func (p *GetFriendGroupsReq) InitDefault() {
+}
+
+func (p *GetFriendGroupsReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *GetFriendGroupsReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *GetFriendGroupsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFriendGroupsReq(%+v)", *p)
+}
+
+var fieldIDToName_GetFriendGroupsReq = map[int16]string{
+	1: "user_id",
+}
+
+type FriendGroupInfo struct {
+	GroupId int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	Name    string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+}
+
+func NewFriendGroupInfo() *FriendGroupInfo {
+	return &FriendGroupInfo{}
+}
+
+func (p *FriendGroupInfo) InitDefault() {
+}
+
+func (p *FriendGroupInfo) GetGroupId() (v int64) {
+	return p.GroupId
+}
+
+func (p *FriendGroupInfo) GetName() (v string) {
+	return p.Name
+}
+func (p *FriendGroupInfo) SetGroupId(val int64) {
+	p.GroupId = val
+}
+func (p *FriendGroupInfo) SetName(val string) {
+	p.Name = val
+}
+
+func (p *FriendGroupInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FriendGroupInfo(%+v)", *p)
+}
+
+var fieldIDToName_FriendGroupInfo = map[int16]string{
+	1: "group_id",
+	2: "name",
+}
+
+type GetFriendGroupsRes struct {
+	Groups []*FriendGroupInfo `thrift:"groups,1" frugal:"1,default,list<FriendGroupInfo>" json:"groups"`
+}
+
+func NewGetFriendGroupsRes() *GetFriendGroupsRes {
+	return &GetFriendGroupsRes{}
+}
+
+func (p *GetFriendGroupsRes) InitDefault() {
+}
+
+func (p *GetFriendGroupsRes) GetGroups() (v []*FriendGroupInfo) {
+	return p.Groups
+}
+func (p *GetFriendGroupsRes) SetGroups(val []*FriendGroupInfo) {
+	p.Groups = val
+}
+
+func (p *GetFriendGroupsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetFriendGroupsRes(%+v)", *p)
+}
+
+var fieldIDToName_GetFriendGroupsRes = map[int16]string{
+	1: "groups",
+}
+
+type SearchUserByAccountReq struct {
+	Account string `thrift:"account,1" frugal:"1,default,string" json:"account"`
+}
+
+func NewSearchUserByAccountReq() *SearchUserByAccountReq {
+	return &SearchUserByAccountReq{}
+}
+
+func (p *SearchUserByAccountReq) InitDefault() {
+}
+
+func (p *SearchUserByAccountReq) GetAccount() (v string) {
+	return p.Account
+}
+func (p *SearchUserByAccountReq) SetAccount(val string) {
+	p.Account = val
+}
+
+func (p *SearchUserByAccountReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchUserByAccountReq(%+v)", *p)
+}
+
+var fieldIDToName_SearchUserByAccountReq = map[int16]string{
+	1: "account",
+}
+
+type SearchUserResult_ struct {
+	Id        int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Account   string `thrift:"account,2" frugal:"2,default,string" json:"account"`
+	Name      string `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	AvatarUrl string `thrift:"avatar_url,4" frugal:"4,default,string" json:"avatar_url"`
+}
+
+func NewSearchUserResult_() *SearchUserResult_ {
+	return &SearchUserResult_{}
+}
+
+func (p *SearchUserResult_) InitDefault() {
+}
+
+func (p *SearchUserResult_) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *SearchUserResult_) GetAccount() (v string) {
+	return p.Account
+}
+
+func (p *SearchUserResult_) GetName() (v string) {
+	return p.Name
+}
+
+func (p *SearchUserResult_) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+func (p *SearchUserResult_) SetId(val int64) {
+	p.Id = val
+}
+func (p *SearchUserResult_) SetAccount(val string) {
+	p.Account = val
+}
+func (p *SearchUserResult_) SetName(val string) {
+	p.Name = val
+}
+func (p *SearchUserResult_) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+
+func (p *SearchUserResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchUserResult_(%+v)", *p)
+}
+
+var fieldIDToName_SearchUserResult_ = map[int16]string{
+	1: "id",
+	2: "account",
+	3: "name",
+	4: "avatar_url",
+}
+
+type SearchUserByAccountRes struct {
+	UserInfo *SearchUserResult_ `thrift:"user_info,1" frugal:"1,default,SearchUserResult_" json:"user_info"`
+}
+
+func NewSearchUserByAccountRes() *SearchUserByAccountRes {
+	return &SearchUserByAccountRes{}
+}
+
+func (p *SearchUserByAccountRes) InitDefault() {
+}
+
+var SearchUserByAccountRes_UserInfo_DEFAULT *SearchUserResult_
+
+func (p *SearchUserByAccountRes) GetUserInfo() (v *SearchUserResult_) {
+	if !p.IsSetUserInfo() {
+		return SearchUserByAccountRes_UserInfo_DEFAULT
+	}
+	return p.UserInfo
+}
+func (p *SearchUserByAccountRes) SetUserInfo(val *SearchUserResult_) {
+	p.UserInfo = val
+}
+
+func (p *SearchUserByAccountRes) IsSetUserInfo() bool {
+	return p.UserInfo != nil
+}
+
+func (p *SearchUserByAccountRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchUserByAccountRes(%+v)", *p)
+}
+
+var fieldIDToName_SearchUserByAccountRes = map[int16]string{
+	1: "user_info",
+}
+
+type GetUserNamesReq struct {
+	UserIds []int64 `thrift:"user_ids,1" frugal:"1,default,list<i64>" json:"user_ids"`
+}
+
+func NewGetUserNamesReq() *GetUserNamesReq {
+	return &GetUserNamesReq{}
+}
+
+func (p *GetUserNamesReq) InitDefault() {
+}
+
+func (p *GetUserNamesReq) GetUserIds() (v []int64) {
+	return p.UserIds
+}
+func (p *GetUserNamesReq) SetUserIds(val []int64) {
+	p.UserIds = val
+}
+
+func (p *GetUserNamesReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserNamesReq(%+v)", *p)
+}
+
+var fieldIDToName_GetUserNamesReq = map[int16]string{
+	1: "user_ids",
+}
+
+type UserNameInfo struct {
+	Id        int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Name      string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	Account   string `thrift:"account,3" frugal:"3,default,string" json:"account"`
+	AvatarUrl string `thrift:"avatar_url,4" frugal:"4,default,string" json:"avatar_url"`
+}
+
+func NewUserNameInfo() *UserNameInfo {
+	return &UserNameInfo{}
+}
+
+func (p *UserNameInfo) InitDefault() {
+}
+
+func (p *UserNameInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *UserNameInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *UserNameInfo) GetAccount() (v string) {
+	return p.Account
+}
+
+func (p *UserNameInfo) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+func (p *UserNameInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *UserNameInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *UserNameInfo) SetAccount(val string) {
+	p.Account = val
+}
+func (p *UserNameInfo) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+
+func (p *UserNameInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserNameInfo(%+v)", *p)
+}
+
+var fieldIDToName_UserNameInfo = map[int16]string{
+	1: "id",
+	2: "name",
+	3: "account",
+	4: "avatar_url",
+}
+
+type GetUserNamesRes struct {
+	Users []*UserNameInfo `thrift:"users,1" frugal:"1,default,list<UserNameInfo>" json:"users"`
+}
+
+func NewGetUserNamesRes() *GetUserNamesRes {
+	return &GetUserNamesRes{}
+}
+
+func (p *GetUserNamesRes) InitDefault() {
+}
+
+func (p *GetUserNamesRes) GetUsers() (v []*UserNameInfo) {
+	return p.Users
+}
+func (p *GetUserNamesRes) SetUsers(val []*UserNameInfo) {
+	p.Users = val
+}
+
+func (p *GetUserNamesRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserNamesRes(%+v)", *p)
+}
+
+var fieldIDToName_GetUserNamesRes = map[int16]string{
+	1: "users",
+}
+
+type GetUserIdsByAccountsReq struct {
+	Accounts []string `thrift:"accounts,1" frugal:"1,default,list<string>" json:"accounts"`
+}
+
+func NewGetUserIdsByAccountsReq() *GetUserIdsByAccountsReq {
+	return &GetUserIdsByAccountsReq{}
+}
+
+func (p *GetUserIdsByAccountsReq) InitDefault() {
+}
+
+func (p *GetUserIdsByAccountsReq) GetAccounts() (v []string) {
+	return p.Accounts
+}
+func (p *GetUserIdsByAccountsReq) SetAccounts(val []string) {
+	p.Accounts = val
+}
+
+func (p *GetUserIdsByAccountsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserIdsByAccountsReq(%+v)", *p)
+}
+
+var fieldIDToName_GetUserIdsByAccountsReq = map[int16]string{
+	1: "accounts",
+}
+
+type UserAccountPair struct {
+	Id      int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Account string `thrift:"account,2" frugal:"2,default,string" json:"account"`
+}
+
+func NewUserAccountPair() *UserAccountPair {
+	return &UserAccountPair{}
+}
+
+func (p *UserAccountPair) InitDefault() {
+}
+
+func (p *UserAccountPair) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *UserAccountPair) GetAccount() (v string) {
+	return p.Account
+}
+func (p *UserAccountPair) SetId(val int64) {
+	p.Id = val
+}
+func (p *UserAccountPair) SetAccount(val string) {
+	p.Account = val
+}
+
+func (p *UserAccountPair) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserAccountPair(%+v)", *p)
+}
+
+var fieldIDToName_UserAccountPair = map[int16]string{
+	1: "id",
+	2: "account",
+}
+
+type GetUserIdsByAccountsRes struct {
+	Users []*UserAccountPair `thrift:"users,1" frugal:"1,default,list<UserAccountPair>" json:"users"`
+}
+
+func NewGetUserIdsByAccountsRes() *GetUserIdsByAccountsRes {
+	return &GetUserIdsByAccountsRes{}
+}
+
+func (p *GetUserIdsByAccountsRes) InitDefault() {
+}
+
+func (p *GetUserIdsByAccountsRes) GetUsers() (v []*UserAccountPair) {
+	return p.Users
+}
+func (p *GetUserIdsByAccountsRes) SetUsers(val []*UserAccountPair) {
+	p.Users = val
+}
+
+func (p *GetUserIdsByAccountsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserIdsByAccountsRes(%+v)", *p)
+}
+
+var fieldIDToName_GetUserIdsByAccountsRes = map[int16]string{
+	1: "users",
+}
+
+type GetUsersInfoByAccountsReq struct {
+	Accounts []string `thrift:"accounts,1" frugal:"1,default,list<string>" json:"accounts"`
+}
+
+func NewGetUsersInfoByAccountsReq() *GetUsersInfoByAccountsReq {
+	return &GetUsersInfoByAccountsReq{}
+}
+
+func (p *GetUsersInfoByAccountsReq) InitDefault() {
+}
+
+func (p *GetUsersInfoByAccountsReq) GetAccounts() (v []string) {
+	return p.Accounts
+}
+func (p *GetUsersInfoByAccountsReq) SetAccounts(val []string) {
+	p.Accounts = val
+}
+
+func (p *GetUsersInfoByAccountsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUsersInfoByAccountsReq(%+v)", *p)
+}
+
+var fieldIDToName_GetUsersInfoByAccountsReq = map[int16]string{
+	1: "accounts",
+}
+
+type UserInfoItem struct {
+	Account   string `thrift:"account,1" frugal:"1,default,string" json:"account"`
+	Name      string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	AvatarUrl string `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
+}
+
+func NewUserInfoItem() *UserInfoItem {
+	return &UserInfoItem{}
+}
+
+func (p *UserInfoItem) InitDefault() {
+}
+
+func (p *UserInfoItem) GetAccount() (v string) {
+	return p.Account
+}
+
+func (p *UserInfoItem) GetName() (v string) {
+	return p.Name
+}
+
+func (p *UserInfoItem) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+func (p *UserInfoItem) SetAccount(val string) {
+	p.Account = val
+}
+func (p *UserInfoItem) SetName(val string) {
+	p.Name = val
+}
+func (p *UserInfoItem) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+
+func (p *UserInfoItem) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserInfoItem(%+v)", *p)
+}
+
+var fieldIDToName_UserInfoItem = map[int16]string{
+	1: "account",
+	2: "name",
+	3: "avatar_url",
+}
+
+type GetUsersInfoByAccountsRes struct {
+	Users []*UserInfoItem `thrift:"users,1" frugal:"1,default,list<UserInfoItem>" json:"users"`
+}
+
+func NewGetUsersInfoByAccountsRes() *GetUsersInfoByAccountsRes {
+	return &GetUsersInfoByAccountsRes{}
+}
+
+func (p *GetUsersInfoByAccountsRes) InitDefault() {
+}
+
+func (p *GetUsersInfoByAccountsRes) GetUsers() (v []*UserInfoItem) {
+	return p.Users
+}
+func (p *GetUsersInfoByAccountsRes) SetUsers(val []*UserInfoItem) {
+	p.Users = val
+}
+
+func (p *GetUsersInfoByAccountsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUsersInfoByAccountsRes(%+v)", *p)
+}
+
+var fieldIDToName_GetUsersInfoByAccountsRes = map[int16]string{
+	1: "users",
+}
+
+type UpdateAvatarReq struct {
+	UserId    int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	AvatarUrl string `thrift:"avatar_url,2" frugal:"2,default,string" json:"avatar_url"`
+}
+
+func NewUpdateAvatarReq() *UpdateAvatarReq {
+	return &UpdateAvatarReq{}
+}
+
+func (p *UpdateAvatarReq) InitDefault() {
+}
+
+func (p *UpdateAvatarReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *UpdateAvatarReq) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+func (p *UpdateAvatarReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *UpdateAvatarReq) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+
+func (p *UpdateAvatarReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateAvatarReq(%+v)", *p)
+}
+
+var fieldIDToName_UpdateAvatarReq = map[int16]string{
+	1: "user_id",
+	2: "avatar_url",
+}
+
 type LoginService interface {
 	Register(ctx context.Context, req *RegisterReq) (r *RegisterRes, err error)
 
@@ -884,6 +1465,12 @@ type LoginService interface {
 	SearchUserByAccount(ctx context.Context, req *SearchUserByAccountReq) (r *SearchUserByAccountRes, err error)
 
 	GetUserNames(ctx context.Context, req *GetUserNamesReq) (r *GetUserNamesRes, err error)
+
+	GetUserIdsByAccounts(ctx context.Context, req *GetUserIdsByAccountsReq) (r *GetUserIdsByAccountsRes, err error)
+
+	GetUsersInfoByAccounts(ctx context.Context, req *GetUsersInfoByAccountsReq) (r *GetUsersInfoByAccountsRes, err error)
+
+	UpdateAvatar(ctx context.Context, req *UpdateAvatarReq) (r *CommonRes, err error)
 }
 
 type LoginServiceRegisterArgs struct {
@@ -1874,101 +2461,6 @@ var fieldIDToName_LoginServiceUpdateFriendRemarkResult = map[int16]string{
 	0: "success",
 }
 
-type GetFriendGroupsReq struct {
-	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
-}
-
-func NewGetFriendGroupsReq() *GetFriendGroupsReq {
-	return &GetFriendGroupsReq{}
-}
-
-func (p *GetFriendGroupsReq) InitDefault() {
-}
-
-func (p *GetFriendGroupsReq) GetUserId() (v int64) {
-	return p.UserId
-}
-func (p *GetFriendGroupsReq) SetUserId(val int64) {
-	p.UserId = val
-}
-
-func (p *GetFriendGroupsReq) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("GetFriendGroupsReq(%+v)", *p)
-}
-
-var fieldIDToName_GetFriendGroupsReq = map[int16]string{
-	1: "user_id",
-}
-
-type FriendGroupInfo struct {
-	GroupId int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
-	Name    string `thrift:"name,2" frugal:"2,default,string" json:"name"`
-}
-
-func NewFriendGroupInfo() *FriendGroupInfo {
-	return &FriendGroupInfo{}
-}
-
-func (p *FriendGroupInfo) InitDefault() {
-}
-
-func (p *FriendGroupInfo) GetGroupId() (v int64) {
-	return p.GroupId
-}
-func (p *FriendGroupInfo) GetName() (v string) {
-	return p.Name
-}
-func (p *FriendGroupInfo) SetGroupId(val int64) {
-	p.GroupId = val
-}
-func (p *FriendGroupInfo) SetName(val string) {
-	p.Name = val
-}
-
-func (p *FriendGroupInfo) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("FriendGroupInfo(%+v)", *p)
-}
-
-var fieldIDToName_FriendGroupInfo = map[int16]string{
-	1: "group_id",
-	2: "name",
-}
-
-type GetFriendGroupsRes struct {
-	Groups []*FriendGroupInfo `thrift:"groups,1" frugal:"1,default,list<FriendGroupInfo>" json:"groups"`
-}
-
-func NewGetFriendGroupsRes() *GetFriendGroupsRes {
-	return &GetFriendGroupsRes{}
-}
-
-func (p *GetFriendGroupsRes) InitDefault() {
-}
-
-func (p *GetFriendGroupsRes) GetGroups() (v []*FriendGroupInfo) {
-	return p.Groups
-}
-func (p *GetFriendGroupsRes) SetGroups(val []*FriendGroupInfo) {
-	p.Groups = val
-}
-
-func (p *GetFriendGroupsRes) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("GetFriendGroupsRes(%+v)", *p)
-}
-
-var fieldIDToName_GetFriendGroupsRes = map[int16]string{
-	1: "groups",
-}
-
 type LoginServiceGetFriendGroupsArgs struct {
 	Req *GetFriendGroupsReq `thrift:"req,1" frugal:"1,default,GetFriendGroupsReq" json:"req"`
 }
@@ -2045,75 +2537,6 @@ var fieldIDToName_LoginServiceGetFriendGroupsResult = map[int16]string{
 	0: "success",
 }
 
-type SearchUserByAccountReq struct {
-	Account string `thrift:"account,1" frugal:"1,default,string" json:"account"`
-}
-
-func NewSearchUserByAccountReq() *SearchUserByAccountReq { return &SearchUserByAccountReq{} }
-func (p *SearchUserByAccountReq) InitDefault()           {}
-func (p *SearchUserByAccountReq) GetAccount() (v string) { return p.Account }
-func (p *SearchUserByAccountReq) SetAccount(val string)  { p.Account = val }
-
-func (p *SearchUserByAccountReq) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("SearchUserByAccountReq(%+v)", *p)
-}
-
-var fieldIDToName_SearchUserByAccountReq = map[int16]string{1: "account"}
-
-type SearchUserResult struct {
-	Id      int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
-	Account string `thrift:"account,2" frugal:"2,default,string" json:"account"`
-	Name    string `thrift:"name,3" frugal:"3,default,string" json:"name"`
-}
-
-func NewSearchUserResult() *SearchUserResult       { return &SearchUserResult{} }
-func (p *SearchUserResult) InitDefault()           {}
-func (p *SearchUserResult) GetId() (v int64)       { return p.Id }
-func (p *SearchUserResult) GetAccount() (v string) { return p.Account }
-func (p *SearchUserResult) GetName() (v string)    { return p.Name }
-func (p *SearchUserResult) SetId(val int64)        { p.Id = val }
-func (p *SearchUserResult) SetAccount(val string)  { p.Account = val }
-func (p *SearchUserResult) SetName(val string)     { p.Name = val }
-
-func (p *SearchUserResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("SearchUserResult(%+v)", *p)
-}
-
-var fieldIDToName_SearchUserResult = map[int16]string{1: "id", 2: "account", 3: "name"}
-
-type SearchUserByAccountRes struct {
-	UserInfo *SearchUserResult `thrift:"user_info,1" frugal:"1,default,SearchUserResult" json:"user_info"`
-}
-
-func NewSearchUserByAccountRes() *SearchUserByAccountRes { return &SearchUserByAccountRes{} }
-func (p *SearchUserByAccountRes) InitDefault()           {}
-
-var SearchUserByAccountRes_UserInfo_DEFAULT *SearchUserResult
-
-func (p *SearchUserByAccountRes) GetUserInfo() (v *SearchUserResult) {
-	if !p.IsSetUserInfo() {
-		return SearchUserByAccountRes_UserInfo_DEFAULT
-	}
-	return p.UserInfo
-}
-func (p *SearchUserByAccountRes) SetUserInfo(val *SearchUserResult) { p.UserInfo = val }
-func (p *SearchUserByAccountRes) IsSetUserInfo() bool               { return p.UserInfo != nil }
-
-func (p *SearchUserByAccountRes) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("SearchUserByAccountRes(%+v)", *p)
-}
-
-var fieldIDToName_SearchUserByAccountRes = map[int16]string{1: "user_info"}
-
 type LoginServiceSearchUserByAccountArgs struct {
 	Req *SearchUserByAccountReq `thrift:"req,1" frugal:"1,default,SearchUserByAccountReq" json:"req"`
 }
@@ -2121,7 +2544,9 @@ type LoginServiceSearchUserByAccountArgs struct {
 func NewLoginServiceSearchUserByAccountArgs() *LoginServiceSearchUserByAccountArgs {
 	return &LoginServiceSearchUserByAccountArgs{}
 }
-func (p *LoginServiceSearchUserByAccountArgs) InitDefault() {}
+
+func (p *LoginServiceSearchUserByAccountArgs) InitDefault() {
+}
 
 var LoginServiceSearchUserByAccountArgs_Req_DEFAULT *SearchUserByAccountReq
 
@@ -2131,8 +2556,13 @@ func (p *LoginServiceSearchUserByAccountArgs) GetReq() (v *SearchUserByAccountRe
 	}
 	return p.Req
 }
-func (p *LoginServiceSearchUserByAccountArgs) SetReq(val *SearchUserByAccountReq) { p.Req = val }
-func (p *LoginServiceSearchUserByAccountArgs) IsSetReq() bool                     { return p.Req != nil }
+func (p *LoginServiceSearchUserByAccountArgs) SetReq(val *SearchUserByAccountReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceSearchUserByAccountArgs) IsSetReq() bool {
+	return p.Req != nil
+}
 
 func (p *LoginServiceSearchUserByAccountArgs) String() string {
 	if p == nil {
@@ -2141,7 +2571,9 @@ func (p *LoginServiceSearchUserByAccountArgs) String() string {
 	return fmt.Sprintf("LoginServiceSearchUserByAccountArgs(%+v)", *p)
 }
 
-var fieldIDToName_LoginServiceSearchUserByAccountArgs = map[int16]string{1: "req"}
+var fieldIDToName_LoginServiceSearchUserByAccountArgs = map[int16]string{
+	1: "req",
+}
 
 type LoginServiceSearchUserByAccountResult struct {
 	Success *SearchUserByAccountRes `thrift:"success,0,optional" frugal:"0,optional,SearchUserByAccountRes" json:"success,omitempty"`
@@ -2150,7 +2582,9 @@ type LoginServiceSearchUserByAccountResult struct {
 func NewLoginServiceSearchUserByAccountResult() *LoginServiceSearchUserByAccountResult {
 	return &LoginServiceSearchUserByAccountResult{}
 }
-func (p *LoginServiceSearchUserByAccountResult) InitDefault() {}
+
+func (p *LoginServiceSearchUserByAccountResult) InitDefault() {
+}
 
 var LoginServiceSearchUserByAccountResult_Success_DEFAULT *SearchUserByAccountRes
 
@@ -2163,7 +2597,10 @@ func (p *LoginServiceSearchUserByAccountResult) GetSuccess() (v *SearchUserByAcc
 func (p *LoginServiceSearchUserByAccountResult) SetSuccess(x interface{}) {
 	p.Success = x.(*SearchUserByAccountRes)
 }
-func (p *LoginServiceSearchUserByAccountResult) IsSetSuccess() bool { return p.Success != nil }
+
+func (p *LoginServiceSearchUserByAccountResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
 
 func (p *LoginServiceSearchUserByAccountResult) String() string {
 	if p == nil {
@@ -2172,64 +2609,9 @@ func (p *LoginServiceSearchUserByAccountResult) String() string {
 	return fmt.Sprintf("LoginServiceSearchUserByAccountResult(%+v)", *p)
 }
 
-var fieldIDToName_LoginServiceSearchUserByAccountResult = map[int16]string{0: "success"}
-
-type GetUserNamesReq struct {
-	UserIds []int64 `thrift:"user_ids,1" frugal:"1,default,list<i64>" json:"user_ids"`
+var fieldIDToName_LoginServiceSearchUserByAccountResult = map[int16]string{
+	0: "success",
 }
-
-func NewGetUserNamesReq() *GetUserNamesReq         { return &GetUserNamesReq{} }
-func (p *GetUserNamesReq) InitDefault()            {}
-func (p *GetUserNamesReq) GetUserIds() (v []int64) { return p.UserIds }
-func (p *GetUserNamesReq) SetUserIds(val []int64)  { p.UserIds = val }
-
-func (p *GetUserNamesReq) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("GetUserNamesReq(%+v)", *p)
-}
-
-var fieldIDToName_GetUserNamesReq = map[int16]string{1: "user_ids"}
-
-type UserNameInfo struct {
-	Id   int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
-	Name string `thrift:"name,2" frugal:"2,default,string" json:"name"`
-}
-
-func NewUserNameInfo() *UserNameInfo        { return &UserNameInfo{} }
-func (p *UserNameInfo) InitDefault()        {}
-func (p *UserNameInfo) GetId() (v int64)    { return p.Id }
-func (p *UserNameInfo) GetName() (v string) { return p.Name }
-func (p *UserNameInfo) SetId(val int64)     { p.Id = val }
-func (p *UserNameInfo) SetName(val string)  { p.Name = val }
-
-func (p *UserNameInfo) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("UserNameInfo(%+v)", *p)
-}
-
-var fieldIDToName_UserNameInfo = map[int16]string{1: "id", 2: "name"}
-
-type GetUserNamesRes struct {
-	Users []*UserNameInfo `thrift:"users,1" frugal:"1,default,list<UserNameInfo>" json:"users"`
-}
-
-func NewGetUserNamesRes() *GetUserNamesRes               { return &GetUserNamesRes{} }
-func (p *GetUserNamesRes) InitDefault()                  {}
-func (p *GetUserNamesRes) GetUsers() (v []*UserNameInfo) { return p.Users }
-func (p *GetUserNamesRes) SetUsers(val []*UserNameInfo)  { p.Users = val }
-
-func (p *GetUserNamesRes) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("GetUserNamesRes(%+v)", *p)
-}
-
-var fieldIDToName_GetUserNamesRes = map[int16]string{1: "users"}
 
 type LoginServiceGetUserNamesArgs struct {
 	Req *GetUserNamesReq `thrift:"req,1" frugal:"1,default,GetUserNamesReq" json:"req"`
@@ -2238,7 +2620,9 @@ type LoginServiceGetUserNamesArgs struct {
 func NewLoginServiceGetUserNamesArgs() *LoginServiceGetUserNamesArgs {
 	return &LoginServiceGetUserNamesArgs{}
 }
-func (p *LoginServiceGetUserNamesArgs) InitDefault() {}
+
+func (p *LoginServiceGetUserNamesArgs) InitDefault() {
+}
 
 var LoginServiceGetUserNamesArgs_Req_DEFAULT *GetUserNamesReq
 
@@ -2248,8 +2632,13 @@ func (p *LoginServiceGetUserNamesArgs) GetReq() (v *GetUserNamesReq) {
 	}
 	return p.Req
 }
-func (p *LoginServiceGetUserNamesArgs) SetReq(val *GetUserNamesReq) { p.Req = val }
-func (p *LoginServiceGetUserNamesArgs) IsSetReq() bool              { return p.Req != nil }
+func (p *LoginServiceGetUserNamesArgs) SetReq(val *GetUserNamesReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceGetUserNamesArgs) IsSetReq() bool {
+	return p.Req != nil
+}
 
 func (p *LoginServiceGetUserNamesArgs) String() string {
 	if p == nil {
@@ -2258,7 +2647,9 @@ func (p *LoginServiceGetUserNamesArgs) String() string {
 	return fmt.Sprintf("LoginServiceGetUserNamesArgs(%+v)", *p)
 }
 
-var fieldIDToName_LoginServiceGetUserNamesArgs = map[int16]string{1: "req"}
+var fieldIDToName_LoginServiceGetUserNamesArgs = map[int16]string{
+	1: "req",
+}
 
 type LoginServiceGetUserNamesResult struct {
 	Success *GetUserNamesRes `thrift:"success,0,optional" frugal:"0,optional,GetUserNamesRes" json:"success,omitempty"`
@@ -2267,7 +2658,9 @@ type LoginServiceGetUserNamesResult struct {
 func NewLoginServiceGetUserNamesResult() *LoginServiceGetUserNamesResult {
 	return &LoginServiceGetUserNamesResult{}
 }
-func (p *LoginServiceGetUserNamesResult) InitDefault() {}
+
+func (p *LoginServiceGetUserNamesResult) InitDefault() {
+}
 
 var LoginServiceGetUserNamesResult_Success_DEFAULT *GetUserNamesRes
 
@@ -2280,7 +2673,10 @@ func (p *LoginServiceGetUserNamesResult) GetSuccess() (v *GetUserNamesRes) {
 func (p *LoginServiceGetUserNamesResult) SetSuccess(x interface{}) {
 	p.Success = x.(*GetUserNamesRes)
 }
-func (p *LoginServiceGetUserNamesResult) IsSetSuccess() bool { return p.Success != nil }
+
+func (p *LoginServiceGetUserNamesResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
 
 func (p *LoginServiceGetUserNamesResult) String() string {
 	if p == nil {
@@ -2289,4 +2685,234 @@ func (p *LoginServiceGetUserNamesResult) String() string {
 	return fmt.Sprintf("LoginServiceGetUserNamesResult(%+v)", *p)
 }
 
-var fieldIDToName_LoginServiceGetUserNamesResult = map[int16]string{0: "success"}
+var fieldIDToName_LoginServiceGetUserNamesResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceGetUserIdsByAccountsArgs struct {
+	Req *GetUserIdsByAccountsReq `thrift:"req,1" frugal:"1,default,GetUserIdsByAccountsReq" json:"req"`
+}
+
+func NewLoginServiceGetUserIdsByAccountsArgs() *LoginServiceGetUserIdsByAccountsArgs {
+	return &LoginServiceGetUserIdsByAccountsArgs{}
+}
+
+func (p *LoginServiceGetUserIdsByAccountsArgs) InitDefault() {
+}
+
+var LoginServiceGetUserIdsByAccountsArgs_Req_DEFAULT *GetUserIdsByAccountsReq
+
+func (p *LoginServiceGetUserIdsByAccountsArgs) GetReq() (v *GetUserIdsByAccountsReq) {
+	if !p.IsSetReq() {
+		return LoginServiceGetUserIdsByAccountsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceGetUserIdsByAccountsArgs) SetReq(val *GetUserIdsByAccountsReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceGetUserIdsByAccountsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceGetUserIdsByAccountsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetUserIdsByAccountsArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetUserIdsByAccountsArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceGetUserIdsByAccountsResult struct {
+	Success *GetUserIdsByAccountsRes `thrift:"success,0,optional" frugal:"0,optional,GetUserIdsByAccountsRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceGetUserIdsByAccountsResult() *LoginServiceGetUserIdsByAccountsResult {
+	return &LoginServiceGetUserIdsByAccountsResult{}
+}
+
+func (p *LoginServiceGetUserIdsByAccountsResult) InitDefault() {
+}
+
+var LoginServiceGetUserIdsByAccountsResult_Success_DEFAULT *GetUserIdsByAccountsRes
+
+func (p *LoginServiceGetUserIdsByAccountsResult) GetSuccess() (v *GetUserIdsByAccountsRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceGetUserIdsByAccountsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceGetUserIdsByAccountsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetUserIdsByAccountsRes)
+}
+
+func (p *LoginServiceGetUserIdsByAccountsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceGetUserIdsByAccountsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetUserIdsByAccountsResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetUserIdsByAccountsResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceGetUsersInfoByAccountsArgs struct {
+	Req *GetUsersInfoByAccountsReq `thrift:"req,1" frugal:"1,default,GetUsersInfoByAccountsReq" json:"req"`
+}
+
+func NewLoginServiceGetUsersInfoByAccountsArgs() *LoginServiceGetUsersInfoByAccountsArgs {
+	return &LoginServiceGetUsersInfoByAccountsArgs{}
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsArgs) InitDefault() {
+}
+
+var LoginServiceGetUsersInfoByAccountsArgs_Req_DEFAULT *GetUsersInfoByAccountsReq
+
+func (p *LoginServiceGetUsersInfoByAccountsArgs) GetReq() (v *GetUsersInfoByAccountsReq) {
+	if !p.IsSetReq() {
+		return LoginServiceGetUsersInfoByAccountsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceGetUsersInfoByAccountsArgs) SetReq(val *GetUsersInfoByAccountsReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetUsersInfoByAccountsArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetUsersInfoByAccountsArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceGetUsersInfoByAccountsResult struct {
+	Success *GetUsersInfoByAccountsRes `thrift:"success,0,optional" frugal:"0,optional,GetUsersInfoByAccountsRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceGetUsersInfoByAccountsResult() *LoginServiceGetUsersInfoByAccountsResult {
+	return &LoginServiceGetUsersInfoByAccountsResult{}
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsResult) InitDefault() {
+}
+
+var LoginServiceGetUsersInfoByAccountsResult_Success_DEFAULT *GetUsersInfoByAccountsRes
+
+func (p *LoginServiceGetUsersInfoByAccountsResult) GetSuccess() (v *GetUsersInfoByAccountsRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceGetUsersInfoByAccountsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceGetUsersInfoByAccountsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetUsersInfoByAccountsRes)
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceGetUsersInfoByAccountsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetUsersInfoByAccountsResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetUsersInfoByAccountsResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceUpdateAvatarArgs struct {
+	Req *UpdateAvatarReq `thrift:"req,1" frugal:"1,default,UpdateAvatarReq" json:"req"`
+}
+
+func NewLoginServiceUpdateAvatarArgs() *LoginServiceUpdateAvatarArgs {
+	return &LoginServiceUpdateAvatarArgs{}
+}
+
+func (p *LoginServiceUpdateAvatarArgs) InitDefault() {
+}
+
+var LoginServiceUpdateAvatarArgs_Req_DEFAULT *UpdateAvatarReq
+
+func (p *LoginServiceUpdateAvatarArgs) GetReq() (v *UpdateAvatarReq) {
+	if !p.IsSetReq() {
+		return LoginServiceUpdateAvatarArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceUpdateAvatarArgs) SetReq(val *UpdateAvatarReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceUpdateAvatarArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceUpdateAvatarArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateAvatarArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateAvatarArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceUpdateAvatarResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceUpdateAvatarResult() *LoginServiceUpdateAvatarResult {
+	return &LoginServiceUpdateAvatarResult{}
+}
+
+func (p *LoginServiceUpdateAvatarResult) InitDefault() {
+}
+
+var LoginServiceUpdateAvatarResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceUpdateAvatarResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceUpdateAvatarResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceUpdateAvatarResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceUpdateAvatarResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceUpdateAvatarResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateAvatarResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateAvatarResult = map[int16]string{
+	0: "success",
+}

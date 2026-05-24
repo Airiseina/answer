@@ -227,6 +227,15 @@ func (db *gro) GetMemberRole(groupId int64, userId int64) (int64, error) {
 	return member.Role, nil
 }
 
+func (db *gro) CheckMuted(groupId int64, userId int64) (bool, error) {
+	var member model.GroupMember
+	err := db.db.Select("is_muted").Where("group_id = ? AND user_id = ?", groupId, userId).First(&member).Error
+	if err != nil {
+		return false, fmt.Errorf("查询禁言状态失败: %w", err)
+	}
+	return member.IsMuted, nil
+}
+
 // UpdateConversationID 将 chat_service 返回的 conversationID 回写到群组记录
 // 建立群组与会话的关联关系，后续邀请/踢人时通过此 ID 同步会话成员
 func (db *gro) UpdateConversationID(groupId int64, conversationID int64) error {

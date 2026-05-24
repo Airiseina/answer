@@ -101,3 +101,15 @@ func SearchUserByAccount(ctx context.Context, req *user.SearchUserByAccountReq) 
 func GetUserNames(ctx context.Context, req *user.GetUserNamesReq) (*user.GetUserNamesRes, error) {
 	return userCli.GetUserNames(ctx, req)
 }
+
+func GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq) (*user.GetUserIdsByAccountsRes, error) {
+	return userCli.GetUserIdsByAccounts(ctx, req)
+}
+
+func GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq) (*user.GetUsersInfoByAccountsRes, error) {
+	return userCli.GetUsersInfoByAccounts(ctx, req)
+}
+
+func UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq) (*user.CommonRes, error) {
+	return userCli.UpdateAvatar(ctx, req)
+}

@@ -5,10 +5,9 @@ package loginservice
 import (
 	"context"
 	"errors"
-	user "user_service/kitex_gen/user"
-
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
+	user "user_service/kitex_gen/user"
 )
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
@@ -123,6 +122,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		getUserNamesHandler,
 		newLoginServiceGetUserNamesArgs,
 		newLoginServiceGetUserNamesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetUserIdsByAccounts": kitex.NewMethodInfo(
+		getUserIdsByAccountsHandler,
+		newLoginServiceGetUserIdsByAccountsArgs,
+		newLoginServiceGetUserIdsByAccountsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetUsersInfoByAccounts": kitex.NewMethodInfo(
+		getUsersInfoByAccountsHandler,
+		newLoginServiceGetUsersInfoByAccountsArgs,
+		newLoginServiceGetUsersInfoByAccountsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateAvatar": kitex.NewMethodInfo(
+		updateAvatarHandler,
+		newLoginServiceUpdateAvatarArgs,
+		newLoginServiceUpdateAvatarResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -457,6 +477,7 @@ func searchUserByAccountHandler(ctx context.Context, handler interface{}, arg, r
 func newLoginServiceSearchUserByAccountArgs() interface{} {
 	return user.NewLoginServiceSearchUserByAccountArgs()
 }
+
 func newLoginServiceSearchUserByAccountResult() interface{} {
 	return user.NewLoginServiceSearchUserByAccountResult()
 }
@@ -474,8 +495,63 @@ func getUserNamesHandler(ctx context.Context, handler interface{}, arg, result i
 func newLoginServiceGetUserNamesArgs() interface{} {
 	return user.NewLoginServiceGetUserNamesArgs()
 }
+
 func newLoginServiceGetUserNamesResult() interface{} {
 	return user.NewLoginServiceGetUserNamesResult()
+}
+
+func getUserIdsByAccountsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetUserIdsByAccountsArgs)
+	realResult := result.(*user.LoginServiceGetUserIdsByAccountsResult)
+	success, err := handler.(user.LoginService).GetUserIdsByAccounts(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetUserIdsByAccountsArgs() interface{} {
+	return user.NewLoginServiceGetUserIdsByAccountsArgs()
+}
+
+func newLoginServiceGetUserIdsByAccountsResult() interface{} {
+	return user.NewLoginServiceGetUserIdsByAccountsResult()
+}
+
+func getUsersInfoByAccountsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetUsersInfoByAccountsArgs)
+	realResult := result.(*user.LoginServiceGetUsersInfoByAccountsResult)
+	success, err := handler.(user.LoginService).GetUsersInfoByAccounts(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetUsersInfoByAccountsArgs() interface{} {
+	return user.NewLoginServiceGetUsersInfoByAccountsArgs()
+}
+
+func newLoginServiceGetUsersInfoByAccountsResult() interface{} {
+	return user.NewLoginServiceGetUsersInfoByAccountsResult()
+}
+
+func updateAvatarHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceUpdateAvatarArgs)
+	realResult := result.(*user.LoginServiceUpdateAvatarResult)
+	success, err := handler.(user.LoginService).UpdateAvatar(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceUpdateAvatarArgs() interface{} {
+	return user.NewLoginServiceUpdateAvatarArgs()
+}
+
+func newLoginServiceUpdateAvatarResult() interface{} {
+	return user.NewLoginServiceUpdateAvatarResult()
 }
 
 type kClient struct {
@@ -643,6 +719,36 @@ func (p *kClient) GetUserNames(ctx context.Context, req *user.GetUserNamesReq) (
 	_args.Req = req
 	var _result user.LoginServiceGetUserNamesResult
 	if err = p.c.Call(ctx, "GetUserNames", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq) (r *user.GetUserIdsByAccountsRes, err error) {
+	var _args user.LoginServiceGetUserIdsByAccountsArgs
+	_args.Req = req
+	var _result user.LoginServiceGetUserIdsByAccountsResult
+	if err = p.c.Call(ctx, "GetUserIdsByAccounts", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq) (r *user.GetUsersInfoByAccountsRes, err error) {
+	var _args user.LoginServiceGetUsersInfoByAccountsArgs
+	_args.Req = req
+	var _result user.LoginServiceGetUsersInfoByAccountsResult
+	if err = p.c.Call(ctx, "GetUsersInfoByAccounts", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceUpdateAvatarArgs
+	_args.Req = req
+	var _result user.LoginServiceUpdateAvatarResult
+	if err = p.c.Call(ctx, "UpdateAvatar", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

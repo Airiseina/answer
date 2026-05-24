@@ -2,6 +2,7 @@ package core
 
 import (
 	"answer_pkg/meter"
+	"answer_pkg/storage"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -63,7 +64,6 @@ func (manager *Manager) Start() {
 			onlineCount := len(manager.Clients)
 			manager.Lock.Unlock()
 			meter.M.WsConnectTotal.Add(context.Background(), 1)
-
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 				defer cancel()
@@ -170,51 +170,67 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 
 	if wsMsg.Type != "chat" {
 		sender.Send(&WsMessage{
-			Type:    "system",
-			Reason:  "未知消息类型",
-			Success: false,
+			Type:      "system",
+			Reason:    "未知消息类型",
+			Success:   false,
+			ClientSeq: wsMsg.ClientSeq,
 		})
 		return
 	}
 	if wsMsg.Content == "" {
 		sender.Send(&WsMessage{
-			Type:    "system",
-			Reason:  "消息内容不能为空",
-			Success: false,
+			Type:           "system",
+			Reason:         "消息内容不能为空",
+			Success:        false,
+			ConversationID: wsMsg.ConversationID,
+			ClientSeq:      wsMsg.ClientSeq,
 		})
 		return
 	}
-	if wsMsg.ConversationID == 0 && wsMsg.PeerID == 0 {
+	if wsMsg.ConversationID == 0 && wsMsg.PeerAccount == "" {
 		sender.Send(&WsMessage{
-			Type:    "system",
-			Reason:  "conversation_id和peer_id不能同时为空",
-			Success: false,
+			Type:           "system",
+			Reason:         "conversation_id和peer_account不能同时为空",
+			Success:        false,
+			ConversationID: wsMsg.ConversationID,
+			ClientSeq:      wsMsg.ClientSeq,
 		})
 		return
+	}
+	var peerID int64
+	if wsMsg.PeerAccount != "" {
+		peerIdMap := rpc.GetUserIdMap(context.Background(), []string{wsMsg.PeerAccount})
+		if id, ok := peerIdMap[wsMsg.PeerAccount]; ok && id != 0 {
+			peerID = id
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	resp, err := rpc.SendMessage(ctx, &chat.SendMessageReq{
 		SenderId:       sender.UserId,
 		ConversationId: wsMsg.ConversationID,
-		PeerId:         wsMsg.PeerID,
+		PeerId:         peerID,
 		Content:        wsMsg.Content,
 		ClientSeq:      wsMsg.ClientSeq,
 	})
 	if err != nil {
 		klog.Errorf("RPC SendMessage失败: %v", err)
 		sender.Send(&WsMessage{
-			Type:    "system",
-			Reason:  "发送失败",
-			Success: false,
+			Type:           "system",
+			Reason:         "发送失败",
+			Success:        false,
+			ConversationID: wsMsg.ConversationID,
+			ClientSeq:      wsMsg.ClientSeq,
 		})
 		return
 	}
 	if !resp.Success {
 		sender.Send(&WsMessage{
-			Type:    "system",
-			Reason:  "发送失败",
-			Success: false,
+			Type:           "system",
+			Reason:         "发送失败",
+			Success:        false,
+			ConversationID: wsMsg.ConversationID,
+			ClientSeq:      wsMsg.ClientSeq,
 		})
 		return
 	}
@@ -230,9 +246,9 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		Type:             "chat",
 		ConversationID:   resp.ConversationId,
 		ConversationType: convType,
-		From:             sender.UserId,
+		FromAccount:      sender.UserAccount,
 		FromName:         sender.UserName,
-		Content:          pushContent,
+		Content:          storage.NormalizeContentURLs(pushContent),
 		MsgID:            resp.MsgId,
 		Seq:              resp.GetSeq(),
 		Timestamp:        resp.Timestamp,
@@ -458,7 +474,7 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 	typingMsg := &WsMessage{
 		Type:           "typing",
 		ConversationID: wsMsg.ConversationID,
-		From:           sender.UserId,
+		FromAccount:    sender.UserAccount,
 		FromName:       sender.UserName,
 	}
 
@@ -544,16 +560,15 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 		Type:           "recall",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
-		From:           sender.UserId,
+		FromAccount:    sender.UserAccount,
 		Success:        true,
 	})
 
-	// 向会话中的其他在线成员推送 recall 事件
 	recallMsg := &WsMessage{
 		Type:           "recall",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
-		From:           sender.UserId,
+		FromAccount:    sender.UserAccount,
 		FromName:       sender.UserName,
 	}
 	if resp.MemberIds != nil {
@@ -615,20 +630,19 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 		Type:           "edit",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
-		From:           sender.UserId,
-		NewContent:     wsMsg.NewContent,
+		FromAccount:    sender.UserAccount,
+		NewContent:     storage.NormalizeContentURLs(wsMsg.NewContent),
 		IsEdited:       true,
 		Success:        true,
 	})
 
-	// 向会话中的其他在线成员推送 edit 事件
 	editMsg := &WsMessage{
 		Type:           "edit",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
-		From:           sender.UserId,
+		FromAccount:    sender.UserAccount,
 		FromName:       sender.UserName,
-		NewContent:     wsMsg.NewContent,
+		NewContent:     storage.NormalizeContentURLs(wsMsg.NewContent),
 		IsEdited:       true,
 	}
 	if resp.MemberIds != nil {
@@ -709,6 +723,14 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 
+	var allSenderIDs []int64
+	for _, cm := range resp.ConvMessages {
+		for _, m := range cm.Messages {
+			allSenderIDs = append(allSenderIDs, m.SenderId)
+		}
+	}
+	accountMap := rpc.GetUserAccountMap(context.Background(), allSenderIDs)
+
 	var convMessages []ConvMessagesItem
 	for _, cm := range resp.ConvMessages {
 		var msgs []SyncMsgItem
@@ -716,9 +738,9 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 			msgs = append(msgs, SyncMsgItem{
 				MsgID:          m.MsgId,
 				ClientSeq:      m.ClientSeq,
-				SenderID:       m.SenderId,
+				SenderAccount:  accountMap[m.SenderId],
 				ConversationID: m.ConversationId,
-				Content:        m.Content,
+				Content:        storage.NormalizeContentURLs(m.Content),
 				Timestamp:      m.Timestamp,
 				Seq:            m.GetSeq(),
 				Status:         m.GetStatus(),

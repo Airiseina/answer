@@ -13,9 +13,11 @@ type BaseModel struct {
 
 type User struct {
 	BaseModel
-	Account string `json:"account" gorm:"type:varchar(20);uniqueIndex;not null"`
-	Name    string `json:"name" gorm:"type:varchar(20);not null"`
-	Hash    string `json:"hash" gorm:"not null"`
+	Account   string `json:"account" gorm:"type:varchar(20);uniqueIndex;not null"`
+	Name      string `json:"name" gorm:"type:varchar(20);not null"`
+	Hash      string `json:"hash" gorm:"not null"`
+	AvatarURL string `json:"avatar_url" gorm:"type:varchar(500);default:''"`
+	IsBot     bool   `json:"is_bot" gorm:"default:false;index"`
 }
 
 const (

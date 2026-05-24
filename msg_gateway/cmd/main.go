@@ -70,8 +70,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	userId := int64(userIdFloat)
 	klog.Infof("JWT 验证成功, userId: %d", userId)
 	userName := ""
+	userAccount := ""
 	if nameCtx, nameCancel := context.WithTimeout(context.Background(), 3*time.Second); nameCtx != nil {
 		userName = rpc.GetUserName(nameCtx, userId)
+		userAccount = rpc.GetUserAccount(nameCtx, userId)
 		nameCancel()
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -80,10 +82,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := &core.Client{
-		Manager:  &core.GlobalManager,
-		UserId:   userId,
-		UserName: userName,
-		Socket:   conn,
+		Manager:     &core.GlobalManager,
+		UserId:      userId,
+		UserName:    userName,
+		UserAccount: userAccount,
+		Socket:      conn,
 	}
 	core.GlobalManager.Register <- client
 	go client.ReadMessage()

@@ -3,7 +3,6 @@ import { api, parseMessageContent, buildMediaContent } from '../api/client';
 
 interface AuthState {
   token: string;
-  userId: string;
   account: string;
 }
 
@@ -11,8 +10,8 @@ interface WsMessage {
   type: string;
   conversation_id?: string;
   conversation_type?: number;
-  peer_id?: string;
-  from?: string;
+  peer_account?: string;
+  from_account?: string;
   from_name?: string;
   content?: string;
   msg_id?: string;
@@ -22,12 +21,13 @@ interface WsMessage {
   new_content?: string;
   is_edited?: boolean;
   seq?: number;
+  client_seq?: number;
   conv_messages?: {
     conversation_id: string;
     messages: {
       msg_id: string;
       client_seq: number;
-      sender_id: string;
+      sender_account: string;
       conversation_id: string;
       content: string;
       timestamp: number;
@@ -54,30 +54,35 @@ interface Conversation {
   id: string;
   name: string;
   type: number;
-  memberIds: string[];
-  peerId?: string;
-  groupId?: string;
+  memberAccounts: string[];
+  peerAccount?: string;
+  groupNumber?: string;
   lastMsg?: string;
   lastTime?: number;
   unread: number;
 }
 
 interface FriendInfo {
-  friend_id: number;
+  friend_account: string;
   name: string;
   remark: string;
   group_id: number;
 }
 
-// 用户在线状态映射：userId → online
 interface OnlineStatusMap {
-  [userId: string]: boolean;
+  [account: string]: boolean;
 }
 
-// 输入状态映射：conversationId → { userId → timestamp }
+interface MemberInfoMap {
+  [account: string]: {
+    name: string;
+    avatar: string;
+  };
+}
+
 interface TypingStatusMap {
   [convId: string]: {
-    [userId: string]: number; // 最后一次 typing 事件的时间戳
+    [account: string]: number;
   };
 }
 
@@ -89,11 +94,13 @@ interface AppState {
   activeConvId: string | null;
   friends: FriendInfo[];
   onlineStatus: OnlineStatusMap;
+  memberInfo: MemberInfoMap;
   typingStatus: TypingStatusMap;
+  systemNotification: string | null;
 }
 
 interface AppContextType extends AppState {
-  login: (token: string, userId: string, account: string) => void;
+  login: (token: string, account: string, avatarUrl?: string) => void;
   logout: () => void;
   wsConnect: () => void;
   wsDisconnect: () => void;
@@ -101,12 +108,15 @@ interface AppContextType extends AppState {
   setActiveConvId: (id: string | null) => void;
   addConversation: (conv: Conversation) => void;
   setFriends: (friends: FriendInfo[]) => void;
-  openChatWith: (targetId: string, name: string, type: number) => void;
+  openChatWith: (targetAccount: string, name: string, type: number) => void;
   loadConversations: () => void;
   sendTyping: (convId: string) => void;
-  loadOnlineStatus: (userIds: string[]) => void;
+  loadOnlineStatus: (accounts: string[]) => void;
+  loadConversationMembers: (accounts: string[]) => void;
+  updateAvatar: (avatarUrl: string) => Promise<boolean>;
   recallMessage: (convId: string, msgId: string) => void;
   editMessage: (convId: string, msgId: string, newContent: string) => void;
+  clearSystemNotification: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -130,7 +140,6 @@ function extractDisplayText(content: string): string {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>({
     token: localStorage.getItem('im_token') || '',
-    userId: localStorage.getItem('im_userId') || '',
     account: localStorage.getItem('im_account') || '',
   });
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -139,7 +148,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [onlineStatus, setOnlineStatus] = useState<OnlineStatusMap>({});
+  const [memberInfo, setMemberInfo] = useState<MemberInfoMap>({});
   const [typingStatus, setTypingStatus] = useState<TypingStatusMap>({});
+  const [systemNotification, setSystemNotification] = useState<string | null>(null);
   const [convMaxSeqs, setConvMaxSeqs] = useState<Record<string, number>>({});
   const wsRef = useRef<WebSocket | null>(null);
   const activeConvRef = useRef<string | null>(null);
@@ -148,27 +159,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const historyLoadedRef = useRef<Set<string>>(new Set());
   const conversationsRef = useRef<Conversation[]>(conversations);
   conversationsRef.current = conversations;
-  // 客户端序列号，用于消息去重：每次发送递增，保证同一用户的每次发送请求唯一
   const clientSeqRef = useRef<number>(0);
 
-  const login = useCallback((token: string, userId: string, account: string) => {
+  const login = useCallback((token: string, account: string, avatarUrl?: string) => {
     localStorage.setItem('im_token', token);
-    localStorage.setItem('im_userId', userId);
     localStorage.setItem('im_account', account);
-    setAuth({ token, userId, account });
+    setAuth({ token, account });
+    if (avatarUrl) {
+      setMemberInfo(prev => ({
+        ...prev,
+        [account]: { name: account, avatar: avatarUrl },
+      }));
+    }
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('im_token');
-    localStorage.removeItem('im_userId');
     localStorage.removeItem('im_account');
-    setAuth({ token: '', userId: '', account: '' });
+    setAuth({ token: '', account: '' });
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     setWsConnected(false);
     setConversations([]);
     setMessages({});
     setActiveConvId(null);
     setFriends([]);
+    setMemberInfo({});
     historyLoadedRef.current.clear();
   }, []);
 
@@ -179,13 +194,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: String(c.conversation_id),
         name: c.name || `会话 ${c.conversation_id}`,
         type: c.type,
-        memberIds: (c.member_ids || []).map((id: any) => String(id)),
-        groupId: c.group_id ? String(c.group_id) : undefined,
+        memberAccounts: (c.member_accounts || []).map((a: any) => String(a)),
+        groupNumber: c.group_number && c.group_number !== '0' ? String(c.group_number) : undefined,
         lastMsg: '',
         lastTime: 0,
         unread: c.unread_count || 0,
       }));
-      // 从会话列表中提取 max_seq，初始化本地 seq 记录
       const seqMap: Record<string, number> = {};
       for (const c of res.data.conversations) {
         if (c.max_seq && c.max_seq > 0) {
@@ -219,18 +233,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (historyLoadedRef.current.has(convId)) return;
     const res = await api('GET', `/api/chat/messages?conversation_id=${convId}&limit=50`);
     if (res.code === 0 && res.data?.messages) {
-      const myId = auth.userId;
+      const myAccount = auth.account;
       const historyMsgs: ChatMessage[] = res.data.messages.map((m: any) => {
         const ts = m.timestamp || 0;
         const timeSec = ts > 1e12 ? ts / 1000 : ts;
         return {
           id: String(m.msg_id),
-          from: String(m.sender_id),
+          from: String(m.sender_account),
           fromName: m.sender_name || '',
           conversationId: String(m.conversation_id),
           content: m.content,
           time: timeSec,
-          isSent: String(m.sender_id) === myId,
+          isSent: String(m.sender_account) === myAccount,
           status: m.status || 0,
           isEdited: m.is_edited || false,
         };
@@ -243,7 +257,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const merged = [...newMsgs, ...existing].sort((a, b) => a.time - b.time);
         return { ...prev, [convId]: merged };
       });
-      // 从历史消息中提取最大 seq，更新本地 seq 记录
       if (res.data.messages.length > 0) {
         let maxSeq = 0;
         for (const m of res.data.messages) {
@@ -258,7 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [auth.userId]);
+  }, [auth.account]);
 
   const wsConnect = useCallback(() => {
     if (wsRef.current) wsRef.current.close();
@@ -270,8 +283,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     ws.onopen = () => {
       setWsConnected(true);
-      // WS 重连后，通过 WS 发送 sync 请求拉取断线期间的增量消息
-      // 遍历本地所有会话的 maxSeq，请求服务端返回 seq > maxSeq 的消息
       setConvMaxSeqs(prev => {
         const seqs = Object.entries(prev);
         if (seqs.length === 0) return prev;
@@ -296,20 +307,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const msg: WsMessage = {
           ...raw,
           conversation_id: raw.conversation_id != null ? String(raw.conversation_id) : undefined,
-          from: raw.from != null ? String(raw.from) : undefined,
+          from_account: raw.from_account != null ? String(raw.from_account) : undefined,
           msg_id: raw.msg_id != null ? String(raw.msg_id) : undefined,
-          peer_id: raw.peer_id != null ? String(raw.peer_id) : undefined,
+          peer_account: raw.peer_account != null ? String(raw.peer_account) : undefined,
         };
-        if (msg.type === 'typing' && msg.from && msg.conversation_id) {
+        if (msg.type === 'typing' && msg.from_account && msg.conversation_id) {
           setTypingStatus(prev => ({
             ...prev,
             [msg.conversation_id!]: {
               ...prev[msg.conversation_id!],
-              [msg.from!]: Date.now(),
+              [msg.from_account!]: Date.now(),
             },
           }));
         }
-        // 处理撤回消息事件：将消息标记为已撤回
         if (msg.type === 'recall' && msg.msg_id && msg.conversation_id) {
           const convId = msg.conversation_id;
           const msgId = String(msg.msg_id);
@@ -323,7 +333,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             };
           });
         }
-        // 处理编辑消息事件：更新消息内容和编辑标记
         if (msg.type === 'edit' && msg.msg_id && msg.conversation_id) {
           const convId = msg.conversation_id;
           const msgId = String(msg.msg_id);
@@ -338,9 +347,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
             };
           });
         }
-        // 处理同步消息响应：将增量消息合并到本地消息列表
+        if (msg.type === 'system' && msg.reason) {
+          const convId = msg.conversation_id;
+          if (convId) {
+            setMessages(prev => {
+              const msgs = prev[convId] || [];
+              const filtered = msgs.filter(m => !(m.isSent && m.id.startsWith('temp_')));
+              if (filtered.length === msgs.length) return prev;
+              return { ...prev, [convId]: filtered };
+            });
+          }
+          setSystemNotification(msg.reason);
+          setTimeout(() => setSystemNotification(null), 3000);
+        }
         if (msg.type === 'sync' && msg.success && msg.conv_messages) {
-          const myId = auth.userId;
+          const myAccount = auth.account;
           for (const cm of msg.conv_messages) {
             const convId = String(cm.conversation_id);
             if (!cm.messages || cm.messages.length === 0) continue;
@@ -349,17 +370,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const timeSec = ts > 1e12 ? ts / 1000 : ts;
               return {
                 id: String(m.msg_id),
-                from: String(m.sender_id),
+                from: String(m.sender_account),
                 fromName: '',
                 conversationId: convId,
                 content: m.content,
                 time: timeSec,
-                isSent: String(m.sender_id) === myId,
+                isSent: String(m.sender_account) === myAccount,
                 status: m.status || 0,
                 isEdited: m.is_edited || false,
               };
             });
-            // 更新该会话的最大 seq
             let maxSeq = 0;
             for (const m of cm.messages) {
               if (m.seq && m.seq > maxSeq) maxSeq = m.seq;
@@ -379,7 +399,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const merged = [...existing, ...newMsgs].sort((a, b) => a.time - b.time);
               return { ...prev, [convId]: merged };
             });
-            // 更新会话列表的 lastMsg
             const lastSyncMsg = syncMsgs[syncMsgs.length - 1];
             if (lastSyncMsg) {
               const displayText = extractDisplayText(lastSyncMsg.content);
@@ -395,12 +414,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
           }
         }
-        if (msg.type === 'chat' && msg.from && msg.content && msg.conversation_id) {
+        if (msg.type === 'chat' && msg.from_account && msg.content && msg.conversation_id) {
           const convId = msg.conversation_id;
-          const myId = auth.userId;
-          const isSent = msg.from === myId;
+          const myAccount = auth.account;
+          const isSent = msg.from_account === myAccount;
 
-          const msgId = msg.msg_id || `${msg.from}_${msg.timestamp}_${Date.now()}`;
+          const msgId = msg.msg_id || `${msg.from_account}_${msg.timestamp}_${Date.now()}`;
           if (isSent && sentMsgIds.current.has(msgId)) return;
           if (isSent) sentMsgIds.current.add(msgId);
           if (sentMsgIds.current.size > 1000) {
@@ -411,7 +430,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const ts = msg.timestamp || 0;
           const timeSec = ts > 1e12 ? ts / 1000 : ts;
 
-          // 更新该会话的最大 seq，用于断线重连后的增量同步
           if (msg.seq && msg.seq > 0 && convId) {
             setConvMaxSeqs(prev => {
               const cur = prev[convId] || 0;
@@ -422,7 +440,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           const chatMsg: ChatMessage = {
             id: msgId,
-            from: msg.from,
+            from: msg.from_account,
             fromName: msg.from_name || '',
             conversationId: convId,
             content: msg.content,
@@ -435,12 +453,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setConversations(prev => {
             const tempConv = prev.find(c => c.id === '' && c.type === 1);
             if (tempConv && convId !== '') {
-              const peerId = tempConv.peerId || tempConv.memberIds.find(id => id !== myId);
-              const isMatch = (isSent && peerId) || (!isSent && msg.from === peerId);
+              const peerAccount = tempConv.peerAccount || tempConv.memberAccounts.find(a => a !== myAccount);
+              const isMatch = (isSent && peerAccount) || (!isSent && msg.from_account === peerAccount);
               if (isMatch) {
                 const upgraded = prev.map(c => {
                   if (c.id === '' && c.type === 1) {
-                    return { ...c, id: convId, peerId: undefined };
+                    return { ...c, id: convId, peerAccount: undefined };
                   }
                   return c;
                 });
@@ -465,7 +483,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               id: convId,
               name: msg.from_name || `会话 ${convId}`,
               type: msg.conversation_type || 1,
-              memberIds: [],
+              memberAccounts: [],
               lastMsg: displayText,
               lastTime: chatMsg.time,
               unread: isSent ? 0 : 1,
@@ -514,7 +532,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch {}
     };
-  }, [auth.token, auth.userId]);
+  }, [auth.token, auth.account]);
 
   const wsDisconnect = useCallback(() => {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
@@ -524,7 +542,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     const conv = conversationsRef.current.find(c => c.id === convId);
     if (!conv) return;
-    // 递增 clientSeq，保证每次发送请求携带唯一序列号，服务端据此去重
     clientSeqRef.current += 1;
     const msg: any = {
       type: 'chat',
@@ -533,10 +550,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       client_seq: clientSeqRef.current,
     };
     if (conv.type === 1) {
-      const myId = auth.userId;
-      const peerId = conv.peerId || conv.memberIds.find(id => id !== myId);
-      if (peerId) {
-        msg.peer_id = peerId;
+      const myAccount = auth.account;
+      const peerAccount = conv.peerAccount || conv.memberAccounts.find(a => a !== myAccount);
+      if (peerAccount) {
+        msg.peer_account = peerAccount;
       }
     }
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -545,7 +562,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const optimisticMsg: ChatMessage = {
       id: tempId,
-      from: auth.userId,
+      from: auth.account,
       fromName: '',
       conversationId: convId,
       content,
@@ -560,7 +577,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setConversations(prev => prev.map(c =>
       c.id === convId ? { ...c, lastMsg: displayText, lastTime: optimisticMsg.time } : c
     ));
-  }, [auth.userId]);
+  }, [auth.account]);
 
   const addConversation = useCallback((conv: Conversation) => {
     setConversations(prev => {
@@ -569,12 +586,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const openChatWith = useCallback((targetId: string, name: string, type: number) => {
+  const openChatWith = useCallback((targetAccount: string, name: string, type: number) => {
     const existing = conversationsRef.current.find(c => {
       if (type === 1) {
-        return c.type === 1 && c.memberIds.includes(auth.userId) && c.memberIds.includes(targetId) && c.memberIds.length === 2;
+        return c.type === 1 && c.memberAccounts.includes(auth.account) && c.memberAccounts.includes(targetAccount) && c.memberAccounts.length === 2;
       }
-      return c.groupId === targetId;
+      return c.groupNumber === targetAccount;
     });
     if (existing) {
       setActiveConvId(existing.id);
@@ -584,16 +601,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       id: '',
       name,
       type,
-      memberIds: type === 1 ? [auth.userId, targetId] : [],
-      peerId: type === 1 ? targetId : undefined,
+      memberAccounts: type === 1 ? [auth.account, targetAccount] : [],
+      peerAccount: type === 1 ? targetAccount : undefined,
       unread: 0,
     };
     addConversation(tempConv);
     setActiveConvId('');
-  }, [auth.userId, addConversation]);
+  }, [auth.account, addConversation]);
 
-  // 发送输入状态事件：通知会话中的其他成员"我正在输入"
-  // 节流控制：3 秒内只发送一次，避免高频消息
   const lastTypingSentRef = useRef<number>(0);
   const sendTyping = useCallback((convId: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -607,21 +622,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // 批量查询用户在线状态
-  // 传入一组 userId，调用 API Gateway 查询后更新 onlineStatus 状态
-  const loadOnlineStatus = useCallback(async (userIds: string[]) => {
-    if (userIds.length === 0) return;
-    const res = await api('POST', '/api/chat/online_status', { user_ids: userIds });
+  const loadOnlineStatus = useCallback(async (accounts: string[]) => {
+    if (accounts.length === 0) return;
+    const res = await api('POST', '/api/chat/online_status', { accounts });
     if (res.code === 0 && res.data?.statuses) {
       const map: OnlineStatusMap = {};
       for (const s of res.data.statuses) {
-        map[s.user_id] = s.online;
+        map[s.account] = s.online;
       }
       setOnlineStatus(prev => ({ ...prev, ...map }));
     }
   }, []);
 
-  // 通过 WS 发送撤回消息请求
+  const loadConversationMembers = useCallback(async (accounts: string[]) => {
+    if (accounts.length === 0) return;
+    const needLoad = accounts.filter(a => !memberInfo[a]);
+    if (needLoad.length === 0) return;
+    const res = await api('POST', '/api/chat/conversation_members', { accounts: needLoad });
+    if (res.code === 0 && res.data?.members) {
+      const map: MemberInfoMap = {};
+      for (const m of res.data.members) {
+        map[m.account] = { name: m.name, avatar: m.avatar_url || '' };
+      }
+      setMemberInfo(prev => ({ ...prev, ...map }));
+    }
+  }, [memberInfo]);
+
+  const updateAvatar = useCallback(async (avatarUrl: string): Promise<boolean> => {
+    const res = await api('POST', '/api/update_avatar', { avatar_url: avatarUrl });
+    if (res.code === 0) {
+      setMemberInfo(prev => ({
+        ...prev,
+        [auth.account]: { ...prev[auth.account], avatar: avatarUrl },
+      }));
+      return true;
+    }
+    return false;
+  }, [auth.account]);
+
   const recallMessage = useCallback((convId: string, msgId: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({
@@ -631,7 +669,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // 通过 WS 发送编辑消息请求
   const editMessage = useCallback((convId: string, msgId: string, newContent: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({
@@ -642,7 +679,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // 自动清理过期的 typing 状态（超过 5 秒的视为过期）
+  const clearSystemNotification = useCallback(() => {
+    setSystemNotification(null);
+  }, []);
+
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
@@ -651,10 +691,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let changed = false;
         for (const convId of Object.keys(prev)) {
           const users = prev[convId];
-          const filtered: { [uid: string]: number } = {};
-          for (const uid of Object.keys(users)) {
-            if (now - users[uid] < 5000) {
-              filtered[uid] = users[uid];
+          const filtered: { [acc: string]: number } = {};
+          for (const acc of Object.keys(users)) {
+            if (now - users[acc] < 5000) {
+              filtered[acc] = users[acc];
             } else {
               changed = true;
             }
@@ -676,9 +716,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [auth.token, wsConnect]);
 
   useEffect(() => {
+    if (auth.token && auth.account && !memberInfo[auth.account]) {
+      loadConversationMembers([auth.account]);
+    }
+  }, [auth.token, auth.account]);
+
+  useEffect(() => {
     if (activeConvId && activeConvId !== '') {
       loadHistory(activeConvId);
-      // 切换到该会话时，通知服务端标记已读，清除服务端未读数
       api('POST', `/api/chat/mark_read/${activeConvId}`).catch(() => {});
       setConversations(prev => prev.map(c =>
         c.id === activeConvId ? { ...c, unread: 0 } : c
@@ -688,9 +733,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      auth, conversations, messages, wsConnected, activeConvId, friends, onlineStatus, typingStatus,
+      auth, conversations, messages, wsConnected, activeConvId, friends, onlineStatus, memberInfo, typingStatus, systemNotification,
       login, logout, wsConnect, wsDisconnect, sendMessage, setActiveConvId, addConversation,
-      setFriends, openChatWith, loadConversations, sendTyping, loadOnlineStatus, recallMessage, editMessage,
+      setFriends, openChatWith, loadConversations, sendTyping, loadOnlineStatus, loadConversationMembers, updateAvatar, recallMessage, editMessage, clearSystemNotification,
     }}>
       {children}
     </AppContext.Provider>

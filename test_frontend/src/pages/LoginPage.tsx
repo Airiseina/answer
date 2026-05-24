@@ -33,7 +33,7 @@ export default function LoginPage() {
         if (!account || !password) { setError('请填写所有字段'); return }
         const res = await api('POST', '/login', { account, password })
         if (res.code === 0 && res.data?.token) {
-          login(String(res.data.token), String(res.data.id), String(res.data.account))
+          login(String(res.data.token), String(res.data.account), res.data.avatar_url || '')
         } else {
           setError(res.msg || '登录失败')
         }

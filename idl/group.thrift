@@ -139,6 +139,15 @@ struct GetJoinRequestsRes {
     1: list<JoinRequestInfo> requests
 }
 
+struct CheckMutedReq{
+    1:i64 group_id
+    2:i64 user_id
+}
+
+struct CheckMutedRes{
+    1:bool is_muted
+}
+
 service GroupService {
     CreateGroupRes CreateGroup(1: CreateGroupReq req)
     CommonRes InviteMembers(1: InviteMembersReq req)
@@ -153,4 +162,5 @@ service GroupService {
     CommonRes JoinGroup(1: JoinGroupReq req)
     CommonRes HandleJoinReq(1: HandleJoinReqReq req)
     GetJoinRequestsRes GetJoinRequests(1: GetJoinRequestsReq req)
+    CheckMutedRes CheckMuted(1: CheckMutedReq req)
 }

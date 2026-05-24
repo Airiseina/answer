@@ -4,11 +4,14 @@ import (
 	"answer_pkg/logger"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -16,9 +19,10 @@ import (
 )
 
 var (
-	Client   *SeaweedFSClient
-	BasePath string
-	FilerURL string
+	Client    *SeaweedFSClient
+	BasePath  string
+	FilerURL  string
+	PublicURL string
 )
 
 type SeaweedFSClient struct {
@@ -30,12 +34,16 @@ type SeaweedFSClient struct {
 func InitSeaweedFS() {
 	FilerURL = viper.GetString("seaweedfs.filer_url")
 	BasePath = viper.GetString("seaweedfs.base_path")
+	PublicURL = viper.GetString("seaweedfs.public_url")
 
 	if FilerURL == "" {
 		FilerURL = "http://127.0.0.1:8888"
 	}
 	if BasePath == "" {
 		BasePath = "/chat"
+	}
+	if PublicURL == "" {
+		PublicURL = "/files"
 	}
 	Client = &SeaweedFSClient{
 		httpClient: &http.Client{Timeout: 60 * time.Second},
@@ -58,7 +66,7 @@ func InitSeaweedFS() {
 	logger.Info("SeaweedFS初始化成功", zap.String("filerURL", FilerURL), zap.String("basePath", BasePath))
 }
 
-func (s *SeaweedFSClient) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, contentType string) error {
+func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, reader io.Reader, contentType string) error {
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -100,7 +108,7 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, bucketName, objectName 
 	return nil
 }
 
-func (s *SeaweedFSClient) GetObject(ctx context.Context, bucketName, objectName string) ([]byte, error) {
+func (s *SeaweedFSClient) GetObject(ctx context.Context, objectName string) ([]byte, error) {
 	downloadURL := s.filerURL + s.basePath + "/" + objectName
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -127,7 +135,7 @@ func (s *SeaweedFSClient) GetObject(ctx context.Context, bucketName, objectName 
 	return data, nil
 }
 
-func (s *SeaweedFSClient) DeleteObject(ctx context.Context, bucketName, objectName string) error {
+func (s *SeaweedFSClient) DeleteObject(ctx context.Context, objectName string) error {
 	deleteURL := s.filerURL + s.basePath + "/" + objectName
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
@@ -148,8 +156,22 @@ func (s *SeaweedFSClient) DeleteObject(ctx context.Context, bucketName, objectNa
 	return nil
 }
 
-func (s *SeaweedFSClient) PresignedGetObject(ctx context.Context, bucketName, objectName string, expires int64) (string, error) {
+func (s *SeaweedFSClient) PresignedGetObject(ctx context.Context, objectName string) (string, error) {
 	return s.filerURL + s.basePath + "/" + objectName, nil
+}
+
+func (s *SeaweedFSClient) ObjectExists(ctx context.Context, objectName string) bool {
+	url := s.filerURL + s.basePath + "/" + objectName
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
 }
 
 type UploadResult struct {
@@ -158,30 +180,45 @@ type UploadResult struct {
 	FileSize int64  `json:"file_size"`
 }
 
-func UploadFile(ctx context.Context, userId int64, objectName string, reader io.Reader, fileSize int64, contentType string) (*UploadResult, error) {
+func ComputeContentHash(data []byte) string {
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:])
+}
+
+func GenerateObjectName(contentHash string, ext string) string {
+	return fmt.Sprintf("data/%s/%s%s", contentHash[:2], contentHash, ext)
+}
+
+func UploadFile(ctx context.Context, userId int64, originalName string, reader io.Reader, fileSize int64, contentType string) (*UploadResult, error) {
 	if Client == nil {
 		return nil, fmt.Errorf("SeaweedFS客户端未初始化")
 	}
-	err := Client.PutObject(ctx, "", objectName, reader, fileSize, contentType)
+
+	data, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("读取文件数据失败: %w", err)
 	}
-	fileURL := FilerURL + BasePath + "/" + objectName
+
+	contentHash := ComputeContentHash(data)
+	ext := filepath.Ext(originalName)
+	objectName := GenerateObjectName(contentHash, ext)
+
+	if !Client.ObjectExists(ctx, objectName) {
+		err = Client.PutObject(ctx, objectName, bytes.NewReader(data), contentType)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("文件上传成功", zap.String("hash", contentHash), zap.Int64("size", fileSize))
+	} else {
+		logger.Info("文件已存在，跳过上传", zap.String("hash", contentHash))
+	}
+
+	fileURL := PublicURL + BasePath + "/" + objectName
 	return &UploadResult{
 		URL:      fileURL,
-		FileName: filepath.Base(objectName),
+		FileName: originalName,
 		FileSize: fileSize,
 	}, nil
-}
-
-func GenerateObjectName(userId int64, originalName string) string {
-	ext := filepath.Ext(originalName)
-	now := time.Now()
-	return fmt.Sprintf("chat/%d/%04d/%02d/%02d/%d%s",
-		userId,
-		now.Year(), now.Month(), now.Day(),
-		now.UnixNano(), ext,
-	)
 }
 
 func GetContentType(filename string) string {
@@ -266,6 +303,20 @@ func HealthCheck() bool {
 	}
 	resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
+}
+
+func NormalizeURL(rawURL string) string {
+	if strings.HasPrefix(rawURL, FilerURL) {
+		return strings.Replace(rawURL, FilerURL, PublicURL, 1)
+	}
+	return rawURL
+}
+
+func NormalizeContentURLs(content string) string {
+	if FilerURL == "" || PublicURL == "" {
+		return content
+	}
+	return strings.Replace(content, FilerURL, PublicURL, -1)
 }
 
 var _ Storage = (*SeaweedFSClient)(nil)

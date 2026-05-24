@@ -1,6 +1,7 @@
 package handle
 
 import (
+	"answer_pkg/storage"
 	"api_gateway/middleware"
 	"api_gateway/response"
 	"api_gateway/rpc"
@@ -8,11 +9,73 @@ import (
 	"strconv"
 
 	chat "chat_service/kitex_gen/chat"
+	group "group_service/kitex_gen/group"
 	user "user_service/kitex_gen/user"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
+
+func buildAccountMap(ctx context.Context, userIDs []int64) map[int64]string {
+	if len(userIDs) == 0 {
+		return make(map[int64]string)
+	}
+	uniqueIDs := make(map[int64]struct{})
+	for _, id := range userIDs {
+		uniqueIDs[id] = struct{}{}
+	}
+	idList := make([]int64, 0, len(uniqueIDs))
+	for id := range uniqueIDs {
+		idList = append(idList, id)
+	}
+	nameResp, err := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: idList})
+	if err != nil || nameResp == nil {
+		hlog.CtxWarnf(ctx, "批量获取用户account失败: %v", err)
+		return make(map[int64]string)
+	}
+	m := make(map[int64]string, len(nameResp.Users))
+	for _, u := range nameResp.Users {
+		m[u.Id] = u.Account
+	}
+	return m
+}
+
+func buildUserIdMap(ctx context.Context, accounts []string) map[string]int64 {
+	if len(accounts) == 0 {
+		return make(map[string]int64)
+	}
+	uniqueAccounts := make(map[string]struct{})
+	for _, a := range accounts {
+		uniqueAccounts[a] = struct{}{}
+	}
+	accountList := make([]string, 0, len(uniqueAccounts))
+	for a := range uniqueAccounts {
+		accountList = append(accountList, a)
+	}
+	resp, err := rpc.GetUserIdsByAccounts(ctx, &user.GetUserIdsByAccountsReq{Accounts: accountList})
+	if err != nil || resp == nil {
+		hlog.CtxWarnf(ctx, "批量获取用户ID失败: %v", err)
+		return make(map[string]int64)
+	}
+	m := make(map[string]int64, len(resp.Users))
+	for _, u := range resp.Users {
+		m[u.Account] = u.Id
+	}
+	return m
+}
+
+func buildGroupNumberMap(ctx context.Context, userID int64) map[int64]int64 {
+	groupsResp, err := rpc.GetUserGroups(ctx, &group.GetUserGroupsReq{UserId: userID})
+	if err != nil || groupsResp == nil {
+		hlog.CtxWarnf(ctx, "获取用户群组列表失败: %v", err)
+		return make(map[int64]int64)
+	}
+	m := make(map[int64]int64, len(groupsResp.Groups))
+	for _, g := range groupsResp.Groups {
+		m[g.GroupId] = g.GroupNumber
+	}
+	return m
+}
 
 func GetHistory(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
@@ -58,20 +121,17 @@ func GetHistory(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	senderIDSet := make(map[int64]struct{})
+	senderIDs := make([]int64, 0, len(resp.Messages))
 	for _, m := range resp.Messages {
-		senderIDSet[m.SenderId] = struct{}{}
+		senderIDs = append(senderIDs, m.SenderId)
 	}
-	senderIDs := make([]int64, 0, len(senderIDSet))
-	for id := range senderIDSet {
-		senderIDs = append(senderIDs, id)
-	}
-	senderNameMap := make(map[int64]string)
+	accountMap := buildAccountMap(ctx, senderIDs)
+	nameMap := make(map[int64]string)
 	if len(senderIDs) > 0 {
 		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: senderIDs})
 		if nameErr == nil && nameResp != nil {
 			for _, u := range nameResp.Users {
-				senderNameMap[u.Id] = u.Name
+				nameMap[u.Id] = u.Name
 			}
 		}
 	}
@@ -79,7 +139,7 @@ func GetHistory(ctx context.Context, c *app.RequestContext) {
 	type messageItem struct {
 		MsgID          int64  `json:"msg_id,string"`
 		ClientSeq      int64  `json:"client_seq"`
-		SenderID       int64  `json:"sender_id,string"`
+		SenderAccount  string `json:"sender_account"`
 		SenderName     string `json:"sender_name"`
 		ConversationID int64  `json:"conversation_id,string"`
 		Content        string `json:"content"`
@@ -93,10 +153,10 @@ func GetHistory(ctx context.Context, c *app.RequestContext) {
 		messages = append(messages, messageItem{
 			MsgID:          m.MsgId,
 			ClientSeq:      m.ClientSeq,
-			SenderID:       m.SenderId,
-			SenderName:     senderNameMap[m.SenderId],
+			SenderAccount:  accountMap[m.SenderId],
+			SenderName:     nameMap[m.SenderId],
 			ConversationID: m.ConversationId,
-			Content:        m.Content,
+			Content:        storage.NormalizeContentURLs(m.Content),
 			Timestamp:      m.Timestamp,
 			Status:         m.GetStatus(),
 			IsEdited:       m.GetIsEdited(),
@@ -126,77 +186,69 @@ func GetConversations(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "查询失败", "获取会话列表失败")
 		return
 	}
+
+	var allMemberIDs []int64
+	for _, conv := range resp.Conversations {
+		for _, mid := range conv.MemberIds {
+			allMemberIDs = append(allMemberIDs, mid)
+		}
+	}
+	accountMap := buildAccountMap(ctx, allMemberIDs)
+	nameMap := make(map[int64]string)
+	if len(allMemberIDs) > 0 {
+		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: allMemberIDs})
+		if nameErr == nil && nameResp != nil {
+			for _, u := range nameResp.Users {
+				nameMap[u.Id] = u.Name
+			}
+		}
+	}
+
+	groupNumberMap := buildGroupNumberMap(ctx, userID)
+
 	type conversationItem struct {
 		ConversationID int64    `json:"conversation_id,string"`
 		Type           int16    `json:"type"`
 		Name           string   `json:"name"`
-		GroupID        int64    `json:"group_id,string"`
-		MemberIds      []string `json:"member_ids"`
+		GroupNumber    int64    `json:"group_number,string"`
+		MemberAccounts []string `json:"member_accounts"`
 		MaxSeq         int64    `json:"max_seq"`
 		MaxReadSeq     int64    `json:"max_read_seq"`
 		UnreadCount    int64    `json:"unread_count"`
 	}
 
-	var privatePeerIDs []int64
-	for _, c := range resp.Conversations {
-		if c.Type == 1 && len(c.MemberIds) == 2 {
-			for _, mid := range c.MemberIds {
-				if mid != userID {
-					privatePeerIDs = append(privatePeerIDs, mid)
-				}
-			}
-		}
-	}
-
-	peerNameMap := make(map[int64]string)
-	if len(privatePeerIDs) > 0 {
-		uniqueIDs := make(map[int64]struct{})
-		for _, id := range privatePeerIDs {
-			uniqueIDs[id] = struct{}{}
-		}
-		idList := make([]int64, 0, len(uniqueIDs))
-		for id := range uniqueIDs {
-			idList = append(idList, id)
-		}
-		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: idList})
-		if nameErr == nil && nameResp != nil {
-			for _, u := range nameResp.Users {
-				peerNameMap[u.Id] = u.Name
-			}
-		}
-	}
-
 	var conversations []conversationItem
-	for _, c := range resp.Conversations {
-		memberStrs := make([]string, len(c.MemberIds))
-		for i, id := range c.MemberIds {
-			memberStrs[i] = strconv.FormatInt(id, 10)
+	for _, conv := range resp.Conversations {
+		memberAccounts := make([]string, len(conv.MemberIds))
+		for i, mid := range conv.MemberIds {
+			memberAccounts[i] = accountMap[mid]
 		}
-		name := c.Name
-		if c.Type == 1 {
-			for _, mid := range c.MemberIds {
+		name := conv.Name
+		if conv.Type == 1 {
+			for _, mid := range conv.MemberIds {
 				if mid != userID {
-					if peerName, ok := peerNameMap[mid]; ok && peerName != "" {
+					if peerName, ok := nameMap[mid]; ok && peerName != "" {
 						name = peerName
 					}
 					break
 				}
 			}
 		}
+		groupNumber := int64(0)
+		if conv.GroupId != nil && *conv.GroupId != 0 {
+			if gn, ok := groupNumberMap[*conv.GroupId]; ok {
+				groupNumber = gn
+			}
+		}
 		conversations = append(conversations, conversationItem{
-			ConversationID: c.ConversationId,
-			Type:           c.Type,
+			ConversationID: conv.ConversationId,
+			Type:           conv.Type,
 			Name:           name,
-			GroupID: func() int64 {
-				if c.GroupId != nil {
-					return *c.GroupId
-				}
-				return 0
-			}(),
-			MemberIds:   memberStrs,
-			MaxSeq:      c.GetMaxSeq(),
-			MaxReadSeq:  c.GetMaxReadSeq(),
-			UnreadCount: c.GetUnreadCount(),
+			GroupNumber:    groupNumber,
+			MemberAccounts: memberAccounts,
+			MaxSeq:         conv.GetMaxSeq(),
+			MaxReadSeq:     conv.GetMaxReadSeq(),
+			UnreadCount:    conv.GetUnreadCount(),
 		})
 	}
 	if conversations == nil {
@@ -207,9 +259,6 @@ func GetConversations(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// MarkRead 标记会话已读
-// 客户端打开会话时调用，将用户在该会话中的已读位置更新到当前最大消息序号
-// 返回更新后的已读序号，客户端可用于更新本地未读数状态
 func MarkRead(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -242,34 +291,33 @@ func MarkRead(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// GetOnlineStatus 查询用户在线状态
-// 客户端传入一组用户ID，返回每个用户的在线/离线状态
-// 用于会话列表和聊天界面中展示在线状态指示器
 func GetOnlineStatus(ctx context.Context, c *app.RequestContext) {
 	var reqBody struct {
-		UserIds []string `json:"user_ids"`
+		Accounts []string `json:"accounts"`
 	}
 	if err := c.BindJSON(&reqBody); err != nil {
 		response.Error(c, "参数错误", "请求格式不正确")
 		return
 	}
-	if len(reqBody.UserIds) == 0 {
+	if len(reqBody.Accounts) == 0 {
 		response.Success(c, map[string]interface{}{
 			"statuses": []interface{}{},
 		})
 		return
 	}
-	if len(reqBody.UserIds) > 100 {
+	if len(reqBody.Accounts) > 100 {
 		response.Error(c, "参数错误", "最多查询100个用户")
 		return
 	}
-	userIDs := make([]int64, 0, len(reqBody.UserIds))
-	for _, idStr := range reqBody.UserIds {
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			continue
+
+	userIdMap := buildUserIdMap(ctx, reqBody.Accounts)
+	userIDs := make([]int64, 0, len(reqBody.Accounts))
+	accountOrder := make([]string, 0, len(reqBody.Accounts))
+	for _, acc := range reqBody.Accounts {
+		if id, ok := userIdMap[acc]; ok && id != 0 {
+			userIDs = append(userIDs, id)
+			accountOrder = append(accountOrder, acc)
 		}
-		userIDs = append(userIDs, id)
 	}
 	if len(userIDs) == 0 {
 		response.Success(c, map[string]interface{}{
@@ -285,15 +333,25 @@ func GetOnlineStatus(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
+
+	idToAccount := make(map[int64]string)
+	for acc, id := range userIdMap {
+		idToAccount[id] = acc
+	}
+
 	type onlineStatusItem struct {
-		UserID string `json:"user_id"`
-		Online bool   `json:"online"`
+		Account string `json:"account"`
+		Online  bool   `json:"online"`
 	}
 	var statuses []onlineStatusItem
 	for _, s := range resp.Statuses {
+		acc := idToAccount[s.UserId]
+		if acc == "" {
+			continue
+		}
 		statuses = append(statuses, onlineStatusItem{
-			UserID: strconv.FormatInt(s.UserId, 10),
-			Online: s.Online,
+			Account: acc,
+			Online:  s.Online,
 		})
 	}
 	if statuses == nil {
@@ -304,10 +362,6 @@ func GetOnlineStatus(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// RecallMessage 撤回消息
-// 发送者在 2 分钟内可撤回自己发送的消息
-// 路径参数：msg_id（消息ID）
-// 成功后通过 WS 推送 recall 事件给会话中的所有成员
 func RecallMessage(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -356,10 +410,6 @@ func RecallMessage(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// EditMessage 编辑消息
-// 发送者可编辑自己发送的消息内容
-// 路径参数：msg_id（消息ID）
-// 成功后通过 WS 推送 edit 事件给会话中的所有成员
 func EditMessage(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -414,7 +464,6 @@ func EditMessage(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// GetEditHistory 查询消息编辑历史
 func GetEditHistory(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -459,23 +508,29 @@ func GetEditHistory(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	editorIDs := make([]int64, 0, len(resp.Histories))
+	for _, h := range resp.Histories {
+		editorIDs = append(editorIDs, h.EditorId)
+	}
+	editorAccountMap := buildAccountMap(ctx, editorIDs)
+
 	type editHistoryItem struct {
-		ID         int64  `json:"id,string"`
-		MsgID      int64  `json:"msg_id,string"`
-		Version    int32  `json:"version"`
-		OldContent string `json:"old_content"`
-		EditorID   int64  `json:"editor_id,string"`
-		EditedAt   int64  `json:"edited_at"`
+		ID            int64  `json:"id,string"`
+		MsgID         int64  `json:"msg_id,string"`
+		Version       int32  `json:"version"`
+		OldContent    string `json:"old_content"`
+		EditorAccount string `json:"editor_account"`
+		EditedAt      int64  `json:"edited_at"`
 	}
 	var items []editHistoryItem
 	for _, h := range resp.Histories {
 		items = append(items, editHistoryItem{
-			ID:         h.Id,
-			MsgID:      h.MsgId,
-			Version:    h.Version,
-			OldContent: h.OldContent,
-			EditorID:   h.EditorId,
-			EditedAt:   h.EditedAt,
+			ID:            h.Id,
+			MsgID:         h.MsgId,
+			Version:       h.Version,
+			OldContent:    h.OldContent,
+			EditorAccount: editorAccountMap[h.EditorId],
+			EditedAt:      h.EditedAt,
 		})
 	}
 	response.Success(c, map[string]interface{}{
@@ -483,9 +538,6 @@ func GetEditHistory(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-// SyncMessages 同步消息
-// 客户端断线重连后，遍历本地所有会话，携带每个会话的本地最大 seq
-// 服务端对每个会话拉取 seq > last_seq 的消息返回
 func SyncMessages(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -521,7 +573,6 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 	}
 
 	var convSeqs []*chat.ConvSeqPair
-	senderIDSet := make(map[int64]struct{})
 	for _, pair := range reqBody.ConvSeqs {
 		convID, err := strconv.ParseInt(pair.ConversationID, 10, 64)
 		if err != nil || convID == 0 {
@@ -554,21 +605,19 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	var allSenderIDs []int64
 	for _, cm := range resp.ConvMessages {
 		for _, m := range cm.Messages {
-			senderIDSet[m.SenderId] = struct{}{}
+			allSenderIDs = append(allSenderIDs, m.SenderId)
 		}
 	}
-	senderIDs := make([]int64, 0, len(senderIDSet))
-	for id := range senderIDSet {
-		senderIDs = append(senderIDs, id)
-	}
-	senderNameMap := make(map[int64]string)
-	if len(senderIDs) > 0 {
-		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: senderIDs})
+	accountMap := buildAccountMap(ctx, allSenderIDs)
+	nameMap := make(map[int64]string)
+	if len(allSenderIDs) > 0 {
+		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: allSenderIDs})
 		if nameErr == nil && nameResp != nil {
 			for _, u := range nameResp.Users {
-				senderNameMap[u.Id] = u.Name
+				nameMap[u.Id] = u.Name
 			}
 		}
 	}
@@ -576,7 +625,7 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 	type messageItem struct {
 		MsgID          int64  `json:"msg_id,string"`
 		ClientSeq      int64  `json:"client_seq"`
-		SenderID       int64  `json:"sender_id,string"`
+		SenderAccount  string `json:"sender_account"`
 		SenderName     string `json:"sender_name"`
 		ConversationID int64  `json:"conversation_id,string"`
 		Content        string `json:"content"`
@@ -597,10 +646,10 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 			msgs = append(msgs, messageItem{
 				MsgID:          m.MsgId,
 				ClientSeq:      m.ClientSeq,
-				SenderID:       m.SenderId,
-				SenderName:     senderNameMap[m.SenderId],
+				SenderAccount:  accountMap[m.SenderId],
+				SenderName:     nameMap[m.SenderId],
 				ConversationID: m.ConversationId,
-				Content:        m.Content,
+				Content:        storage.NormalizeContentURLs(m.Content),
 				Timestamp:      m.Timestamp,
 				Seq:            m.GetSeq(),
 				Status:         m.GetStatus(),
@@ -620,5 +669,50 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 	}
 	response.Success(c, map[string]interface{}{
 		"conv_messages": convMessages,
+	})
+}
+
+func GetConversationMembers(ctx context.Context, c *app.RequestContext) {
+	var reqBody struct {
+		Accounts []string `json:"accounts"`
+	}
+	if err := c.BindJSON(&reqBody); err != nil {
+		response.Error(c, "参数错误", "请求格式不正确")
+		return
+	}
+	if len(reqBody.Accounts) == 0 {
+		response.Success(c, map[string]interface{}{
+			"members": []interface{}{},
+		})
+		return
+	}
+	if len(reqBody.Accounts) > 500 {
+		response.Error(c, "参数错误", "最多查询500个用户")
+		return
+	}
+	resp, err := rpc.GetUsersInfoByAccounts(ctx, &user.GetUsersInfoByAccountsReq{Accounts: reqBody.Accounts})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC GetUsersInfoByAccounts失败: %v", err)
+		response.Error(c, "系统繁忙", "获取成员信息失败")
+		return
+	}
+	type memberItem struct {
+		Account   string `json:"account"`
+		Name      string `json:"name"`
+		AvatarUrl string `json:"avatar_url"`
+	}
+	var members []memberItem
+	for _, u := range resp.Users {
+		members = append(members, memberItem{
+			Account:   u.Account,
+			Name:      u.Name,
+			AvatarUrl: storage.NormalizeURL(u.AvatarUrl),
+		})
+	}
+	if members == nil {
+		members = []memberItem{}
+	}
+	response.Success(c, map[string]interface{}{
+		"members": members,
 	})
 }

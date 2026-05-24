@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     port: 3000,
     proxy: {
       '/ws': {
@@ -13,6 +14,7 @@ export default defineConfig({
       '/login': 'http://localhost:1234',
       '/register': 'http://localhost:1234',
       '/api': 'http://localhost:1234',
+      '/files': 'http://localhost:1234',
     }
   }
 })

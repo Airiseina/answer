@@ -11,6 +11,32 @@
 
 .sidebar-avatar {
   margin-bottom: 24px;
+  position: relative;
+  cursor: pointer;
+}
+
+.sidebar-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sidebar-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.sidebar-avatar:hover .sidebar-avatar-overlay {
+  opacity: 1;
 }
 
 .avatar-circle {

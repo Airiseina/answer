@@ -18,6 +18,7 @@ struct LoginReq{
 struct LoginRes{
 1:i64 id,
 2:string account,
+3:string avatar_url,
 }
 struct CheckUsersExistReq{
 1:list<i64> userIds,
@@ -106,6 +107,7 @@ struct SearchUserResult{
 1:i64 id,
 2:string account,
 3:string name,
+4:string avatar_url,
 }
 struct SearchUserByAccountRes{
 1:SearchUserResult user_info,
@@ -116,9 +118,36 @@ struct GetUserNamesReq{
 struct UserNameInfo{
 1:i64 id,
 2:string name,
+3:string account,
+4:string avatar_url,
 }
 struct GetUserNamesRes{
 1:list<UserNameInfo> users,
+}
+struct GetUserIdsByAccountsReq{
+1:list<string> accounts,
+}
+struct UserAccountPair{
+1:i64 id,
+2:string account,
+}
+struct GetUserIdsByAccountsRes{
+1:list<UserAccountPair> users,
+}
+struct GetUsersInfoByAccountsReq{
+1:list<string> accounts,
+}
+struct UserInfoItem{
+1:string account,
+2:string name,
+3:string avatar_url,
+}
+struct GetUsersInfoByAccountsRes{
+1:list<UserInfoItem> users,
+}
+struct UpdateAvatarReq{
+1:i64 user_id,
+2:string avatar_url,
 }
 service LoginService{
 RegisterRes Register(1:RegisterReq req)
@@ -137,4 +166,7 @@ CommonRes UpdateFriendRemark(1:UpdateFriendRemarkReq req)
 GetFriendGroupsRes GetFriendGroups(1:GetFriendGroupsReq req)
 SearchUserByAccountRes SearchUserByAccount(1:SearchUserByAccountReq req)
 GetUserNamesRes GetUserNames(1:GetUserNamesReq req)
+GetUserIdsByAccountsRes GetUserIdsByAccounts(1:GetUserIdsByAccountsReq req)
+GetUsersInfoByAccountsRes GetUsersInfoByAccounts(1:GetUsersInfoByAccountsReq req)
+CommonRes UpdateAvatar(1:UpdateAvatarReq req)
 }

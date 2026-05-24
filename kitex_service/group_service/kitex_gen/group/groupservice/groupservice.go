@@ -104,6 +104,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CheckMuted": kitex.NewMethodInfo(
+		checkMutedHandler,
+		newGroupServiceCheckMutedArgs,
+		newGroupServiceCheckMutedResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -404,6 +411,24 @@ func newGroupServiceGetJoinRequestsResult() interface{} {
 	return group.NewGroupServiceGetJoinRequestsResult()
 }
 
+func checkMutedHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*group.GroupServiceCheckMutedArgs)
+	realResult := result.(*group.GroupServiceCheckMutedResult)
+	success, err := handler.(group.GroupService).CheckMuted(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newGroupServiceCheckMutedArgs() interface{} {
+	return group.NewGroupServiceCheckMutedArgs()
+}
+
+func newGroupServiceCheckMutedResult() interface{} {
+	return group.NewGroupServiceCheckMutedResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -539,6 +564,16 @@ func (p *kClient) GetJoinRequests(ctx context.Context, req *group.GetJoinRequest
 	_args.Req = req
 	var _result group.GroupServiceGetJoinRequestsResult
 	if err = p.c.Call(ctx, "GetJoinRequests", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CheckMuted(ctx context.Context, req *group.CheckMutedReq) (r *group.CheckMutedRes, err error) {
+	var _args group.GroupServiceCheckMutedArgs
+	_args.Req = req
+	var _result group.GroupServiceCheckMutedResult
+	if err = p.c.Call(ctx, "CheckMuted", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

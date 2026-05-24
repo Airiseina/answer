@@ -5,6 +5,7 @@ import (
 	"api_gateway/response"
 	"api_gateway/rpc"
 	"context"
+	"strconv"
 	"user_service/kitex_gen/user"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -44,8 +45,8 @@ func Register(ctx context.Context, c *app.RequestContext) {
 }
 
 type addFriendParam struct {
-	Receiver int64  `json:"receiver"`
-	Message  string `json:"message"`
+	ReceiverAccount string `json:"receiver_account"`
+	Message         string `json:"message"`
 }
 
 func AddFriend(ctx context.Context, c *app.RequestContext) {
@@ -58,28 +59,36 @@ func AddFriend(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
+
+	receiverIdMap := buildUserIdMap(ctx, []string{param.ReceiverAccount})
+	receiverID, ok := receiverIdMap[param.ReceiverAccount]
+	if !ok || receiverID == 0 {
+		response.Error(c, "参数错误", "目标账号不存在")
+		return
+	}
+
 	res, err := rpc.AddFriend(ctx, &user.AddFriendReq{
 		UserId:   userID,
-		Receiver: param.Receiver,
+		Receiver: receiverID,
 		Message:  param.Message,
 	})
 	if err != nil {
-		hlog.CtxErrorf(ctx, "添加好友RPC调用失败, user_id=%d, receiver=%d, err=%v", userID, param.Receiver, err)
+		hlog.CtxErrorf(ctx, "添加好友RPC调用失败, user_id=%d, receiver=%d, err=%v", userID, receiverID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "添加好友失败, user_id=%d, receiver=%d, reason=用户不存在或已是好友或已发送请求", userID, param.Receiver)
+		hlog.CtxWarnf(ctx, "添加好友失败, user_id=%d, receiver=%d", userID, receiverID)
 		response.Error(c, "操作失败", "用户不存在或已是好友或已发送请求")
 		return
 	}
-	hlog.CtxInfof(ctx, "添加好友请求发送成功, user_id=%d, receiver=%d", userID, param.Receiver)
+	hlog.CtxInfof(ctx, "添加好友请求发送成功, user_id=%d, receiver=%d", userID, receiverID)
 	response.Success(c, "好友请求已发送")
 }
 
 type handleFriendReqParam struct {
-	Sender int64 `json:"sender"`
-	Accept bool  `json:"accept"`
+	SenderAccount string `json:"sender_account"`
+	Accept        bool   `json:"accept"`
 }
 
 func HandleFriendReq(ctx context.Context, c *app.RequestContext) {
@@ -92,18 +101,26 @@ func HandleFriendReq(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
+
+	senderIdMap := buildUserIdMap(ctx, []string{param.SenderAccount})
+	senderID, ok := senderIdMap[param.SenderAccount]
+	if !ok || senderID == 0 {
+		response.Error(c, "参数错误", "发送者账号不存在")
+		return
+	}
+
 	res, err := rpc.HandleFriendReq(ctx, &user.HandleFriendReqReq{
-		Sender: param.Sender,
+		Sender: senderID,
 		UserId: userID,
 		Accept: param.Accept,
 	})
 	if err != nil {
-		hlog.CtxErrorf(ctx, "处理好友请求RPC调用失败, user_id=%d, sender=%d, err=%v", userID, param.Sender, err)
+		hlog.CtxErrorf(ctx, "处理好友请求RPC调用失败, user_id=%d, sender=%d, err=%v", userID, senderID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "处理好友请求失败, user_id=%d, sender=%d, reason=请求不存在或已处理", userID, param.Sender)
+		hlog.CtxWarnf(ctx, "处理好友请求失败, user_id=%d, sender=%d", userID, senderID)
 		response.Error(c, "操作失败", "请求不存在或已处理")
 		return
 	}
@@ -111,12 +128,12 @@ func HandleFriendReq(ctx context.Context, c *app.RequestContext) {
 	if param.Accept {
 		action = "已通过"
 	}
-	hlog.CtxInfof(ctx, "处理好友请求成功, user_id=%d, sender=%d, action=%s", userID, param.Sender, action)
+	hlog.CtxInfof(ctx, "处理好友请求成功, user_id=%d, sender=%d, action=%s", userID, senderID, action)
 	response.Success(c, "好友请求"+action)
 }
 
 type deleteFriendParam struct {
-	FriendID int64 `json:"friend_id"`
+	FriendAccount string `json:"friend_account"`
 }
 
 func DeleteFriend(ctx context.Context, c *app.RequestContext) {
@@ -129,21 +146,29 @@ func DeleteFriend(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
+
+	friendIdMap := buildUserIdMap(ctx, []string{param.FriendAccount})
+	friendID, ok := friendIdMap[param.FriendAccount]
+	if !ok || friendID == 0 {
+		response.Error(c, "参数错误", "好友账号不存在")
+		return
+	}
+
 	res, err := rpc.DeleteFriend(ctx, &user.DeleteFriendReq{
 		UserId:   userID,
-		FriendId: param.FriendID,
+		FriendId: friendID,
 	})
 	if err != nil {
-		hlog.CtxErrorf(ctx, "删除好友RPC调用失败, user_id=%d, friend_id=%d, err=%v", userID, param.FriendID, err)
+		hlog.CtxErrorf(ctx, "删除好友RPC调用失败, user_id=%d, friend_id=%d, err=%v", userID, friendID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "删除好友失败, user_id=%d, friend_id=%d, reason=好友关系不存在", userID, param.FriendID)
+		hlog.CtxWarnf(ctx, "删除好友失败, user_id=%d, friend_id=%d", userID, friendID)
 		response.Error(c, "操作失败", "好友关系不存在")
 		return
 	}
-	hlog.CtxInfof(ctx, "删除好友成功, user_id=%d, friend_id=%d", userID, param.FriendID)
+	hlog.CtxInfof(ctx, "删除好友成功, user_id=%d, friend_id=%d", userID, friendID)
 	response.Success(c, "删除成功")
 }
 
@@ -159,8 +184,33 @@ func GetFriendList(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
+
+	friendIDs := make([]int64, 0, len(res.Friends))
+	for _, f := range res.Friends {
+		friendIDs = append(friendIDs, f.FriendId)
+	}
+	accountMap := buildAccountMap(ctx, friendIDs)
+
+	type friendItem struct {
+		FriendAccount string `json:"friend_account"`
+		Remark        string `json:"remark"`
+		GroupID       int64  `json:"group_id,string"`
+		Name          string `json:"name"`
+	}
+	var list []friendItem
+	for _, f := range res.Friends {
+		list = append(list, friendItem{
+			FriendAccount: accountMap[f.FriendId],
+			Remark:        f.Remark,
+			GroupID:       f.GroupId,
+			Name:          f.Name,
+		})
+	}
+	if list == nil {
+		list = []friendItem{}
+	}
 	hlog.CtxInfof(ctx, "获取好友列表成功, user_id=%d, count=%d", userID, len(res.Friends))
-	response.Success(c, res.Friends)
+	response.Success(c, list)
 }
 
 func GetFriendRequests(ctx context.Context, c *app.RequestContext) {
@@ -175,8 +225,33 @@ func GetFriendRequests(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
+
+	var userIDs []int64
+	for _, r := range res.Requests {
+		userIDs = append(userIDs, r.Sender, r.Receiver)
+	}
+	accountMap := buildAccountMap(ctx, userIDs)
+
+	type friendRequestItem struct {
+		SenderAccount   string `json:"sender_account"`
+		ReceiverAccount string `json:"receiver_account"`
+		Message         string `json:"message"`
+		Status          int64  `json:"status"`
+	}
+	var list []friendRequestItem
+	for _, r := range res.Requests {
+		list = append(list, friendRequestItem{
+			SenderAccount:   accountMap[r.Sender],
+			ReceiverAccount: accountMap[r.Receiver],
+			Message:         r.Message,
+			Status:          r.Status,
+		})
+	}
+	if list == nil {
+		list = []friendRequestItem{}
+	}
 	hlog.CtxInfof(ctx, "获取好友请求列表成功, user_id=%d, count=%d", userID, len(res.Requests))
-	response.Success(c, res.Requests)
+	response.Success(c, list)
 }
 
 type createFriendGroupParam struct {
@@ -213,7 +288,9 @@ func CreateFriendGroup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	hlog.CtxInfof(ctx, "创建好友分组成功, user_id=%d, group_id=%d, name=%s", userID, res.GroupId, param.Name)
-	response.Success(c, res)
+	response.Success(c, map[string]interface{}{
+		"group_id": strconv.FormatInt(res.GroupId, 10),
+	})
 }
 
 type updateFriendGroupParam struct {
@@ -247,7 +324,7 @@ func UpdateFriendGroup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "修改好友分组失败, user_id=%d, group_id=%d, reason=分组不存在或无权限", userID, param.GroupID)
+		hlog.CtxWarnf(ctx, "修改好友分组失败, user_id=%d, group_id=%d", userID, param.GroupID)
 		response.Error(c, "操作失败", "分组不存在或无权限")
 		return
 	}
@@ -279,7 +356,7 @@ func DeleteFriendGroup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "删除好友分组失败, user_id=%d, group_id=%d, reason=分组不存在或无权限", userID, param.GroupID)
+		hlog.CtxWarnf(ctx, "删除好友分组失败, user_id=%d, group_id=%d", userID, param.GroupID)
 		response.Error(c, "操作失败", "分组不存在或无权限")
 		return
 	}
@@ -288,8 +365,8 @@ func DeleteFriendGroup(ctx context.Context, c *app.RequestContext) {
 }
 
 type moveFriendToGroupParam struct {
-	FriendID int64 `json:"friend_id"`
-	GroupID  int64 `json:"group_id"`
+	FriendAccount string `json:"friend_account"`
+	GroupID       int64  `json:"group_id"`
 }
 
 func MoveFriendToGroup(ctx context.Context, c *app.RequestContext) {
@@ -302,28 +379,36 @@ func MoveFriendToGroup(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
+
+	friendIdMap := buildUserIdMap(ctx, []string{param.FriendAccount})
+	friendID, ok := friendIdMap[param.FriendAccount]
+	if !ok || friendID == 0 {
+		response.Error(c, "参数错误", "好友账号不存在")
+		return
+	}
+
 	res, err := rpc.MoveFriendToGroup(ctx, &user.MoveFriendToGroupReq{
 		UserId:   userID,
-		FriendId: param.FriendID,
+		FriendId: friendID,
 		GroupId:  param.GroupID,
 	})
 	if err != nil {
-		hlog.CtxErrorf(ctx, "移动好友到分组RPC调用失败, user_id=%d, friend_id=%d, group_id=%d, err=%v", userID, param.FriendID, param.GroupID, err)
+		hlog.CtxErrorf(ctx, "移动好友到分组RPC调用失败, user_id=%d, friend_id=%d, group_id=%d, err=%v", userID, friendID, param.GroupID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "移动好友到分组失败, user_id=%d, friend_id=%d, group_id=%d, reason=好友关系或分组不存在", userID, param.FriendID, param.GroupID)
+		hlog.CtxWarnf(ctx, "移动好友到分组失败, user_id=%d, friend_id=%d, group_id=%d", userID, friendID, param.GroupID)
 		response.Error(c, "操作失败", "好友关系或分组不存在")
 		return
 	}
-	hlog.CtxInfof(ctx, "移动好友到分组成功, user_id=%d, friend_id=%d, group_id=%d", userID, param.FriendID, param.GroupID)
+	hlog.CtxInfof(ctx, "移动好友到分组成功, user_id=%d, friend_id=%d, group_id=%d", userID, friendID, param.GroupID)
 	response.Success(c, "移动成功")
 }
 
 type updateFriendRemarkParam struct {
-	FriendID int64  `json:"friend_id"`
-	Remark   string `json:"remark"`
+	FriendAccount string `json:"friend_account"`
+	Remark        string `json:"remark"`
 }
 
 func UpdateFriendRemark(ctx context.Context, c *app.RequestContext) {
@@ -336,22 +421,30 @@ func UpdateFriendRemark(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
+
+	friendIdMap := buildUserIdMap(ctx, []string{param.FriendAccount})
+	friendID, ok := friendIdMap[param.FriendAccount]
+	if !ok || friendID == 0 {
+		response.Error(c, "参数错误", "好友账号不存在")
+		return
+	}
+
 	res, err := rpc.UpdateFriendRemark(ctx, &user.UpdateFriendRemarkReq{
 		UserId:   userID,
-		FriendId: param.FriendID,
+		FriendId: friendID,
 		Remark:   param.Remark,
 	})
 	if err != nil {
-		hlog.CtxErrorf(ctx, "修改好友备注RPC调用失败, user_id=%d, friend_id=%d, err=%v", userID, param.FriendID, err)
+		hlog.CtxErrorf(ctx, "修改好友备注RPC调用失败, user_id=%d, friend_id=%d, err=%v", userID, friendID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !res.Success {
-		hlog.CtxWarnf(ctx, "修改好友备注失败, user_id=%d, friend_id=%d, reason=好友关系不存在", userID, param.FriendID)
+		hlog.CtxWarnf(ctx, "修改好友备注失败, user_id=%d, friend_id=%d", userID, friendID)
 		response.Error(c, "操作失败", "好友关系不存在")
 		return
 	}
-	hlog.CtxInfof(ctx, "修改好友备注成功, user_id=%d, friend_id=%d", userID, param.FriendID)
+	hlog.CtxInfof(ctx, "修改好友备注成功, user_id=%d, friend_id=%d", userID, friendID)
 	response.Success(c, "修改成功")
 }
 
@@ -394,6 +487,44 @@ func SearchUserByAccount(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "用户不存在", "请检查账号")
 		return
 	}
-	hlog.CtxInfof(ctx, "搜索用户成功, account=%s, user_id=%d", param.Account, res.UserInfo.Id)
-	response.Success(c, res.UserInfo)
+	hlog.CtxInfof(ctx, "搜索用户成功, account=%s", param.Account)
+	response.Success(c, map[string]interface{}{
+		"account": res.UserInfo.Account,
+		"name":    res.UserInfo.Name,
+	})
+}
+
+func UpdateAvatar(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userID := userInfo.Id
+
+	var reqBody struct {
+		AvatarUrl string `json:"avatar_url"`
+	}
+	if err := c.BindJSON(&reqBody); err != nil {
+		response.Error(c, "参数错误", "请求格式不正确")
+		return
+	}
+	if reqBody.AvatarUrl == "" {
+		response.Error(c, "参数错误", "头像URL不能为空")
+		return
+	}
+
+	res, err := rpc.UpdateAvatar(ctx, &user.UpdateAvatarReq{
+		UserId:    userID,
+		AvatarUrl: reqBody.AvatarUrl,
+	})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC UpdateAvatar失败, user_id=%d, err=%v", userID, err)
+		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if !res.Success {
+		hlog.CtxWarnf(ctx, "更新头像失败, user_id=%d", userID)
+		response.Error(c, "操作失败", "更新头像失败")
+		return
+	}
+	hlog.CtxInfof(ctx, "更新头像成功, user_id=%d", userID)
+	response.Success(c, "更新成功")
 }

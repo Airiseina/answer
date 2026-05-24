@@ -504,3 +504,7 @@ func (service GroupService) GetJoinRequests(groupId int64) ([]JoinRequestDTO, er
 	}
 	return result, nil
 }
+
+func (service GroupService) CheckMuted(groupId int64, userId int64) (bool, error) {
+	return service.dao.CheckMuted(groupId, userId)
+}

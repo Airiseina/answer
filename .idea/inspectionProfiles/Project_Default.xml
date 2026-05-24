@@ -6,5 +6,6 @@
         <method importPath="github.com/segmentio/kafka-go" receiver="*Dialer" name="DialContext" />
       </methods>
     </inspection_tool>
+    <inspection_tool class="SqlNoDataSourceInspection" enabled="false" level="WARNING" enabled_by_default="false" />
   </profile>
 </component>

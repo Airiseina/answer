@@ -100,6 +100,7 @@ func (s *FriendService) DeleteFriend(userID, friendID int64) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	_ = s.dao.DeleteFriendRequestsBetweenUsers(userID, friendID)
 	return true, nil
 }
 

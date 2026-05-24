@@ -4,9 +4,9 @@ import { useApp } from '../store/AppContext'
 import './GroupsPanel.css'
 
 interface GroupInfo {
-  group_id: number
   name: string
-  owner_id: number
+  owner_account: string
+  owner_name: string
   notice: string
   group_number: string
   create_time: number
@@ -14,29 +14,26 @@ interface GroupInfo {
 }
 
 interface GroupMemberInfo {
-  group_id: number
-  user_id: number
+  account: string
+  name: string
   role: number
   is_muted: boolean
   join_time: number
-  name: string
 }
 
 interface UserGroup {
-  group_id: number
   name: string
   group_number: string
 }
 
 interface GroupSearchResult {
-  group_id: number
   name: string
   owner_name: string
   group_number: string
 }
 
 interface JoinRequestInfo {
-  user_id: number
+  account: string
   name: string
   message: string
   status: number
@@ -44,10 +41,10 @@ interface JoinRequestInfo {
 
 export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
   const { openChatWith, friends, auth, conversations, setActiveConvId } = useApp()
-  const currentUserId = auth.userId ? parseInt(auth.userId) : 0
+  const currentAccount = auth.account
   const [tab, setTab] = useState<'create' | 'list' | 'search' | 'info'>('list')
   const [createName, setCreateName] = useState('')
-  const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([])
+  const [selectedFriendAccounts, setSelectedFriendAccounts] = useState<string[]>([])
   const [myGroups, setMyGroups] = useState<UserGroup[]>([])
   const [searchNumber, setSearchNumber] = useState('')
   const [searchResult, setSearchResult] = useState<GroupSearchResult | null>(null)
@@ -64,14 +61,14 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
 
   const handleCreate = async () => {
     if (!createName) return
-    const res = await api('POST', '/api/create_group', { name: createName, initial_members: selectedFriendIds })
+    const res = await api('POST', '/api/create_group', { name: createName, initial_accounts: selectedFriendAccounts })
     showToast(res.code === 0 ? `群组创建成功，群号: ${res.data?.group_number || ''}` : res.msg || '创建失败')
-    if (res.code === 0) { setCreateName(''); setSelectedFriendIds([]) }
+    if (res.code === 0) { setCreateName(''); setSelectedFriendAccounts([]) }
   }
 
-  const toggleFriend = (fid: number) => {
-    setSelectedFriendIds(prev =>
-      prev.includes(fid) ? prev.filter(id => id !== fid) : [...prev, fid]
+  const toggleFriend = (faccount: string) => {
+    setSelectedFriendAccounts(prev =>
+      prev.includes(faccount) ? prev.filter(a => a !== faccount) : [...prev, faccount]
     )
   }
 
@@ -95,69 +92,69 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
     if (res.code === 0) setJoinMessage('')
   }
 
-  const loadGroupInfo = async (groupId: number) => {
-    const res = await api('GET', `/api/get_group_info?group_id=${groupId}`)
+  const loadGroupInfo = async (groupNumber: string) => {
+    const res = await api('GET', `/api/get_group_info?group_number=${groupNumber}`)
     if (res.code === 0) { setGroupInfo(res.data); setManageMode(null) }
     else showToast(res.msg || '获取失败')
   }
 
-  const loadJoinRequests = async (groupId: number) => {
-    const res = await api('GET', `/api/get_join_requests?group_id=${groupId}`)
+  const loadJoinRequests = async (groupNumber: string) => {
+    const res = await api('GET', `/api/get_join_requests?group_number=${groupNumber}`)
     if (res.code === 0) setJoinRequests(res.data || [])
     else showToast(res.msg || '获取失败')
   }
 
-  const handleInvite = async (groupId: number, userIds: number[]) => {
-    const res = await api('POST', '/api/invite_members', { group_id: groupId, user_ids: userIds })
+  const handleInvite = async (groupNumber: string, accounts: string[]) => {
+    const res = await api('POST', '/api/invite_members', { group_number: groupNumber, accounts })
     showToast(res.code === 0 ? '邀请成功' : res.msg || '邀请失败')
-    if (res.code === 0) { loadGroupInfo(groupId); setSelectedInviteFriends([]); setManageMode(null) }
+    if (res.code === 0) { loadGroupInfo(groupNumber); setSelectedInviteAccounts([]); setManageMode(null) }
   }
 
-  const handleKick = async (groupId: number, userId: number) => {
-    const res = await api('POST', '/api/kick_members', { group_id: groupId, user_ids: [userId] })
+  const handleKick = async (groupNumber: string, account: string) => {
+    const res = await api('POST', '/api/kick_members', { group_number: groupNumber, accounts: [account] })
     showToast(res.code === 0 ? '已踢出' : res.msg || '操作失败')
-    if (res.code === 0) loadGroupInfo(groupId)
+    if (res.code === 0) loadGroupInfo(groupNumber)
   }
 
-  const handleChangeOwner = async (groupId: number, newId: number) => {
-    const res = await api('POST', '/api/change_owner', { group_id: groupId, new_id: newId })
+  const handleChangeOwner = async (groupNumber: string, newAccount: string) => {
+    const res = await api('POST', '/api/change_owner', { group_number: groupNumber, new_account: newAccount })
     showToast(res.code === 0 ? '转让成功' : res.msg || '操作失败')
-    if (res.code === 0) loadGroupInfo(groupId)
+    if (res.code === 0) loadGroupInfo(groupNumber)
   }
 
-  const handleChangeNotice = async (groupId: number, notice: string) => {
+  const handleChangeNotice = async (groupNumber: string, notice: string) => {
     if (!notice.trim()) return
-    const res = await api('POST', '/api/change_notice', { group_id: groupId, notice })
+    const res = await api('POST', '/api/change_notice', { group_number: groupNumber, notice })
     showToast(res.code === 0 ? '公告修改成功' : res.msg || '操作失败')
-    if (res.code === 0) { loadGroupInfo(groupId); setNoticeInput('') }
+    if (res.code === 0) { loadGroupInfo(groupNumber); setNoticeInput('') }
   }
 
-  const handleMuted = async (groupId: number, mutedId: number, isMuted: boolean) => {
-    const res = await api('POST', '/api/muted', { group_id: groupId, muted_id: mutedId, is_muted: isMuted })
+  const handleMuted = async (groupNumber: string, mutedAccount: string, isMuted: boolean) => {
+    const res = await api('POST', '/api/muted', { group_number: groupNumber, muted_account: mutedAccount, is_muted: isMuted })
     showToast(res.code === 0 ? '禁言状态修改成功' : res.msg || '操作失败')
-    if (res.code === 0) loadGroupInfo(groupId)
+    if (res.code === 0) loadGroupInfo(groupNumber)
   }
 
-  const handleSetAdmin = async (groupId: number, targetId: number, role: number) => {
-    const res = await api('POST', '/api/set_admin', { group_id: groupId, target_id: targetId, role })
+  const handleSetAdmin = async (groupNumber: string, targetAccount: string, role: number) => {
+    const res = await api('POST', '/api/set_admin', { group_number: groupNumber, target_account: targetAccount, role })
     showToast(res.code === 0 ? '管理员设置修改成功' : res.msg || '操作失败')
-    if (res.code === 0) loadGroupInfo(groupId)
+    if (res.code === 0) loadGroupInfo(groupNumber)
   }
 
-  const handleJoinReq = async (groupId: number, userId: number, accept: boolean) => {
-    const res = await api('POST', '/api/handle_join_req', { group_id: groupId, user_id: userId, accept })
+  const handleJoinReq = async (groupNumber: string, account: string, accept: boolean) => {
+    const res = await api('POST', '/api/handle_join_req', { group_number: groupNumber, account, accept })
     showToast(res.code === 0 ? '处理成功' : res.msg || '操作失败')
-    if (res.code === 0) loadJoinRequests(groupId)
+    if (res.code === 0) loadJoinRequests(groupNumber)
   }
 
-  const startGroupChat = (gid: number, name: string) => {
-    const conv = conversations.find(c => c.groupId === String(gid))
+  const startGroupChat = (groupNumber: string, name: string) => {
+    const conv = conversations.find(c => c.groupNumber === groupNumber)
     if (conv) {
       setActiveConvId(conv.id)
       onSwitchToChat()
       return
     }
-    openChatWith(String(gid), name || `群组 ${gid}`, 2)
+    openChatWith(groupNumber, name || `群组 ${groupNumber}`, 2)
     onSwitchToChat()
   }
 
@@ -168,22 +165,22 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
   }
 
   const isOwnerOrAdmin = (group: GroupInfo) => {
-    if (!currentUserId) return false
-    if (group.owner_id === currentUserId) return true
-    const member = group.members?.find((m: GroupMemberInfo) => m.user_id === currentUserId)
+    if (!currentAccount) return false
+    if (group.owner_account === currentAccount) return true
+    const member = group.members?.find((m: GroupMemberInfo) => m.account === currentAccount)
     return member?.role === 1
   }
 
   const isOwner = (group: GroupInfo) => {
-    if (!currentUserId) return false
-    return group.owner_id === currentUserId
+    if (!currentAccount) return false
+    return group.owner_account === currentAccount
   }
 
   const [noticeInput, setNoticeInput] = useState('')
-  const [selectedInviteFriends, setSelectedInviteFriends] = useState<number[]>([])
+  const [selectedInviteAccounts, setSelectedInviteAccounts] = useState<string[]>([])
 
-  const openGroupDetail = (groupId: number) => {
-    loadGroupInfo(groupId)
+  const openGroupDetail = (groupNumber: string) => {
+    loadGroupInfo(groupNumber)
     setTab('info')
   }
 
@@ -211,23 +208,23 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
               ) : (
                 <div className="friend-picker-list">
                   {friends.map(f => (
-                    <div key={f.friend_id}
-                      className={`friend-picker-item ${selectedFriendIds.includes(f.friend_id) ? 'selected' : ''}`}
-                      onClick={() => toggleFriend(f.friend_id)}
+                    <div key={f.friend_account}
+                      className={`friend-picker-item ${selectedFriendAccounts.includes(f.friend_account) ? 'selected' : ''}`}
+                      onClick={() => toggleFriend(f.friend_account)}
                     >
                       <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
                       <div className="fp-info">
                         <div className="fp-name">{f.remark || f.name}</div>
                       </div>
-                      {selectedFriendIds.includes(f.friend_id) && (
+                      {selectedFriendAccounts.includes(f.friend_account) && (
                         <div className="fp-check">✓</div>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-              {selectedFriendIds.length > 0 && (
-                <div className="selected-count">已选 {selectedFriendIds.length} 人</div>
+              {selectedFriendAccounts.length > 0 && (
+                <div className="selected-count">已选 {selectedFriendAccounts.length} 人</div>
               )}
             </div>
             <button className="btn-primary full" onClick={handleCreate}>创建群组</button>
@@ -236,15 +233,15 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
         {tab === 'list' && (
           <div className="group-list">
             {myGroups.map(g => (
-              <div key={g.group_id} className="friend-item">
-                <div className="friend-main" onClick={() => openGroupDetail(g.group_id)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+              <div key={g.group_number} className="friend-item">
+                <div className="friend-main" onClick={() => openGroupDetail(g.group_number)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                   <div className="friend-avatar">👥</div>
                   <div className="friend-info">
                     <div className="friend-name">{g.name}</div>
                     <div className="friend-sub">群号: {g.group_number}</div>
                   </div>
                 </div>
-                <button className="btn-icon" title="进入群聊" onClick={() => startGroupChat(g.group_id, g.name)} style={{ flexShrink: 0 }}>💬</button>
+                <button className="btn-icon" title="进入群聊" onClick={() => startGroupChat(g.group_number, g.name)} style={{ flexShrink: 0 }}>💬</button>
               </div>
             ))}
             {myGroups.length === 0 && <div className="contacts-empty">暂无群组</div>}
@@ -289,15 +286,15 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                     <div className="gi-id">群号: {groupInfo.group_number}</div>
                   </div>
                 </div>
-                <div className="gi-row"><span>群主</span><span>{groupInfo.members?.find((m: GroupMemberInfo) => m.role === 2)?.name || '未知'}</span></div>
+                <div className="gi-row"><span>群主</span><span>{groupInfo.owner_name}</span></div>
                 <div className="gi-row"><span>公告</span><span>{groupInfo.notice || '无'}</span></div>
                 <div className="gi-row"><span>成员数</span><span>{groupInfo.members?.length || 0}</span></div>
-                <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => startGroupChat(groupInfo.group_id, groupInfo.name)}>
+                <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => startGroupChat(groupInfo.group_number, groupInfo.name)}>
                   进入群聊
                 </button>
                 {isOwnerOrAdmin(groupInfo) && (
                   <>
-                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'requests' ? null : 'requests'); if (manageMode !== 'requests') loadJoinRequests(groupInfo.group_id) }}>
+                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'requests' ? null : 'requests'); if (manageMode !== 'requests') loadJoinRequests(groupInfo.group_number) }}>
                       {manageMode === 'requests' ? '收起申请' : '入群申请'}
                     </button>
                     {manageMode === 'requests' && (
@@ -308,7 +305,7 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                           joinRequests.map((r, i) => (
                             <div key={i} className="gi-member" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                <span>{r.name || `用户${r.user_id}`}</span>
+                                <span>{r.name || r.account}</span>
                                 <span className={`role-tag ${r.status === 0 ? 'role-0' : r.status === 1 ? 'role-2' : 'role-1'}`}>
                                   {r.status === 0 ? '待审核' : r.status === 1 ? '已通过' : '已拒绝'}
                                 </span>
@@ -316,8 +313,8 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                               {r.message && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.message}</div>}
                               {r.status === 0 && (
                                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                  <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => handleJoinReq(groupInfo.group_id, r.user_id, true)}>通过</button>
-                                  <button className="btn-danger" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => handleJoinReq(groupInfo.group_id, r.user_id, false)}>拒绝</button>
+                                  <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => handleJoinReq(groupInfo.group_number, r.account, true)}>通过</button>
+                                  <button className="btn-danger" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => handleJoinReq(groupInfo.group_number, r.account, false)}>拒绝</button>
                                 </div>
                               )}
                             </div>
@@ -325,7 +322,7 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                         )}
                       </div>
                     )}
-                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'invite' ? null : 'invite'); setSelectedInviteFriends([]) }}>
+                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'invite' ? null : 'invite'); setSelectedInviteAccounts([]) }}>
                       {manageMode === 'invite' ? '收起邀请' : '邀请成员'}
                     </button>
                     {manageMode === 'invite' && (
@@ -336,23 +333,23 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                           <>
                             <div className="friend-picker-list" style={{ maxHeight: 150 }}>
                               {friends.map(f => {
-                                const inGroup = groupInfo.members?.some((m: GroupMemberInfo) => m.user_id === f.friend_id)
+                                const inGroup = groupInfo.members?.some((m: GroupMemberInfo) => m.account === f.friend_account)
                                 if (inGroup) return null
                                 return (
-                                  <div key={f.friend_id}
-                                    className={`friend-picker-item ${selectedInviteFriends.includes(f.friend_id) ? 'selected' : ''}`}
-                                    onClick={() => setSelectedInviteFriends(prev => prev.includes(f.friend_id) ? prev.filter(id => id !== f.friend_id) : [...prev, f.friend_id])}
+                                  <div key={f.friend_account}
+                                    className={`friend-picker-item ${selectedInviteAccounts.includes(f.friend_account) ? 'selected' : ''}`}
+                                    onClick={() => setSelectedInviteAccounts(prev => prev.includes(f.friend_account) ? prev.filter(a => a !== f.friend_account) : [...prev, f.friend_account])}
                                   >
                                     <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
                                     <div className="fp-info"><div className="fp-name">{f.remark || f.name}</div></div>
-                                    {selectedInviteFriends.includes(f.friend_id) && <div className="fp-check">✓</div>}
+                                    {selectedInviteAccounts.includes(f.friend_account) && <div className="fp-check">✓</div>}
                                   </div>
                                 )
                               })}
                             </div>
-                            {selectedInviteFriends.length > 0 && (
-                              <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => handleInvite(groupInfo.group_id, selectedInviteFriends)}>
-                                邀请选中好友 ({selectedInviteFriends.length}人)
+                            {selectedInviteAccounts.length > 0 && (
+                              <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => handleInvite(groupInfo.group_number, selectedInviteAccounts)}>
+                                邀请选中好友 ({selectedInviteAccounts.length}人)
                               </button>
                             )}
                           </>
@@ -367,32 +364,32 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                     {groupInfo.members.map((m: GroupMemberInfo, i: number) => (
                       <div key={i} className="gi-member">
                         <div className="gi-member-left">
-                          <span className="gi-member-name">{m.name || `用户${m.user_id}`}</span>
+                          <span className="gi-member-name">{m.name || m.account}</span>
                           <span className={`role-tag role-${m.role}`}>{getRoleLabel(m.role)}</span>
                           {m.is_muted && <span className="role-tag role-muted">禁言</span>}
                         </div>
-                        {isOwnerOrAdmin(groupInfo) && m.user_id !== currentUserId && m.role !== 2 && (
+                        {isOwnerOrAdmin(groupInfo) && m.account !== currentAccount && m.role !== 2 && (
                           <div className="gi-member-actions">
-                            <button className="gi-action-btn" onClick={() => handleKick(groupInfo.group_id, m.user_id)} title="踢出">✕</button>
+                            <button className="gi-action-btn" onClick={() => handleKick(groupInfo.group_number, m.account)} title="踢出">✕</button>
                             {isOwner(groupInfo) && (
                               <>
-                                <button className="gi-action-btn" onClick={() => handleSetAdmin(groupInfo.group_id, m.user_id, m.role === 1 ? 0 : 1)} title={m.role === 1 ? '取消管理员' : '设为管理员'}>
+                                <button className="gi-action-btn" onClick={() => handleSetAdmin(groupInfo.group_number, m.account, m.role === 1 ? 0 : 1)} title={m.role === 1 ? '取消管理员' : '设为管理员'}>
                                   {m.role === 1 ? '↓' : '↑'}
                                 </button>
-                                <button className="gi-action-btn" onClick={() => handleMuted(groupInfo.group_id, m.user_id, !m.is_muted)} title={m.is_muted ? '解除禁言' : '禁言'}>
+                                <button className="gi-action-btn" onClick={() => handleMuted(groupInfo.group_number, m.account, !m.is_muted)} title={m.is_muted ? '解除禁言' : '禁言'}>
                                   {m.is_muted ? '🔊' : '🔇'}
                                 </button>
                               </>
                             )}
                             {!isOwner(groupInfo) && m.role === 0 && (
-                              <button className="gi-action-btn" onClick={() => handleMuted(groupInfo.group_id, m.user_id, !m.is_muted)} title={m.is_muted ? '解除禁言' : '禁言'}>
+                              <button className="gi-action-btn" onClick={() => handleMuted(groupInfo.group_number, m.account, !m.is_muted)} title={m.is_muted ? '解除禁言' : '禁言'}>
                                 {m.is_muted ? '🔊' : '🔇'}
                               </button>
                             )}
                           </div>
                         )}
                         {isOwner(groupInfo) && m.role !== 2 && (
-                          <button className="gi-action-btn" onClick={() => handleChangeOwner(groupInfo.group_id, m.user_id)} title="转让群主">👑</button>
+                          <button className="gi-action-btn" onClick={() => handleChangeOwner(groupInfo.group_number, m.account)} title="转让群主">👑</button>
                         )}
                       </div>
                     ))}
@@ -404,7 +401,7 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                     <div className="manage-section">
                       <h4>修改公告</h4>
                       <input value={noticeInput} onChange={e => setNoticeInput(e.target.value)} placeholder={groupInfo.notice || '输入新公告'} />
-                      <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => handleChangeNotice(groupInfo.group_id, noticeInput)}>修改公告</button>
+                      <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => handleChangeNotice(groupInfo.group_number, noticeInput)}>修改公告</button>
                     </div>
                   </>
                 )}

@@ -6,7 +6,11 @@ import (
 	"group_service/kitex_gen/group"
 	"group_service/rpc"
 
+	"answer_pkg/meter"
+
 	"github.com/cloudwego/kitex/pkg/klog"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type GroupServiceImpl struct {
@@ -38,6 +42,7 @@ func (s *GroupServiceImpl) CreateGroup(ctx context.Context, req *group.CreateGro
 		return nil, err
 	}
 	if !f {
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "create"), attribute.String("status", "invalid_members")))
 		return &group.CreateGroupRes{GroupId: 0}, nil
 	}
 	nameMap, err := rpc.GetUserNames(ctx, members)
@@ -48,8 +53,10 @@ func (s *GroupServiceImpl) CreateGroup(ctx context.Context, req *group.CreateGro
 	groupId, groupNumber, conversationID, err := s.groupService.CreateGroup(ctx, req.CreatorId, req.Name, members, nameMap)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建群聊时发生系统错误:%v", req.CreatorId, err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "create"), attribute.String("status", "error")))
 		return nil, err
 	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "create"), attribute.String("status", "success")))
 	resp = &group.CreateGroupRes{
 		GroupId:        groupId,
 		GroupNumber:    groupNumber,
@@ -67,8 +74,14 @@ func (s *GroupServiceImpl) InviteMembers(ctx context.Context, req *group.InviteM
 	success, err := s.groupService.InviteMembers(ctx, req.InviterId, req.GroupId, req.UserIds, nameMap)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]邀请成员到群[%d]时发生系统错误:%v", req.InviterId, req.GroupId, err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "invite"), attribute.String("status", "error")))
 		return &group.CommonRes{Success: false}, err
 	}
+	status := "success"
+	if !success {
+		status = "failed"
+	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "invite"), attribute.String("status", status)))
 	return &group.CommonRes{Success: success}, nil
 }
 
@@ -76,8 +89,14 @@ func (s *GroupServiceImpl) KickMembers(ctx context.Context, req *group.KickMembe
 	success, err := s.groupService.KickMembers(ctx, req.OperatorId, req.GroupId, req.UserIds)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]踢出[%d]群成员时发生系统错误:%v", req.OperatorId, req.GroupId, err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "kick"), attribute.String("status", "error")))
 		return &group.CommonRes{Success: false}, err
 	}
+	status := "success"
+	if !success {
+		status = "failed"
+	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "kick"), attribute.String("status", status)))
 	return &group.CommonRes{Success: success}, nil
 }
 
@@ -120,8 +139,14 @@ func (s *GroupServiceImpl) ChangeOwner(ctx context.Context, req *group.ChangeOwn
 	success, err := s.groupService.ChangeOwner(req.OldId, req.GroupId, req.NewId_)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]修改[%d]群主给[%d]发生系统错误:%v", req.OldId, req.GroupId, req.NewId_, err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "change_owner"), attribute.String("status", "error")))
 		return &group.CommonRes{Success: false}, err
 	}
+	status := "success"
+	if !success {
+		status = "failed"
+	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "change_owner"), attribute.String("status", status)))
 	return &group.CommonRes{Success: success}, nil
 }
 
@@ -190,8 +215,14 @@ func (s *GroupServiceImpl) JoinGroup(ctx context.Context, req *group.JoinGroupRe
 	success, err := s.groupService.JoinGroup(req.UserId, req.GroupNumber, req.Message)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]申请加入群[%d]时发生系统错误:%v", req.UserId, req.GroupNumber, err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "join"), attribute.String("status", "error")))
 		return &group.CommonRes{Success: false}, err
 	}
+	status := "success"
+	if !success {
+		status = "rejected"
+	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "join"), attribute.String("status", status)))
 	return &group.CommonRes{Success: success}, nil
 }
 
@@ -208,8 +239,17 @@ func (s *GroupServiceImpl) HandleJoinReq(ctx context.Context, req *group.HandleJ
 	success, err := s.groupService.HandleJoinRequest(ctx, req.OperatorId, req.GroupId, req.UserId, req.Accept, userName)
 	if err != nil {
 		klog.CtxErrorf(ctx, "处理入群申请时发生系统错误:%v", err)
+		meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "handle_join"), attribute.String("status", "error")))
 		return &group.CommonRes{Success: false}, err
 	}
+	result := "rejected"
+	if req.Accept {
+		result = "accepted"
+	}
+	if !success {
+		result = "invalid"
+	}
+	meter.M.GroupOpTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", "handle_join"), attribute.String("status", result)))
 	return &group.CommonRes{Success: success}, nil
 }
 
@@ -237,4 +277,13 @@ func (s *GroupServiceImpl) GetJoinRequests(ctx context.Context, req *group.GetJo
 		})
 	}
 	return &group.GetJoinRequestsRes{Requests: list}, nil
+}
+
+func (s *GroupServiceImpl) CheckMuted(ctx context.Context, req *group.CheckMutedReq) (resp *group.CheckMutedRes, err error) {
+	isMuted, err := s.groupService.CheckMuted(req.GroupId, req.UserId)
+	if err != nil {
+		klog.CtxErrorf(ctx, "查询用户[%d]在群[%d]禁言状态失败: %v", req.UserId, req.GroupId, err)
+		return &group.CheckMutedRes{IsMuted: false}, err
+	}
+	return &group.CheckMutedRes{IsMuted: isMuted}, nil
 }

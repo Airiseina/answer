@@ -4,8 +4,8 @@ import { useApp } from '../store/AppContext'
 import './ContactsPanel.css'
 
 interface FriendReq {
-  sender: number
-  receiver: number
+  sender_account: string
+  receiver_account: string
   message: string
   status: number
 }
@@ -16,15 +16,17 @@ interface FriendGroup {
 }
 
 export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
-  const { openChatWith, auth, setFriends, friends } = useApp()
+  const { openChatWith, auth, setFriends, friends, memberInfo, loadConversationMembers } = useApp()
   const [requests, setRequests] = useState<FriendReq[]>([])
   const [tab, setTab] = useState<'list' | 'req' | 'add' | 'group'>('list')
   const [searchAccount, setSearchAccount] = useState('')
-  const [searchResult, setSearchResult] = useState<{ id: number; account: string; name: string } | null>(null)
+  const [searchResult, setSearchResult] = useState<{ account: string; name: string } | null>(null)
   const [addMsg, setAddMsg] = useState('')
   const [groupName, setGroupName] = useState('')
   const [friendGroups, setFriendGroups] = useState<FriendGroup[]>([])
-  const [movingFriendId, setMovingFriendId] = useState<number | null>(null)
+  const [movingFriendAccount, setMovingFriendAccount] = useState<string | null>(null)
+  const [editingRemarkAccount, setEditingRemarkAccount] = useState<string | null>(null)
+  const [remarkInput, setRemarkInput] = useState('')
   const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => {
@@ -49,6 +51,13 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
 
   useEffect(() => { loadFriends(); loadFriendGroups() }, [])
 
+  useEffect(() => {
+    const accounts = friends.map(f => f.friend_account).filter(a => a)
+    if (accounts.length > 0) {
+      loadConversationMembers(accounts)
+    }
+  }, [friends, loadConversationMembers])
+
   const handleSearchUser = async () => {
     if (!searchAccount) return
     const res = await api('GET', `/api/search_user?account=${searchAccount}`)
@@ -58,15 +67,15 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
 
   const handleAddFriend = async () => {
     if (!searchResult) return
-    const res = await api('POST', '/api/add_friend', { receiver: searchResult.id, message: addMsg })
+    const res = await api('POST', '/api/add_friend', { receiver_account: searchResult.account, message: addMsg })
     showToast(res.code === 0 ? '好友请求已发送' : res.msg || '发送失败')
     if (res.code === 0) { setSearchAccount(''); setAddMsg(''); setSearchResult(null) }
   }
 
-  const handleFriendReq = async (sender: number, accept: boolean) => {
-    const res = await api('POST', '/api/handle_friend_req', { sender, accept })
+  const handleFriendReq = async (senderAccount: string, accept: boolean) => {
+    const res = await api('POST', '/api/handle_friend_req', { sender_account: senderAccount, accept })
     showToast(res.code === 0 ? (accept ? '已添加好友' : '已拒绝') : res.msg || '操作失败')
-    if (res.code === 0) loadRequests()
+    if (res.code === 0) { loadRequests(); loadFriends() }
   }
 
   const handleCreateGroup = async () => {
@@ -76,10 +85,10 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
     if (res.code === 0) { setGroupName(''); loadFriendGroups() }
   }
 
-  const handleMoveFriend = async (friendId: number, groupId: number) => {
-    const res = await api('POST', '/api/move_friend_to_group', { friend_id: friendId, group_id: groupId })
+  const handleMoveFriend = async (friendAccount: string, groupId: number) => {
+    const res = await api('POST', '/api/move_friend_to_group', { friend_account: friendAccount, group_id: groupId })
     showToast(res.code === 0 ? '移动成功' : res.msg || '移动失败')
-    if (res.code === 0) { setMovingFriendId(null); loadFriends() }
+    if (res.code === 0) { setMovingFriendAccount(null); loadFriends() }
   }
 
   const handleDeleteGroup = async (groupId: number) => {
@@ -88,8 +97,20 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
     if (res.code === 0) { loadFriendGroups(); loadFriends() }
   }
 
-  const startChat = (friendId: number, name: string) => {
-    openChatWith(String(friendId), name, 1)
+  const handleUpdateRemark = async (friendAccount: string, remark: string) => {
+    const res = await api('POST', '/api/update_friend_remark', { friend_account: friendAccount, remark })
+    showToast(res.code === 0 ? '备注修改成功' : res.msg || '修改失败')
+    if (res.code === 0) { setEditingRemarkAccount(null); setRemarkInput(''); loadFriends() }
+  }
+
+  const startEditRemark = (friendAccount: string, currentRemark: string) => {
+    setEditingRemarkAccount(friendAccount)
+    setRemarkInput(currentRemark)
+    setMovingFriendAccount(null)
+  }
+
+  const startChat = (friendAccount: string, name: string) => {
+    openChatWith(friendAccount, name, 1)
     onSwitchToChat()
   }
 
@@ -126,22 +147,48 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
                   {getGroupName(Number(gid))} <span className="count">{grouped[Number(gid)].length}</span>
                 </div>
                 {grouped[Number(gid)].map(f => (
-                  <div key={f.friend_id} className="friend-item">
-                    <div className="friend-main" onClick={() => startChat(f.friend_id, f.remark || f.name)}>
-                      <div className="friend-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
+                  <div key={f.friend_account} className="friend-item">
+                    <div className="friend-main" onClick={() => startChat(f.friend_account, f.remark || f.name)}>
+                      {memberInfo[f.friend_account]?.avatar ? (
+                        <img src={memberInfo[f.friend_account].avatar} alt={f.name} className="friend-avatar-img" />
+                      ) : (
+                        <div className="friend-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
+                      )}
                       <div className="friend-info">
                         <div className="friend-name">{f.remark || f.name}</div>
+                        {f.remark && <div className="friend-sub-name">昵称: {f.name}</div>}
                       </div>
                     </div>
                     <div className="friend-actions">
-                      <button className="btn-icon" title="移动到分组" onClick={() => setMovingFriendId(movingFriendId === f.friend_id ? null : f.friend_id)}>☰</button>
+                      <button className="btn-icon" title="修改备注" onClick={() => startEditRemark(f.friend_account, f.remark)}>✏️</button>
+                      <button className="btn-icon" title="移动到分组" onClick={() => setMovingFriendAccount(movingFriendAccount === f.friend_account ? null : f.friend_account)}>☰</button>
                     </div>
-                    {movingFriendId === f.friend_id && (
+                    {editingRemarkAccount === f.friend_account && (
+                      <div className="move-group-dropdown">
+                        <div className="move-group-label">修改备注：</div>
+                        <input
+                          value={remarkInput}
+                          onChange={e => setRemarkInput(e.target.value)}
+                          placeholder={f.name}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleUpdateRemark(f.friend_account, remarkInput)
+                            if (e.key === 'Escape') { setEditingRemarkAccount(null); setRemarkInput('') }
+                          }}
+                          autoFocus
+                          style={{ width: '100%', padding: '4px 8px', fontSize: 13, border: '1px solid var(--border)', borderRadius: 4, marginTop: 4 }}
+                        />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                          <button className="btn-sm btn-accept" onClick={() => handleUpdateRemark(f.friend_account, remarkInput)}>保存</button>
+                          <button className="btn-sm btn-reject" onClick={() => { setEditingRemarkAccount(null); setRemarkInput('') }}>取消</button>
+                        </div>
+                      </div>
+                    )}
+                    {movingFriendAccount === f.friend_account && editingRemarkAccount !== f.friend_account && (
                       <div className="move-group-dropdown">
                         <div className="move-group-label">移动到：</div>
-                        <div className={`move-group-item ${f.group_id === 0 ? 'active' : ''}`} onClick={() => handleMoveFriend(f.friend_id, 0)}>我的好友</div>
+                        <div className={`move-group-item ${f.group_id === 0 ? 'active' : ''}`} onClick={() => handleMoveFriend(f.friend_account, 0)}>我的好友</div>
                         {friendGroups.map(g => (
-                          <div key={g.group_id} className={`move-group-item ${f.group_id === g.group_id ? 'active' : ''}`} onClick={() => handleMoveFriend(f.friend_id, g.group_id)}>
+                          <div key={g.group_id} className={`move-group-item ${f.group_id === g.group_id ? 'active' : ''}`} onClick={() => handleMoveFriend(f.friend_account, g.group_id)}>
                             {g.name}
                           </div>
                         ))}
@@ -159,7 +206,7 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
             {requests.map((r, i) => (
               <div key={i} className="req-item">
                 <div className="req-info">
-                  <span className="req-from">用户 {r.sender}</span>
+                  <span className="req-from">{r.sender_account}</span>
                   <span className="req-msg">{r.message}</span>
                   <span className={`req-status status-${r.status}`}>
                     {r.status === 0 ? '待处理' : r.status === 1 ? '已同意' : '已拒绝'}
@@ -167,8 +214,8 @@ export default function ContactsPanel({ onSwitchToChat }: { onSwitchToChat: () =
                 </div>
                 {r.status === 0 && (
                   <div className="req-actions">
-                    <button className="btn-sm btn-accept" onClick={() => handleFriendReq(r.sender, true)}>同意</button>
-                    <button className="btn-sm btn-reject" onClick={() => handleFriendReq(r.sender, false)}>拒绝</button>
+                    <button className="btn-sm btn-accept" onClick={() => handleFriendReq(r.sender_account, true)}>同意</button>
+                    <button className="btn-sm btn-reject" onClick={() => handleFriendReq(r.sender_account, false)}>拒绝</button>
                   </div>
                 )}
               </div>

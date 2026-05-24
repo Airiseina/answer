@@ -28,18 +28,19 @@ func Meter() metric.Meter {
 }
 
 type Metrics struct {
-	OnlineUsers        metric.Int64ObservableGauge
-	WsConnectTotal     metric.Int64Counter
-	WsDisconnectTotal  metric.Int64Counter
-	MessageSentTotal   metric.Int64Counter
-	MessageLatency     metric.Float64Histogram
-	BotRequestTotal    metric.Int64Counter
-	BotResponseLatency metric.Float64Histogram
-	BotTokenUsage      metric.Int64Counter
-	GroupOpTotal       metric.Int64Counter
-	UserRegisterTotal  metric.Int64Counter
-	UserLoginTotal     metric.Int64Counter
-	FriendOpTotal      metric.Int64Counter
+	OnlineUsers          metric.Int64ObservableGauge
+	WsConnectTotal       metric.Int64Counter
+	WsDisconnectTotal    metric.Int64Counter
+	MessageSentTotal     metric.Int64Counter
+	MessageReceivedTotal metric.Int64Counter
+	MessageLatency       metric.Float64Histogram
+	BotRequestTotal      metric.Int64Counter
+	BotResponseLatency   metric.Float64Histogram
+	BotTokenUsage        metric.Int64Counter
+	GroupOpTotal         metric.Int64Counter
+	UserRegisterTotal    metric.Int64Counter
+	UserLoginTotal       metric.Int64Counter
+	FriendOpTotal        metric.Int64Counter
 }
 
 var M *Metrics
@@ -65,6 +66,12 @@ func registerAll(serviceName string) {
 		metric.WithDescription("发送消息总数"),
 	)
 	mustRegister(err, "aim.message.sent.total")
+
+	M.MessageReceivedTotal, err = Meter().Int64Counter(
+		"aim.message.received.total",
+		metric.WithDescription("接收消息总数"),
+	)
+	mustRegister(err, "aim.message.received.total")
 
 	M.MessageLatency, err = Meter().Float64Histogram(
 		"aim.message.latency",

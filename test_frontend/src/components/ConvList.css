@@ -94,6 +94,13 @@
   flex-shrink: 0;
 }
 
+.conv-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .online-dot {
   position: absolute;
   bottom: 0;

@@ -48,7 +48,7 @@ func (s *LoginServiceImpl) Login(ctx context.Context, req *user.LoginReq) (resp 
 		return &user.LoginRes{}, nil
 	}
 	meter.M.UserLoginTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
-	return &user.LoginRes{Account: userInfo.Account, Id: userInfo.Id}, nil
+	return &user.LoginRes{Account: userInfo.Account, Id: userInfo.Id, AvatarUrl: userInfo.AvatarURL}, nil
 }
 
 func (s *LoginServiceImpl) CheckUsersExist(ctx context.Context, req *user.CheckUsersExistReq) (resp *user.CheckUsersExistRes, err error) {
@@ -224,10 +224,11 @@ func (s *LoginServiceImpl) SearchUserByAccount(ctx context.Context, req *user.Se
 		return &user.SearchUserByAccountRes{}, nil
 	}
 	return &user.SearchUserByAccountRes{
-		UserInfo: &user.SearchUserResult{
-			Id:      searchUserDTO.Id,
-			Account: searchUserDTO.Account,
-			Name:    searchUserDTO.Name,
+		UserInfo: &user.SearchUserResult_{
+			Id:        searchUserDTO.Id,
+			Account:   searchUserDTO.Account,
+			Name:      searchUserDTO.Name,
+			AvatarUrl: searchUserDTO.AvatarURL,
 		},
 	}, nil
 }
@@ -241,9 +242,54 @@ func (s *LoginServiceImpl) GetUserNames(ctx context.Context, req *user.GetUserNa
 	var list []*user.UserNameInfo
 	for _, u := range users {
 		list = append(list, &user.UserNameInfo{
-			Id:   u.Id,
-			Name: u.Name,
+			Id:        u.Id,
+			Name:      u.Name,
+			Account:   u.Account,
+			AvatarUrl: u.AvatarURL,
 		})
 	}
 	return &user.GetUserNamesRes{Users: list}, nil
+}
+
+// GetUserIdsByAccounts implements the LoginServiceImpl interface.
+func (s *LoginServiceImpl) GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq) (resp *user.GetUserIdsByAccountsRes, err error) {
+	dtos, err := s.userService.GetUserIdsByAccounts(req.Accounts)
+	if err != nil {
+		klog.CtxErrorf(ctx, "批量查询用户ID时发生系统错误: %v", err)
+		return nil, err
+	}
+	var list []*user.UserAccountPair
+	for _, dto := range dtos {
+		list = append(list, &user.UserAccountPair{
+			Id:      dto.Id,
+			Account: dto.Account,
+		})
+	}
+	return &user.GetUserIdsByAccountsRes{Users: list}, nil
+}
+
+func (s *LoginServiceImpl) GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq) (resp *user.GetUsersInfoByAccountsRes, err error) {
+	dtos, err := s.userService.GetUsersInfoByAccounts(req.Accounts)
+	if err != nil {
+		klog.CtxErrorf(ctx, "批量查询用户信息时发生系统错误: %v", err)
+		return nil, err
+	}
+	var list []*user.UserInfoItem
+	for _, dto := range dtos {
+		list = append(list, &user.UserInfoItem{
+			Account:   dto.Account,
+			Name:      dto.Name,
+			AvatarUrl: dto.AvatarURL,
+		})
+	}
+	return &user.GetUsersInfoByAccountsRes{Users: list}, nil
+}
+
+func (s *LoginServiceImpl) UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq) (resp *user.CommonRes, err error) {
+	success, err := s.userService.UpdateAvatar(req.UserId, req.AvatarUrl)
+	if err != nil {
+		klog.CtxErrorf(ctx, "用户[%d]更新头像时发生系统错误: %v", req.UserId, err)
+		return nil, err
+	}
+	return &user.CommonRes{Success: success}, nil
 }

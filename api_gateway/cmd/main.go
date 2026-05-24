@@ -28,7 +28,7 @@ func main() {
 		hertzzap.WithCoreLevel(zap.NewAtomicLevelAt(zap.DebugLevel)),
 		hertzzap.WithZapOptions(
 			zap.AddCaller(),
-			zap.AddCallerSkip(4),
+			zap.AddCallerSkip(3),
 			zap.Fields(zap.String("service", "api_gateway")),
 		),
 	)
@@ -41,7 +41,7 @@ func main() {
 	meter.InitMeter("api_gateway")
 	rpc.Connect()
 	tracerOptions, cfg := hertztracing.NewServerTracer()
-	h := server.New(server.WithHostPorts("0.0.0.0:1234"), tracerOptions)
+	h := server.New(server.WithHostPorts("0.0.0.0:1234"), server.WithMaxRequestBodySize(50*1024*1024), tracerOptions)
 	h.Use(hertztracing.ServerMiddleware(cfg))
 	h.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},

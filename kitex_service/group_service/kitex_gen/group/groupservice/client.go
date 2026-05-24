@@ -24,6 +24,7 @@ type Client interface {
 	JoinGroup(ctx context.Context, req *group.JoinGroupReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
 	HandleJoinReq(ctx context.Context, req *group.HandleJoinReqReq, callOptions ...callopt.Option) (r *group.CommonRes, err error)
 	GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq, callOptions ...callopt.Option) (r *group.GetJoinRequestsRes, err error)
+	CheckMuted(ctx context.Context, req *group.CheckMutedReq, callOptions ...callopt.Option) (r *group.CheckMutedRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -118,4 +119,9 @@ func (p *kGroupServiceClient) HandleJoinReq(ctx context.Context, req *group.Hand
 func (p *kGroupServiceClient) GetJoinRequests(ctx context.Context, req *group.GetJoinRequestsReq, callOptions ...callopt.Option) (r *group.GetJoinRequestsRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetJoinRequests(ctx, req)
+}
+
+func (p *kGroupServiceClient) CheckMuted(ctx context.Context, req *group.CheckMutedReq, callOptions ...callopt.Option) (r *group.CheckMutedRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CheckMuted(ctx, req)
 }

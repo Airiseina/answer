@@ -2,10 +2,10 @@ go 1.26.1
 
 use (
 	./api_gateway
+	./kitex_service/bot_service
 	./kitex_service/chat_service
 	./kitex_service/user_service
 	./msg_gateway
 	./pkg
-	./work_service
 	kitex_service/group_service
 )

@@ -51,8 +51,8 @@ func JwtMiddleware() {
 			if res.Id == 0 {
 				return nil, errors.New("账号密码错误")
 			}
-			c.Set("user_id", res.Id)
 			c.Set("account", res.Account)
+			c.Set("avatar_url", res.AvatarUrl)
 			return &Resp{res.Id, res.Account}, nil
 		},
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
@@ -88,12 +88,12 @@ func JwtMiddleware() {
 			return &Resp{userId, account}
 		},
 		LoginResponse: func(ctx context.Context, c *app.RequestContext, code int, message string, time time.Time) {
-			userID, _ := c.Get("user_id")
 			account, _ := c.Get("account")
+			avatarUrl, _ := c.Get("avatar_url")
 			response.Success(c, map[string]interface{}{
-				"token":   message,
-				"id":      userID,
-				"account": account,
+				"token":      message,
+				"account":    account,
+				"avatar_url": avatarUrl,
 			})
 		},
 	})

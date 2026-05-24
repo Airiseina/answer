@@ -4,10 +4,9 @@ package loginservice
 
 import (
 	"context"
-	user "user_service/kitex_gen/user"
-
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
+	user "user_service/kitex_gen/user"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
@@ -28,6 +27,9 @@ type Client interface {
 	GetFriendGroups(ctx context.Context, req *user.GetFriendGroupsReq, callOptions ...callopt.Option) (r *user.GetFriendGroupsRes, err error)
 	SearchUserByAccount(ctx context.Context, req *user.SearchUserByAccountReq, callOptions ...callopt.Option) (r *user.SearchUserByAccountRes, err error)
 	GetUserNames(ctx context.Context, req *user.GetUserNamesReq, callOptions ...callopt.Option) (r *user.GetUserNamesRes, err error)
+	GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq, callOptions ...callopt.Option) (r *user.GetUserIdsByAccountsRes, err error)
+	GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq, callOptions ...callopt.Option) (r *user.GetUsersInfoByAccountsRes, err error)
+	UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -137,4 +139,19 @@ func (p *kLoginServiceClient) SearchUserByAccount(ctx context.Context, req *user
 func (p *kLoginServiceClient) GetUserNames(ctx context.Context, req *user.GetUserNamesReq, callOptions ...callopt.Option) (r *user.GetUserNamesRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetUserNames(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetUserIdsByAccounts(ctx context.Context, req *user.GetUserIdsByAccountsReq, callOptions ...callopt.Option) (r *user.GetUserIdsByAccountsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetUserIdsByAccounts(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetUsersInfoByAccounts(ctx context.Context, req *user.GetUsersInfoByAccountsReq, callOptions ...callopt.Option) (r *user.GetUsersInfoByAccountsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetUsersInfoByAccounts(ctx, req)
+}
+
+func (p *kLoginServiceClient) UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateAvatar(ctx, req)
 }

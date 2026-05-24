@@ -2,6 +2,9 @@ package main
 
 import (
 	"answer_pkg/connect"
+	"answer_pkg/meter"
+	"answer_pkg/tracer"
+	"context"
 	"group_service/internal/config"
 	"group_service/internal/dal"
 	"group_service/internal/model"
@@ -37,6 +40,10 @@ func main() {
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
+	otelAddr := viper.GetString("otel.Addr")
+	p := tracer.InitTracer("group_service", otelAddr)
+	defer p.Shutdown(context.Background())
+	meter.InitMeter("group_service")
 	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
 		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
 	}

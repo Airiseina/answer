@@ -23,6 +23,7 @@ type UserDao interface {
 	GetFriendRequest(sender, receiver int64) (model.FriendRequest, error)
 	GetFriendRequestBetweenUsers(userA, userB int64) (model.FriendRequest, error)
 	DeleteFriendRequest(sender, receiver int64) error
+	DeleteFriendRequestsBetweenUsers(userA, userB int64) error
 	UpdateFriendRequestStatus(sender, receiver, status int64) error
 	GetFriendRequestsByReceiver(receiver int64) ([]model.FriendRequest, error)
 	CreateFriend(userID, friendID, groupID int64) error
@@ -39,4 +40,6 @@ type UserDao interface {
 	ResetFriendsGroupID(groupID int64) error
 	GetFriendGroupsByUserId(userID int64) ([]model.FriendGroup, error)
 	GetUsersByIds(userIds []int64) ([]model.User, error)
+	GetUsersByAccounts(accounts []string) ([]model.User, error)
+	UpdateAvatar(userID int64, avatarURL string) error
 }

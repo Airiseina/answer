@@ -33,8 +33,9 @@ func (dao *UserService) Register(account, name, password string) (bool, error) {
 }
 
 type UserDTO struct {
-	Id      int64  `json:"id"`
-	Account string `json:"account"`
+	Id        int64  `json:"id"`
+	Account   string `json:"account"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 func (dao *UserService) Login(account string, password string) (UserDTO, error) {
@@ -50,7 +51,8 @@ func (dao *UserService) Login(account string, password string) (UserDTO, error) 
 		return UserDTO{}, nil
 	}
 	return UserDTO{
-		Id:      userInfo.ID,
-		Account: userInfo.Account,
+		Id:        userInfo.ID,
+		Account:   userInfo.Account,
+		AvatarURL: userInfo.AvatarURL,
 	}, nil
 }

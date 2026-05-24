@@ -82,7 +82,7 @@ func (db *gor) GetFriendRequest(sender, receiver int64) (model.FriendRequest, er
 
 func (db *gor) GetFriendRequestBetweenUsers(userA, userB int64) (model.FriendRequest, error) {
 	var req model.FriendRequest
-	err := db.db.Where(
+	err := db.db.Unscoped().Where(
 		"(sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)",
 		userA, userB, userB, userA,
 	).First(&req).Error
@@ -96,7 +96,18 @@ func (db *gor) GetFriendRequestBetweenUsers(userA, userB int64) (model.FriendReq
 }
 
 func (db *gor) DeleteFriendRequest(sender, receiver int64) error {
-	err := db.db.Where("sender = ? AND receiver = ?", sender, receiver).Delete(&model.FriendRequest{}).Error
+	err := db.db.Unscoped().Where("sender = ? AND receiver = ?", sender, receiver).Delete(&model.FriendRequest{}).Error
+	if err != nil {
+		return fmt.Errorf("删除好友请求失败: %w", err)
+	}
+	return nil
+}
+
+func (db *gor) DeleteFriendRequestsBetweenUsers(userA, userB int64) error {
+	err := db.db.Unscoped().Where(
+		"(sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)",
+		userA, userB, userB, userA,
+	).Delete(&model.FriendRequest{}).Error
 	if err != nil {
 		return fmt.Errorf("删除好友请求失败: %w", err)
 	}
@@ -153,7 +164,7 @@ func (db *gor) CreateFriendPair(userA, userB int64, groupID int64) error {
 
 func (db *gor) GetFriend(userID, friendID int64) (model.Friend, error) {
 	var friend model.Friend
-	err := db.db.Where("user_id = ? AND friend_id = ?", userID, friendID).First(&friend).Error
+	err := db.db.Unscoped().Where("user_id = ? AND friend_id = ?", userID, friendID).First(&friend).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return model.Friend{}, nil
@@ -164,7 +175,7 @@ func (db *gor) GetFriend(userID, friendID int64) (model.Friend, error) {
 }
 
 func (db *gor) DeleteFriend(userID, friendID int64) error {
-	err := db.db.Where("user_id = ? AND friend_id = ?", userID, friendID).Delete(&model.Friend{}).Error
+	err := db.db.Unscoped().Where("user_id = ? AND friend_id = ?", userID, friendID).Delete(&model.Friend{}).Error
 	if err != nil {
 		return fmt.Errorf("删除好友关系失败: %w", err)
 	}
@@ -264,4 +275,21 @@ func (db *gor) GetUsersByIds(userIds []int64) ([]model.User, error) {
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
 	}
 	return users, nil
+}
+
+func (db *gor) GetUsersByAccounts(accounts []string) ([]model.User, error) {
+	var users []model.User
+	err := db.db.Where("account IN ?", accounts).Find(&users).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询用户列表失败: %w", err)
+	}
+	return users, nil
+}
+
+func (db *gor) UpdateAvatar(userID int64, avatarURL string) error {
+	err := db.db.Model(&model.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error
+	if err != nil {
+		return fmt.Errorf("更新头像失败: %w", err)
+	}
+	return nil
 }
