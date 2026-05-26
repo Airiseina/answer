@@ -171,50 +171,56 @@ services:
       - garnet_data:/data
     networks:
       - answer-net
-#
-#  kafka-1:
-#    image: apache/kafka:latest
-#    container_name: answer_kafka-1
-#    user: root
-#    environment:
-#      KAFKA_NODE_ID: 1
-#      KAFKA_PROCESS_ROLES: broker,controller
-#      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,EXTERNAL://localhost:9094
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-#      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093
-#      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-#      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-#    ports:
-#      - "9094:9094"
-#    volumes:
-#      - kafka_1_data:/tmp/kafka-logs
-#    networks:
-#      - answer-net
-#
-#  kafka-2:
-#    image: apache/kafka:latest
-#    container_name: answer_kafka-2
-#    user: root
-#    environment:
-#      KAFKA_NODE_ID: 2
-#      KAFKA_PROCESS_ROLES: broker,controller
-#      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9095
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092,EXTERNAL://localhost:9095
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-#      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093
-#      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-#      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-#    ports:
-#      - "9095:9095"
-#    volumes:
-#      - kafka_2_data:/tmp/kafka-logs
-#    networks:
-#      - answer-net
+
+  kafka-1:
+    image: apache/kafka:latest
+    container_name: answer_kafka-1
+    user: root
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    ports:
+      - "9094:9094"
+    volumes:
+      - kafka_1_data:/tmp/kafka-logs
+    networks:
+      - answer-net
+
+  kafka-2:
+    image: apache/kafka:latest
+    container_name: answer_kafka-2
+    user: root
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker
+      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:9095
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092,EXTERNAL://localhost:9095
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    ports:
+      - "9095:9095"
+    volumes:
+      - kafka_2_data:/tmp/kafka-logs
+    networks:
+      - answer-net
+    depends_on:
+      - kafka-1
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -327,8 +333,8 @@ volumes:
   postgres_data:
   mysql_data:
   garnet_data:
-#  kafka_1_data:
-#  kafka_2_data:
+  kafka_1_data:
+  kafka_2_data:
   qdrant_data:
   seaweedfs_master_data:
   seaweedfs_volume_data:

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../api/client'
 import { useApp } from '../store/AppContext'
 import './GroupsPanel.css'
@@ -37,6 +37,12 @@ interface JoinRequestInfo {
   name: string
   message: string
   status: number
+}
+
+interface BotItem {
+  bot_id: string
+  name: string
+  is_system: boolean
 }
 
 export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
@@ -178,6 +184,18 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
 
   const [noticeInput, setNoticeInput] = useState('')
   const [selectedInviteAccounts, setSelectedInviteAccounts] = useState<string[]>([])
+  const [bots, setBots] = useState<BotItem[]>([])
+  const [selectedBotIds, setSelectedBotIds] = useState<string[]>([])
+
+  const loadBots = async () => {
+    const res = await api('GET', '/api/bot/list')
+    if (res.code === 0) setBots(res.data?.bots || [])
+    else setBots([])
+  }
+
+  useEffect(() => {
+    loadBots()
+  }, [])
 
   const openGroupDetail = (groupNumber: string) => {
     loadGroupInfo(groupNumber)
@@ -322,34 +340,87 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                         )}
                       </div>
                     )}
-                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'invite' ? null : 'invite'); setSelectedInviteAccounts([]) }}>
-                      {manageMode === 'invite' ? '收起邀请' : '邀请成员'}
+                    <button className="btn-secondary full" style={{ marginTop: 8 }} onClick={() => { setManageMode(manageMode === 'invite' ? null : 'invite'); setSelectedInviteAccounts([]); setSelectedBotIds([]) }}>
+                      {manageMode === 'invite' ? '收起邀请' : '邀请成员 / 添加 Bot'}
                     </button>
                     {manageMode === 'invite' && (
                       <div className="manage-section" style={{ marginTop: 8 }}>
-                        {friends.length === 0 ? (
-                          <div className="picker-empty">暂无好友可邀请</div>
+                        {friends.length === 0 && bots.length === 0 ? (
+                          <div className="picker-empty">暂无好友或 Bot 可邀请</div>
                         ) : (
                           <>
-                            <div className="friend-picker-list" style={{ maxHeight: 150 }}>
-                              {friends.map(f => {
-                                const inGroup = groupInfo.members?.some((m: GroupMemberInfo) => m.account === f.friend_account)
-                                if (inGroup) return null
-                                return (
-                                  <div key={f.friend_account}
-                                    className={`friend-picker-item ${selectedInviteAccounts.includes(f.friend_account) ? 'selected' : ''}`}
-                                    onClick={() => setSelectedInviteAccounts(prev => prev.includes(f.friend_account) ? prev.filter(a => a !== f.friend_account) : [...prev, f.friend_account])}
-                                  >
-                                    <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
-                                    <div className="fp-info"><div className="fp-name">{f.remark || f.name}</div></div>
-                                    {selectedInviteAccounts.includes(f.friend_account) && <div className="fp-check">✓</div>}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                            {selectedInviteAccounts.length > 0 && (
-                              <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => handleInvite(groupInfo.group_number, selectedInviteAccounts)}>
-                                邀请选中好友 ({selectedInviteAccounts.length}人)
+                            {friends.length > 0 && (
+                              <>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>好友</div>
+                                <div className="friend-picker-list" style={{ maxHeight: 120 }}>
+                                  {friends.map(f => {
+                                    const inGroup = groupInfo.members?.some((m: GroupMemberInfo) => m.account === f.friend_account)
+                                    if (inGroup) return null
+                                    return (
+                                      <div key={f.friend_account}
+                                        className={`friend-picker-item ${selectedInviteAccounts.includes(f.friend_account) ? 'selected' : ''}`}
+                                        onClick={() => setSelectedInviteAccounts(prev => prev.includes(f.friend_account) ? prev.filter(a => a !== f.friend_account) : [...prev, f.friend_account])}
+                                      >
+                                        <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
+                                        <div className="fp-info"><div className="fp-name">{f.remark || f.name}</div></div>
+                                        {selectedInviteAccounts.includes(f.friend_account) && <div className="fp-check">✓</div>}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </>
+                            )}
+                            {bots.length > 0 && (
+                              <>
+                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '8px 0 4px' }}>Bot</div>
+                                <div className="friend-picker-list" style={{ maxHeight: 120 }}>
+                                  {bots.map(b => {
+                                    return (
+                                      <div key={b.bot_id}
+                                        className={`friend-picker-item ${selectedBotIds.includes(b.bot_id) ? 'selected' : ''}`}
+                                        onClick={() => setSelectedBotIds(prev => prev.includes(b.bot_id) ? prev.filter(id => id !== b.bot_id) : [...prev, b.bot_id])}
+                                      >
+                                        <div className="fp-avatar">🤖</div>
+                                        <div className="fp-info"><div className="fp-name">{b.name}{b.is_system ? ' (系统)' : ''}</div></div>
+                                        {selectedBotIds.includes(b.bot_id) && <div className="fp-check">✓</div>}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </>
+                            )}
+                            {(selectedInviteAccounts.length > 0 || selectedBotIds.length > 0) && (
+                              <button className="btn-primary full" style={{ marginTop: 8 }} onClick={async () => {
+                                let ok = true
+                                if (selectedInviteAccounts.length > 0) {
+                                  const res = await api('POST', '/api/invite_members', { group_number: groupInfo.group_number, accounts: selectedInviteAccounts })
+                                  if (res.code !== 0) { showToast(res.msg || '邀请好友失败'); ok = false }
+                                }
+                                if (ok && selectedBotIds.length > 0) {
+                                  const conv = conversations.find(c => c.groupNumber === groupInfo.group_number)
+                                  if (conv) {
+                                    for (const botId of selectedBotIds) {
+                                      const res = await api('POST', '/api/bot/add_to_conversation', {
+                                        bot_id: botId,
+                                        conversation_id: conv.id,
+                                        conversation_type: 2,
+                                      })
+                                      if (res.code !== 0) { showToast(res.msg || '添加Bot失败'); ok = false; break }
+                                    }
+                                  } else {
+                                    showToast('未找到群聊会话，请先进入群聊')
+                                    ok = false
+                                  }
+                                }
+                                if (ok) {
+                                  showToast('操作成功')
+                                  loadGroupInfo(groupInfo.group_number)
+                                  setSelectedInviteAccounts([])
+                                  setSelectedBotIds([])
+                                  setManageMode(null)
+                                }
+                              }}>
+                                确认邀请 ({selectedInviteAccounts.length}位好友{selectedBotIds.length > 0 ? ` + ${selectedBotIds.length}个Bot` : ''})
                               </button>
                             )}
                           </>

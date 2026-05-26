@@ -26,13 +26,16 @@ func NewBotService(dao dal.BotDao) *BotService {
 	}
 }
 
-func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, avatarUrl, systemPrompt, apiKey, model_, baseURL string) (int64, error) {
+func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, systemPrompt, apiKey, model_, baseURL string) (int64, error) {
 	botId := svc.snowNode.Generate()
+	userID, rpcErr := rpc.CreateBotUser(ctx, name, "")
+	if rpcErr != nil {
+		return 0, fmt.Errorf("创建Bot用户记录失败: %w", rpcErr)
+	}
 	bot := model.Bot{
 		ID:           botId,
+		UserID:       userID,
 		CreatorID:    creatorId,
-		Name:         name,
-		AvatarURL:    avatarUrl,
 		SystemPrompt: systemPrompt,
 		ApiKey:       apiKey,
 		Model:        model_,
@@ -42,23 +45,6 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, ava
 	err := svc.dao.CreateBot(bot)
 	if err != nil {
 		return 0, err
-	}
-	userID, rpcErr := rpc.CreateBotUser(ctx, name, avatarUrl)
-	if rpcErr != nil {
-		delErr := svc.dao.DeleteBot(botId)
-		if delErr != nil {
-			klog.Errorf("Bot[%d]创建用户记录失败后回滚删除Bot也失败: %v", botId, delErr)
-		}
-		return 0, fmt.Errorf("创建Bot用户记录失败: %w", rpcErr)
-	}
-	err = svc.dao.UpdateBot(botId, map[string]interface{}{"user_id": userID})
-	if err != nil {
-		klog.Errorf("Bot[%d]更新user_id失败: %v", botId, err)
-		delErr := svc.dao.DeleteBot(botId)
-		if delErr != nil {
-			klog.Errorf("Bot[%d]创建用户记录失败后回滚删除Bot也失败: %v", botId, delErr)
-		}
-		return 0, fmt.Errorf("创建Bot用户记录失败: %w", rpcErr)
 	}
 	return botId, nil
 }
@@ -77,24 +63,34 @@ type BotInfoDTO struct {
 	CreatedAt    int64
 }
 
-func (svc *BotService) GetBot(botId int64) (BotInfoDTO, error) {
-	info, err := svc.dao.GetBot(botId)
-	if err != nil {
-		return BotInfoDTO{}, err
-	}
+func (svc *BotService) enrichBotInfo(ctx context.Context, info model.Bot) BotInfoDTO {
 	dto := BotInfoDTO{
 		BotId:        info.ID,
 		UserId:       info.UserID,
 		CreatorId:    info.CreatorID,
-		Name:         info.Name,
-		AvatarUrl:    info.AvatarURL,
+		ApiKey:       info.ApiKey,
 		SystemPrompt: info.SystemPrompt,
 		Model:        info.Model,
 		BaseURL:      info.BaseURL,
 		IsSystem:     info.IsSystem,
 		CreatedAt:    info.CreatedAt.UnixMilli(),
 	}
-	return dto, nil
+	if info.UserID > 0 {
+		names, err := rpc.GetUserNames(ctx, []int64{info.UserID})
+		if err == nil && len(names) > 0 {
+			dto.Name = names[0].Name
+			dto.AvatarUrl = names[0].AvatarURL
+		}
+	}
+	return dto
+}
+
+func (svc *BotService) GetBot(botId int64) (BotInfoDTO, error) {
+	info, err := svc.dao.GetBot(botId)
+	if err != nil {
+		return BotInfoDTO{}, err
+	}
+	return svc.enrichBotInfo(context.Background(), info), nil
 }
 
 func (svc *BotService) GetSystemBot() (int64, error) {
@@ -110,19 +106,10 @@ func (svc *BotService) GetUserBots(creatorId int64) ([]BotInfoDTO, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.Background()
 	var dtos []BotInfoDTO
 	for _, info := range infos {
-		dtos = append(dtos, BotInfoDTO{
-			BotId:        info.ID,
-			CreatorId:    info.CreatorID,
-			Name:         info.Name,
-			AvatarUrl:    info.AvatarURL,
-			SystemPrompt: info.SystemPrompt,
-			Model:        info.Model,
-			BaseURL:      info.BaseURL,
-			IsSystem:     info.IsSystem,
-			CreatedAt:    info.CreatedAt.UnixMilli(),
-		})
+		dtos = append(dtos, svc.enrichBotInfo(ctx, info))
 	}
 	return dtos, nil
 }
@@ -141,9 +128,28 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 	if bot.CreatorID != operatorId {
 		return false, nil
 	}
-	err = svc.dao.UpdateBot(botId, updates)
-	if err != nil {
-		return false, err
+	botUpdates := make(map[string]interface{})
+	for k, v := range updates {
+		if k == "name" || k == "avatar_url" {
+			continue
+		}
+		botUpdates[k] = v
+	}
+	if len(botUpdates) > 0 {
+		err = svc.dao.UpdateBot(botId, botUpdates)
+		if err != nil {
+			return false, err
+		}
+	}
+	if newName, ok := updates["name"].(string); ok && bot.UserID > 0 {
+		if syncErr := rpc.UpdateBotUserName(context.Background(), bot.UserID, newName); syncErr != nil {
+			klog.Warnf("Bot[%d]名称已更新但同步user_service失败: %v", botId, syncErr)
+		}
+	}
+	if newAvatar, ok := updates["avatar_url"].(string); ok && bot.UserID > 0 {
+		if syncErr := rpc.UpdateBotUserAvatar(context.Background(), bot.UserID, newAvatar); syncErr != nil {
+			klog.Warnf("Bot[%d]头像已更新但同步user_service失败: %v", botId, syncErr)
+		}
 	}
 	return true, nil
 }
@@ -193,7 +199,7 @@ func (svc *BotService) AddBotToConversation(ctx context.Context, operatorId, bot
 	if bot.ID == 0 {
 		return 0, fmt.Errorf("bot不存在")
 	}
-	if bot.CreatorID != operatorId {
+	if !bot.IsSystem && bot.CreatorID != operatorId {
 		return 0, fmt.Errorf("只有Bot创建者才能将Bot拉入会话")
 	}
 	if bot.UserID == 0 {
@@ -248,8 +254,6 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	systemBot := model.Bot{
 		ID:           botId,
 		CreatorID:    0,
-		Name:         name,
-		AvatarURL:    "",
 		SystemPrompt: systemPrompt,
 		ApiKey:       viper.GetString("ai.system.bot_api_key"),
 		Model:        viper.GetString("ai.system.bot_model"),

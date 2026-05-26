@@ -309,3 +309,11 @@ func (db *gor) CreateBotUser(name, avatarURL string) (int64, error) {
 	}
 	return botUser.ID, nil
 }
+
+func (db *gor) UpdateBotUserName(userID int64, name string) error {
+	err := db.db.Model(&model.User{}).Where("id = ? AND is_bot = ?", userID, true).Update("name", name).Error
+	if err != nil {
+		return fmt.Errorf("更新Bot用户名失败: %w", err)
+	}
+	return nil
+}

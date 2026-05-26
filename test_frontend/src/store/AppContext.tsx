@@ -104,12 +104,12 @@ interface AppContextType extends AppState {
   logout: () => void;
   wsConnect: () => void;
   wsDisconnect: () => void;
-  sendMessage: (convId: string, content: string, mentionedIds?: number[]) => void;
+  sendMessage: (convId: string, content: string, mentionedIds?: string[]) => void;
   setActiveConvId: (id: string | null) => void;
   addConversation: (conv: Conversation) => void;
   setFriends: (friends: FriendInfo[]) => void;
   openChatWith: (targetAccount: string, name: string, type: number) => void;
-  openSystemAI: () => Promise<void>;
+  openSystemAI: () => Promise<boolean>;
   loadConversations: () => void;
   sendTyping: (convId: string) => void;
   loadOnlineStatus: (accounts: string[]) => void;
@@ -191,16 +191,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadConversations = useCallback(async () => {
     const res = await api('GET', '/api/chat/conversations');
     if (res.code === 0 && res.data?.conversations) {
-      const loaded: Conversation[] = res.data.conversations.map((c: any) => ({
-        id: String(c.conversation_id),
-        name: c.name || `会话 ${c.conversation_id}`,
-        type: c.type,
-        memberAccounts: (c.member_accounts || []).map((a: any) => String(a)),
-        groupNumber: c.group_number && c.group_number !== '0' ? String(c.group_number) : undefined,
-        lastMsg: '',
-        lastTime: 0,
-        unread: c.unread_count || 0,
-      }));
+      const loaded: Conversation[] = res.data.conversations.map((c: any) => {
+        const memberAccounts: string[] = (c.member_accounts || []).map((a: any) => String(a));
+        let peerAccount: string | undefined;
+        if (c.type === 1 && memberAccounts.length === 2) {
+          peerAccount = memberAccounts.find(a => a !== auth.account);
+        }
+        return {
+          id: String(c.conversation_id),
+          name: c.name || `会话 ${c.conversation_id}`,
+          type: c.type,
+          memberAccounts,
+          peerAccount,
+          groupNumber: c.group_number && c.group_number !== '0' ? String(c.group_number) : undefined,
+          lastMsg: '',
+          lastTime: 0,
+          unread: c.unread_count || 0,
+        };
+      });
       const seqMap: Record<string, number> = {};
       for (const c of res.data.conversations) {
         if (c.max_seq && c.max_seq > 0) {
@@ -217,6 +225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       }
       setConversations(prev => {
+        const tempConvs = prev.filter(c => c.id === '');
         const existingMap = new Map(prev.map(c => [c.id, c]));
         for (const c of loaded) {
           if (existingMap.has(c.id)) {
@@ -225,7 +234,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             c.lastTime = old.lastTime;
           }
         }
-        return loaded;
+        return [...tempConvs, ...loaded];
       });
     }
   }, []);
@@ -539,7 +548,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
   }, []);
 
-  const sendMessage = useCallback((convId: string, content: string, mentionedIds?: number[]) => {
+  const sendMessage = useCallback((convId: string, content: string, mentionedIds?: string[]) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     const conv = conversationsRef.current.find(c => c.id === convId);
     if (!conv) return;
@@ -593,7 +602,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openChatWith = useCallback((targetAccount: string, name: string, type: number) => {
     const existing = conversationsRef.current.find(c => {
       if (type === 1) {
-        return c.type === 1 && c.memberAccounts.includes(auth.account) && c.memberAccounts.includes(targetAccount) && c.memberAccounts.length === 2;
+        if (c.type !== 1) return false;
+        if (c.peerAccount === targetAccount) return true;
+        if (c.memberAccounts.length === 2 && c.memberAccounts.includes(auth.account) && c.memberAccounts.includes(targetAccount)) return true;
+        return false;
       }
       return c.groupNumber === targetAccount;
     });
@@ -601,6 +613,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveConvId(existing.id);
       return;
     }
+    setConversations(prev => prev.filter(c => c.id !== ''));
     const tempConv: Conversation = {
       id: '',
       name,
@@ -609,36 +622,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
       peerAccount: type === 1 ? targetAccount : undefined,
       unread: 0,
     };
-    addConversation(tempConv);
+    setConversations(prev => [tempConv, ...prev]);
     setActiveConvId('');
-  }, [auth.account, addConversation]);
+  }, [auth.account]);
 
-  const openSystemAI = useCallback(async () => {
+  const openSystemAI = useCallback(async (): Promise<boolean> => {
     const sysRes = await api('GET', '/api/bot/system');
     if (sysRes.code !== 0 || !sysRes.data?.bot_id) {
-      return;
+      return false;
     }
     const botId = sysRes.data.bot_id;
     const addRes = await api('POST', '/api/bot/add_to_conversation', {
       bot_id: botId,
-      conversation_id: 0,
+      conversation_id: "0",
       conversation_type: 1,
     });
-    if (addRes.code !== 0) {
-      return;
-    }
     const convId = String(addRes.data?.conversation_id || '');
-    if (!convId || convId === '0') {
-      const existing = conversationsRef.current.find(c =>
-        c.type === 1 && c.memberAccounts.includes(String(botId))
-      );
-      if (existing) {
-        setActiveConvId(existing.id);
+    if (addRes.code === 0 && convId && convId !== '0') {
+      await loadConversations();
+      const found = conversationsRef.current.find(c => c.id === convId);
+      if (!found) {
+        setConversations(prev => {
+          if (prev.find(c => c.id === convId)) return prev;
+          return [{
+            id: convId,
+            name: 'AI 助手',
+            type: 1,
+            memberAccounts: [],
+            unread: 0,
+          }, ...prev];
+        });
       }
-      return;
+      setActiveConvId(convId);
+      return true;
     }
     await loadConversations();
-    setActiveConvId(convId);
+    return false;
   }, [auth.account, loadConversations]);
 
   const lastTypingSentRef = useRef<number>(0);

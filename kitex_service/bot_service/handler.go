@@ -18,7 +18,7 @@ func (s *BotServiceImpl) CreateBot(ctx context.Context, req *bot.CreateBotReq) (
 	if req.IsSetBaseUrl() {
 		baseURL = req.GetBaseUrl()
 	}
-	botId, err := s.botService.CreateBot(ctx, req.CreatorId, req.Name, req.AvatarUrl, req.SystemPrompt, req.ApiKey, req.Model, baseURL)
+	botId, err := s.botService.CreateBot(ctx, req.CreatorId, req.Name, req.SystemPrompt, req.ApiKey, req.Model, baseURL)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建Bot时发生系统错误: %v", req.CreatorId, err)
 		return &bot.CreateBotRes{Success: false}, err

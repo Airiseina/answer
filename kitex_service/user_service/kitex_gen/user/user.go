@@ -1509,6 +1509,44 @@ var fieldIDToName_CreateBotUserRes = map[int16]string{
 	2: "user_id",
 }
 
+type UpdateBotUserNameReq struct {
+	UserId int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Name   string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+}
+
+func NewUpdateBotUserNameReq() *UpdateBotUserNameReq {
+	return &UpdateBotUserNameReq{}
+}
+
+func (p *UpdateBotUserNameReq) InitDefault() {
+}
+
+func (p *UpdateBotUserNameReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *UpdateBotUserNameReq) GetName() (v string) {
+	return p.Name
+}
+func (p *UpdateBotUserNameReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *UpdateBotUserNameReq) SetName(val string) {
+	p.Name = val
+}
+
+func (p *UpdateBotUserNameReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateBotUserNameReq(%+v)", *p)
+}
+
+var fieldIDToName_UpdateBotUserNameReq = map[int16]string{
+	1: "user_id",
+	2: "name",
+}
+
 type LoginService interface {
 	Register(ctx context.Context, req *RegisterReq) (r *RegisterRes, err error)
 
@@ -1549,6 +1587,8 @@ type LoginService interface {
 	UpdateAvatar(ctx context.Context, req *UpdateAvatarReq) (r *CommonRes, err error)
 
 	CreateBotUser(ctx context.Context, req *CreateBotUserReq) (r *CreateBotUserRes, err error)
+
+	UpdateBotUserName(ctx context.Context, req *UpdateBotUserNameReq) (r *CommonRes, err error)
 }
 
 type LoginServiceRegisterArgs struct {
@@ -3068,5 +3108,81 @@ func (p *LoginServiceCreateBotUserResult) String() string {
 }
 
 var fieldIDToName_LoginServiceCreateBotUserResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceUpdateBotUserNameArgs struct {
+	Req *UpdateBotUserNameReq `thrift:"req,1" frugal:"1,default,UpdateBotUserNameReq" json:"req"`
+}
+
+func NewLoginServiceUpdateBotUserNameArgs() *LoginServiceUpdateBotUserNameArgs {
+	return &LoginServiceUpdateBotUserNameArgs{}
+}
+
+func (p *LoginServiceUpdateBotUserNameArgs) InitDefault() {
+}
+
+var LoginServiceUpdateBotUserNameArgs_Req_DEFAULT *UpdateBotUserNameReq
+
+func (p *LoginServiceUpdateBotUserNameArgs) GetReq() (v *UpdateBotUserNameReq) {
+	if !p.IsSetReq() {
+		return LoginServiceUpdateBotUserNameArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceUpdateBotUserNameArgs) SetReq(val *UpdateBotUserNameReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceUpdateBotUserNameArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceUpdateBotUserNameArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateBotUserNameArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateBotUserNameArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceUpdateBotUserNameResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceUpdateBotUserNameResult() *LoginServiceUpdateBotUserNameResult {
+	return &LoginServiceUpdateBotUserNameResult{}
+}
+
+func (p *LoginServiceUpdateBotUserNameResult) InitDefault() {
+}
+
+var LoginServiceUpdateBotUserNameResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceUpdateBotUserNameResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceUpdateBotUserNameResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceUpdateBotUserNameResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceUpdateBotUserNameResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceUpdateBotUserNameResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateBotUserNameResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateBotUserNameResult = map[int16]string{
 	0: "success",
 }

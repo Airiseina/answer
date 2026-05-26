@@ -2,13 +2,13 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 
 	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
-	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -16,7 +16,6 @@ import (
 
 type CreateBotReq struct {
 	Name         string `json:"name" vd:"len($) > 0"`
-	AvatarUrl    string `json:"avatar_url"`
 	SystemPrompt string `json:"system_prompt" vd:"len($) > 0"`
 	ApiKey       string `json:"api_key"`
 	Model        string `json:"model" vd:"len($) > 0"`
@@ -36,7 +35,6 @@ func CreateBot(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.CreateBot(ctx, &bot.CreateBotReq{
 		CreatorId:    userId,
 		Name:         req.Name,
-		AvatarUrl:    req.AvatarUrl,
 		SystemPrompt: req.SystemPrompt,
 		ApiKey:       req.ApiKey,
 		Model:        req.Model,
@@ -47,11 +45,11 @@ func CreateBot(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "创建Bot失败", nil)
 		return
 	}
-	response.Success(c, map[string]interface{}{"bot_id": resp.BotId})
+	response.Success(c, map[string]interface{}{"bot_id": fmt.Sprintf("%d", resp.BotId)})
 }
 
 type UpdateBotReq struct {
-	BotId        int64  `json:"bot_id" vd:"$ > 0"`
+	BotId        int64  `json:"bot_id,string" vd:"$ > 0"`
 	Name         string `json:"name"`
 	AvatarUrl    string `json:"avatar_url"`
 	SystemPrompt string `json:"system_prompt"`
@@ -102,7 +100,7 @@ func UpdateBot(ctx context.Context, c *app.RequestContext) {
 }
 
 type DeleteBotReq struct {
-	BotId int64 `json:"bot_id" vd:"$ > 0"`
+	BotId int64 `json:"bot_id,string" vd:"$ > 0"`
 }
 
 func DeleteBot(ctx context.Context, c *app.RequestContext) {
@@ -127,6 +125,18 @@ func DeleteBot(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, map[string]interface{}{"success": resp.Success})
 }
 
+type botInfoItem struct {
+	BotId        string  `json:"bot_id"`
+	CreatorId    string  `json:"creator_id"`
+	Name         string  `json:"name"`
+	AvatarUrl    string  `json:"avatar_url"`
+	SystemPrompt string  `json:"system_prompt"`
+	Model        string  `json:"model"`
+	IsSystem     bool    `json:"is_system"`
+	CreatedAt    string  `json:"created_at"`
+	BaseUrl      *string `json:"base_url,omitempty"`
+}
+
 func GetUserBots(ctx context.Context, c *app.RequestContext) {
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
@@ -138,19 +148,29 @@ func GetUserBots(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "获取Bot列表失败", nil)
 		return
 	}
-	response.Success(c, map[string]interface{}{"bots": resp.Bots})
-}
-
-type ChatWithBotReq struct {
-	BotId          int64    `json:"bot_id" vd:"$ > 0"`
-	ConversationId int64    `json:"conversation_id" vd:"$ > 0"`
-	Content        string   `json:"content" vd:"len($) > 0"`
-	History        []string `json:"history"`
+	var items []botInfoItem
+	for _, b := range resp.Bots {
+		items = append(items, botInfoItem{
+			BotId:        fmt.Sprintf("%d", b.BotId),
+			CreatorId:    fmt.Sprintf("%d", b.CreatorId),
+			Name:         b.Name,
+			AvatarUrl:    b.AvatarUrl,
+			SystemPrompt: b.SystemPrompt,
+			Model:        b.Model,
+			IsSystem:     b.IsSystem,
+			CreatedAt:    fmt.Sprintf("%d", b.CreatedAt),
+			BaseUrl:      b.BaseUrl,
+		})
+	}
+	if items == nil {
+		items = []botInfoItem{}
+	}
+	response.Success(c, map[string]interface{}{"bots": items})
 }
 
 type AddBotToConversationReq struct {
-	BotId            int64 `json:"bot_id" vd:"$ > 0"`
-	ConversationId   int64 `json:"conversation_id"`
+	BotId            int64 `json:"bot_id,string" vd:"$ > 0"`
+	ConversationId   int64 `json:"conversation_id,string"`
 	ConversationType int16 `json:"conversation_type" vd:"$ > 0"`
 }
 
@@ -177,36 +197,9 @@ func AddBotToConversation(ctx context.Context, c *app.RequestContext) {
 	}
 	result := map[string]interface{}{"success": resp.Success}
 	if resp.ConversationId != nil {
-		result["conversation_id"] = *resp.ConversationId
+		result["conversation_id"] = fmt.Sprintf("%d", *resp.ConversationId)
 	}
 	response.Success(c, result)
-}
-
-func ChatWithBot(ctx context.Context, c *app.RequestContext) {
-	Identity, _ := c.Get(middleware.IdentityKey)
-	userInfo := Identity.(*middleware.Resp)
-	userId := userInfo.Id
-
-	var req ChatWithBotReq
-	if err := c.BindAndValidate(&req); err != nil {
-		response.Error(c, "参数错误", err.Error())
-		return
-	}
-	resp, err := rpc.HandleMessage(ctx, &work.HandleMessageReq{
-		BotId:          req.BotId,
-		ConversationId: req.ConversationId,
-		SenderId:       userId,
-		Content:        req.Content,
-		History:        req.History,
-	})
-	if err != nil {
-		hlog.CtxErrorf(ctx, "Bot对话失败: %v", err)
-		response.Error(c, "Bot对话失败", nil)
-		return
-	}
-	response.Success(c, map[string]interface{}{
-		"success": resp.Success,
-	})
 }
 
 func GetSystemBot(ctx context.Context, c *app.RequestContext) {
@@ -218,7 +211,7 @@ func GetSystemBot(ctx context.Context, c *app.RequestContext) {
 	}
 	result := map[string]interface{}{"success": resp.Success}
 	if resp.BotId != 0 {
-		result["bot_id"] = resp.BotId
+		result["bot_id"] = fmt.Sprintf("%d", resp.BotId)
 	}
 	response.Success(c, result)
 }

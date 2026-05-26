@@ -15,7 +15,7 @@ func GetConfig() {
 	viper.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
 	viper.SetDefault("seaweedfs.base_path", "/chat")
 	viper.SetDefault("seaweedfs.public_url", "/files")
-	viper.SetDefault("redis.addr", "127.0.0.1:6379")
+	viper.SetDefault("kafka.brokers", []string{"127.0.0.1:9094"})
 	config.LoadConfig()
 	storage.FilerURL = viper.GetString("seaweedfs.filer_url")
 	storage.BasePath = viper.GetString("seaweedfs.base_path")

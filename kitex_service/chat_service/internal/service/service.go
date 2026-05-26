@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/chat_service/rpc"
 	"github.com/Airiseina/answer/pkg/snowflake"
+	"gorm.io/gorm"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/redis/go-redis/v9"
@@ -120,7 +122,35 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	}
 	convInfo, err := svc.conversationDao.GetConversationInfo(ctx, convID)
 	if err != nil {
-		return nil, fmt.Errorf("查询会话信息失败: %w", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) && peerID != 0 {
+			newConvID, createErr := svc.conversationDao.GetOrCreatePrivateConversation(ctx, senderID, peerID, func() int64 {
+				return getConvSnowNode().Generate()
+			})
+			if createErr != nil {
+				return nil, fmt.Errorf("会话不存在且重建失败: %w", createErr)
+			}
+			convID = newConvID
+			convInfo, err = svc.conversationDao.GetConversationInfo(ctx, convID)
+			if err != nil {
+				return nil, fmt.Errorf("查询重建会话信息失败: %w", err)
+			}
+			members, err = svc.conversationDao.GetConversationMembers(ctx, convID)
+			if err != nil {
+				return nil, fmt.Errorf("查询重建会话成员失败: %w", err)
+			}
+			isMember = false
+			for _, m := range members {
+				if m == senderID {
+					isMember = true
+					break
+				}
+			}
+			if !isMember {
+				return nil, fmt.Errorf("发送者不在该会话中")
+			}
+		} else {
+			return nil, fmt.Errorf("查询会话信息失败: %w", err)
+		}
 	}
 	var convType int16
 	if convInfo != nil {

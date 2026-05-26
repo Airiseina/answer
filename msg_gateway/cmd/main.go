@@ -121,13 +121,18 @@ func main() {
 	core.InitPushSecret(viper.GetString("jwt.Key"))
 	gatewayAddr := viper.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)
-	rdb, err := connect.ConnectRedis()
+	kafkaWriter, err := connect.ConnectKafkaProducer()
 	if err != nil {
-		klog.Fatalf("连接Redis失败: %v", err)
+		klog.Fatalf("连接Kafka失败: %v", err)
 	}
-	core.InitRedis(rdb)
+	core.InitKafkaProducer(kafkaWriter)
 	rpc.Connect()
+	botReplyReader, err := connect.ConnectKafkaConsumerGroup("bot-reply-group", "bot-reply-topic")
+	if err != nil {
+		klog.Fatalf("连接Bot回复Kafka ConsumerGroup失败: %v", err)
+	}
 	go core.GlobalManager.Start()
+	core.StartBotReplyConsumer(botReplyReader)
 	wsHandler := otelhttp.NewHandler(http.HandlerFunc(handleWebSocket), "/ws")
 	http.Handle("/ws", corsMiddleware(wsHandler))
 	http.Handle("/push", corsMiddleware(http.HandlerFunc(core.HandlePush)))

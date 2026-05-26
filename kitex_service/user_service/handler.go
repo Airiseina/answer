@@ -302,3 +302,13 @@ func (s *LoginServiceImpl) CreateBotUser(ctx context.Context, req *user.CreateBo
 	}
 	return &user.CreateBotUserRes{Success: true, UserId: userID}, nil
 }
+
+// UpdateBotUserName implements the LoginServiceImpl interface.
+func (s *LoginServiceImpl) UpdateBotUserName(ctx context.Context, req *user.UpdateBotUserNameReq) (resp *user.CommonRes, err error) {
+	success, err := s.userService.UpdateBotUserName(req.UserId, req.Name)
+	if err != nil {
+		klog.CtxErrorf(ctx, "更新Bot用户[%d]名称时发生系统错误: %v", req.UserId, err)
+		return nil, err
+	}
+	return &user.CommonRes{Success: success}, nil
+}

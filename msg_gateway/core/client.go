@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/Airiseina/answer/pkg/meter"
@@ -12,6 +14,62 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
+
+type StringInt64Slice []int64
+
+func (s StringInt64Slice) MarshalJSON() ([]byte, error) {
+	result := make([]string, len(s))
+	for i, v := range s {
+		result[i] = fmt.Sprintf(`"%d"`, v)
+	}
+	return []byte("[" + joinStrings(result, ",") + "]"), nil
+}
+
+func (s *StringInt64Slice) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*s = nil
+		return nil
+	}
+	var raw []json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		var nums []int64
+		if err2 := json.Unmarshal(data, &nums); err2 != nil {
+			return err
+		}
+		*s = nums
+		return nil
+	}
+	result := make([]int64, len(raw))
+	for i, r := range raw {
+		str := string(r)
+		if str[0] == '"' {
+			v, err := strconv.ParseInt(str[1:len(str)-1], 10, 64)
+			if err != nil {
+				return err
+			}
+			result[i] = v
+		} else {
+			v, err := strconv.ParseInt(str, 10, 64)
+			if err != nil {
+				return err
+			}
+			result[i] = v
+		}
+	}
+	*s = result
+	return nil
+}
+
+func joinStrings(ss []string, sep string) string {
+	if len(ss) == 0 {
+		return ""
+	}
+	result := ss[0]
+	for i := 1; i < len(ss); i++ {
+		result += sep + ss[i]
+	}
+	return result
+}
 
 type Client struct {
 	Manager     *Manager        // 所属的连接管理器，用于注册/注销和消息分发
@@ -36,14 +94,14 @@ type WsMessage struct {
 	ClientSeq        int64              `json:"client_seq,omitempty"`
 	Success          bool               `json:"success,omitempty"`
 	Reason           string             `json:"reason,omitempty"`
-	TargetUserIds    []int64            `json:"target_user_ids,omitempty"`
+	TargetUserIds    StringInt64Slice   `json:"target_user_ids,omitempty"`
 	MaxReadSeq       int64              `json:"max_read_seq,omitempty"`
 	NewContent       string             `json:"new_content,omitempty"`
 	IsEdited         bool               `json:"is_edited,omitempty"`
 	ConvSeqs         []ConvSeqItem      `json:"conv_seqs,omitempty"`
 	Limit            int16              `json:"limit,omitempty"`
 	ConvMessages     []ConvMessagesItem `json:"conv_messages,omitempty"`
-	MentionedIds     []int64            `json:"mentioned_ids,omitempty"`
+	MentionedIds     []string           `json:"mentioned_ids,omitempty"`
 }
 
 type ConvSeqItem struct {

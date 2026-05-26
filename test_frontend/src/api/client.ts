@@ -42,7 +42,7 @@ export async function uploadFile(file: File): Promise<{ code: number; msg: strin
 }
 
 export interface MentionItem {
-  user_id: number
+  user_id: string
   name: string
 }
 

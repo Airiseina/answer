@@ -53,12 +53,16 @@ func main() {
 	}
 	rpc.Connect()
 	llmClient := llm.NewClient()
-	workService := service.NewWorkService(llmClient)
-	rdb, err := connect.ConnectRedis()
+	kafkaWriter, err := connect.ConnectKafkaProducer()
 	if err != nil {
-		klog.Fatalf("连接Redis失败: %v", err)
+		klog.Fatalf("连接Kafka Producer失败: %v", err)
 	}
-	botConsumer := consumer.NewBotTaskConsumer(rdb, workService)
+	workService := service.NewWorkService(llmClient, kafkaWriter)
+	kafkaReader, err := connect.ConnectKafkaConsumerGroup("bot-worker-group", "bot-task-topic")
+	if err != nil {
+		klog.Fatalf("连接Kafka ConsumerGroup失败: %v", err)
+	}
+	botConsumer := consumer.NewBotTaskConsumer(kafkaReader, workService)
 	go botConsumer.Start(context.Background())
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4324")
 	if err != nil {

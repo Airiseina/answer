@@ -17,6 +17,8 @@ export default function ChatPanel() {
   const [newChatType, setNewChatType] = useState<number>(1)
   const [newChatName, setNewChatName] = useState('')
   const [selectedFriendAccounts, setSelectedFriendAccounts] = useState<string[]>([])
+  const [bots, setBots] = useState<{ bot_id: string; name: string; is_system: boolean }[]>([])
+  const [selectedBotIds, setSelectedBotIds] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; isSent: boolean; isRecalled: boolean } | null>(null)
@@ -32,14 +34,14 @@ export default function ChatPanel() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const conv = conversations.find(c => c.id === activeConvId)
-  const msgs = activeConvId ? (messages[activeConvId] || []) : []
+  const msgs = activeConvId !== null ? (messages[activeConvId] || []) : []
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs.length])
 
   const handleSend = () => {
-    if (!activeConvId) return
+    if (activeConvId === null) return
 
     if (pendingAttachment) {
       const { url, mediaType, fileName, fileSize } = pendingAttachment
@@ -88,7 +90,7 @@ export default function ChatPanel() {
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !activeConvId) return
+    if (!file || activeConvId === null) return
     setUploading(true)
     try {
       const res = await uploadFile(file)
@@ -117,7 +119,7 @@ export default function ChatPanel() {
   }
 
   const handleCreateGroupConversation = async () => {
-    if (selectedFriendAccounts.length === 0) return
+    if (selectedFriendAccounts.length === 0 && selectedBotIds.length === 0) return
     const res = await api('POST', '/api/create_group', {
       name: newChatName || `群聊`,
       initial_accounts: selectedFriendAccounts,
@@ -135,9 +137,19 @@ export default function ChatPanel() {
       })
       setActiveConvId(convId)
       loadConversations()
+      if (selectedBotIds.length > 0) {
+        for (const botId of selectedBotIds) {
+          await api('POST', '/api/bot/add_to_conversation', {
+            bot_id: botId,
+            conversation_id: convId,
+            conversation_type: 2,
+          })
+        }
+      }
       setShowNewChat(false)
       setNewChatName('')
       setSelectedFriendAccounts([])
+      setSelectedBotIds([])
     }
   }
 
@@ -146,6 +158,16 @@ export default function ChatPanel() {
       prev.includes(faccount) ? prev.filter(a => a !== faccount) : [...prev, faccount]
     )
   }
+
+  const loadBots = async () => {
+    const res = await api('GET', '/api/bot/list')
+    if (res.code === 0) setBots(res.data?.bots || [])
+    else setBots([])
+  }
+
+  useEffect(() => {
+    loadBots()
+  }, [])
 
   const formatTime = (ts: number) => {
     const d = new Date(ts * 1000)
@@ -164,7 +186,7 @@ export default function ChatPanel() {
   }
 
   const handleRecall = () => {
-    if (contextMenu && activeConvId) {
+    if (contextMenu && activeConvId !== null) {
       recallMessage(activeConvId, contextMenu.msgId)
       setContextMenu(null)
     }
@@ -178,7 +200,7 @@ export default function ChatPanel() {
   }
 
   const handleSaveEdit = () => {
-    if (editingMsgId && activeConvId && editInput.trim()) {
+    if (editingMsgId && activeConvId !== null && editInput.trim()) {
       editMessage(activeConvId, editingMsgId, editInput.trim())
       setEditingMsgId(null)
       setEditInput('')
@@ -191,7 +213,7 @@ export default function ChatPanel() {
   }
 
   const handleViewEditHistory = async (msgId: string) => {
-    if (!activeConvId) return
+    if (activeConvId === null) return
     const res = await api('POST', `/api/chat/edit_history/${msgId}`, { conversation_id: activeConvId })
     if (res.code === 0 && res.data?.histories) {
       setEditHistoryModal({ msgId, histories: res.data.histories })
@@ -227,7 +249,7 @@ export default function ChatPanel() {
   const getMentionCandidates = () => {
     if (!conv) return []
     const myAccount = auth.account
-    const candidates: { account: string; name: string; userId: number }[] = []
+    const candidates: { account: string; name: string; userId: string }[] = []
     const seen = new Set<string>()
     for (const account of conv.memberAccounts) {
       if (account === myAccount) continue
@@ -235,14 +257,14 @@ export default function ChatPanel() {
       seen.add(account)
       const info = memberInfo[account]
       const name = info?.name || account
-      candidates.push({ account, name, userId: parseInt(account) || 0 })
+      candidates.push({ account, name, userId: account })
     }
     for (const f of friends) {
       if (seen.has(f.friend_account)) continue
       if (conv.type === 2) continue
       seen.add(f.friend_account)
       const name = f.remark || f.name
-      candidates.push({ account: f.friend_account, name, userId: parseInt(f.friend_account) || 0 })
+      candidates.push({ account: f.friend_account, name, userId: f.friend_account })
     }
     return candidates
   }
@@ -267,7 +289,7 @@ export default function ChatPanel() {
     }
   }
 
-  const handleMentionSelect = (candidate: { account: string; name: string; userId: number }) => {
+  const handleMentionSelect = (candidate: { account: string; name: string; userId: string }) => {
     if (mentionStartPos === -1) return
     const before = input.substring(0, mentionStartPos)
     const after = input.substring(textareaRef.current?.selectionStart || input.length)
@@ -397,41 +419,63 @@ export default function ChatPanel() {
           <div className="modal-field">
             <label>群聊名称</label>
             <input value={newChatName} onChange={e => setNewChatName(e.target.value)} placeholder="输入群聊名称" />
-            <label style={{ marginTop: 8 }}>选择好友拉入群聊</label>
-            {friends.length === 0 ? (
-              <div className="picker-empty">暂无好友</div>
-            ) : (
-              <div className="friend-picker-list">
-                {friends.map(f => (
-                  <div key={f.friend_account}
-                    className={`friend-picker-item ${selectedFriendAccounts.includes(f.friend_account) ? 'selected' : ''}`}
-                    onClick={() => toggleFriend(f.friend_account)}
-                  >
-                    <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
-                    <div className="fp-info">
-                      <div className="fp-name">{f.remark || f.name}</div>
+            {friends.length > 0 && (
+              <>
+                <label style={{ marginTop: 8 }}>选择好友拉入群聊</label>
+                <div className="friend-picker-list">
+                  {friends.map(f => (
+                    <div key={f.friend_account}
+                      className={`friend-picker-item ${selectedFriendAccounts.includes(f.friend_account) ? 'selected' : ''}`}
+                      onClick={() => toggleFriend(f.friend_account)}
+                    >
+                      <div className="fp-avatar">{(f.remark || f.name || '?')[0].toUpperCase()}</div>
+                      <div className="fp-info">
+                        <div className="fp-name">{f.remark || f.name}</div>
+                      </div>
+                      {selectedFriendAccounts.includes(f.friend_account) && <div className="fp-check">✓</div>}
                     </div>
-                    {selectedFriendAccounts.includes(f.friend_account) && <div className="fp-check">✓</div>}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
-            {selectedFriendAccounts.length > 0 && (
-              <div className="selected-count">已选 {selectedFriendAccounts.length} 人</div>
+            {bots.length > 0 && (
+              <>
+                <label style={{ marginTop: 8 }}>选择 Bot 拉入群聊</label>
+                <div className="friend-picker-list">
+                  {bots.map(b => (
+                    <div key={b.bot_id}
+                      className={`friend-picker-item ${selectedBotIds.includes(b.bot_id) ? 'selected' : ''}`}
+                      onClick={() => setSelectedBotIds(prev => prev.includes(b.bot_id) ? prev.filter(id => id !== b.bot_id) : [...prev, b.bot_id])}
+                    >
+                      <div className="fp-avatar">🤖</div>
+                      <div className="fp-info">
+                        <div className="fp-name">{b.name}{b.is_system ? ' (系统)' : ''}</div>
+                      </div>
+                      {selectedBotIds.includes(b.bot_id) && <div className="fp-check">✓</div>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {friends.length === 0 && bots.length === 0 && (
+              <div className="picker-empty">暂无好友或 Bot</div>
+            )}
+            {(selectedFriendAccounts.length > 0 || selectedBotIds.length > 0) && (
+              <div className="selected-count">已选 {selectedFriendAccounts.length} 位好友{selectedBotIds.length > 0 ? ` + ${selectedBotIds.length} 个Bot` : ''}</div>
             )}
           </div>
         )}
         <div className="modal-actions">
           <button className="btn-cancel" onClick={() => setShowNewChat(false)}>取消</button>
           {newChatType === 2 && (
-            <button className="btn-primary" onClick={handleCreateGroupConversation} disabled={selectedFriendAccounts.length === 0}>创建群聊</button>
+            <button className="btn-primary" onClick={handleCreateGroupConversation} disabled={selectedFriendAccounts.length === 0 && selectedBotIds.length === 0}>创建群聊</button>
           )}
         </div>
       </div>
     </div>
   )
 
-  const peerAccount = conv?.type === 1 ? conv.memberAccounts.find(a => a !== auth.account) : undefined
+  const peerAccount = conv?.type === 1 ? (conv.peerAccount || conv.memberAccounts.find(a => a !== auth.account)) : undefined
   const isPeerOnline = peerAccount ? onlineStatus[peerAccount] === true : false
 
   const activeTypingUsers = activeConvId && typingStatus[activeConvId]

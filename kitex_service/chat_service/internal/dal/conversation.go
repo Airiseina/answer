@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 	"strconv"
 	"time"
+
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -120,7 +121,18 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	if err == nil {
 		convID, parseErr := strconv.ParseInt(val, 10, 64)
 		if parseErr == nil && convID > 0 {
-			return convID, nil
+			var exists bool
+			existsErr := dao.db.WithContext(ctx).
+				Table("conversation_table").
+				Where("id = ? AND type = ?", convID, model.ConvTypePrivate).
+				Select("1").
+				Limit(1).
+				Scan(&exists).Error
+			if existsErr == nil && exists {
+				return convID, nil
+			}
+			dao.rdb.Del(ctx, pairKey)
+			dao.rdb.Del(ctx, dao.convMembersKey(convID))
 		}
 	}
 	// 非"Key不存在"的错误（如 Redis 连接故障），直接返回

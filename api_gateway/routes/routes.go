@@ -56,6 +56,5 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/bot/delete", handle.DeleteBot)
 	authGroup.GET("/bot/list", handle.GetUserBots)
 	authGroup.POST("/bot/add_to_conversation", handle.AddBotToConversation)
-	authGroup.POST("/bot/chat", handle.ChatWithBot)
 	authGroup.GET("/bot/system", handle.GetSystemBot)
 }

@@ -20,18 +20,18 @@ import (
 	"github.com/Airiseina/answer/msg_gateway/rpc"
 
 	"github.com/cloudwego/kitex/pkg/klog"
-	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 )
 
 var pushSecret []byte
-var rdb *redis.Client
+var kafkaWriter *kafka.Writer
 
 func InitPushSecret(secret string) {
 	pushSecret = []byte(secret)
 }
 
-func InitRedis(client *redis.Client) {
-	rdb = client
+func InitKafkaProducer(writer *kafka.Writer) {
+	kafkaWriter = writer
 }
 
 type Manager struct {
@@ -255,7 +255,16 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 	sender.Send(chatMsg)
 	meter.M.MessageSentTotal.Add(context.Background(), 1)
 	go manager.pushToMembers(resp.MemberIds, sender.UserId, chatMsg)
-	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, wsMsg.MentionedIds, pushContent) //此处应该改为account、、、、、、
+	var mentionedUserIDs []int64
+	if len(wsMsg.MentionedIds) > 0 {
+		uidMap := rpc.GetUserIdMap(context.Background(), wsMsg.MentionedIds)
+		for _, acc := range wsMsg.MentionedIds {
+			if id, ok := uidMap[acc]; ok && id != 0 {
+				mentionedUserIDs = append(mentionedUserIDs, id)
+			}
+		}
+	}
+	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, mentionedUserIDs, pushContent)
 }
 
 func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg *WsMessage) {
@@ -299,7 +308,7 @@ func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg
 
 func pushToGateway(gatewayAddr string, msg *WsMessage, targetUserIDs []int64) {
 	pushMsg := *msg
-	pushMsg.TargetUserIds = targetUserIDs
+	pushMsg.TargetUserIds = StringInt64Slice(targetUserIDs)
 	data, err := json.Marshal(pushMsg)
 	if err != nil {
 		klog.Errorf("序列化推送消息失败: %v", err)
@@ -763,7 +772,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 const (
 	convTypePrivate int16 = 1
 	convTypeGroup   int16 = 2
-	botTaskStream         = "bot:task:stream"
+	botTaskTopic          = "bot-task-topic"
 )
 
 func (manager *Manager) triggerBots(senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string) {
@@ -803,32 +812,80 @@ func (manager *Manager) triggerBots(senderID, conversationID int64, convType int
 				continue
 			}
 		} else if convType == convTypePrivate {
-			if len(memberIDs) == 2 {
-				continue
-			}
-			if !isMentioned {
+			if len(memberIDs) > 2 && !isMentioned {
 				continue
 			}
 		} else {
 			continue
 		}
 		task := map[string]interface{}{
-			"bot_id":          fmt.Sprintf("%d", botId),
-			"conversation_id": fmt.Sprintf("%d", conversationID),
-			"sender_id":       fmt.Sprintf("%d", senderID),
+			"bot_id":          botId,
+			"conversation_id": conversationID,
+			"sender_id":       senderID,
 			"content":         content,
 		}
 		taskJSON, _ := json.Marshal(task)
-		err = rdb.XAdd(context.Background(), &redis.XAddArgs{
-			Stream: botTaskStream,
-			Values: map[string]interface{}{
-				"task": string(taskJSON),
-			},
-			MaxLen: 10000,
-			Approx: true,
-		}).Err()
+		err = kafkaWriter.WriteMessages(context.Background(), kafka.Message{
+			Topic: botTaskTopic,
+			Key:   []byte(fmt.Sprintf("%d", botId)),
+			Value: taskJSON,
+		})
 		if err != nil {
-			klog.Errorf("推送Bot任务到Redis Stream失败: %v", err)
+			klog.Errorf("推送Bot任务到Kafka失败: %v", err)
 		}
 	}
+}
+
+type BotReplyMessage struct {
+	MsgID            int64   `json:"msg_id"`
+	Seq              int64   `json:"seq"`
+	ConversationID   int64   `json:"conversation_id"`
+	ConversationType int16   `json:"conversation_type"`
+	SenderID         int64   `json:"sender_id"`
+	Content          string  `json:"content"`
+	Timestamp        int64   `json:"timestamp"`
+	MemberIDs        []int64 `json:"member_ids"`
+}
+
+func StartBotReplyConsumer(reader *kafka.Reader) {
+	go func() {
+		for {
+			msg, err := reader.FetchMessage(context.Background())
+			if err != nil {
+				klog.Errorf("Bot回复Kafka FetchMessage失败: %v", err)
+				time.Sleep(time.Second)
+				continue
+			}
+			var reply BotReplyMessage
+			if err := json.Unmarshal(msg.Value, &reply); err != nil {
+				klog.Errorf("解析Bot回复消息失败[partition=%d,offset=%d]: %v", msg.Partition, msg.Offset, err)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				reader.CommitMessages(ctx, msg)
+				cancel()
+				continue
+			}
+			senderAccount := ""
+			senderName := ""
+			if reply.SenderID > 0 {
+				senderAccount = rpc.GetUserAccount(context.Background(), reply.SenderID)
+				senderName = rpc.GetUserName(context.Background(), reply.SenderID)
+			}
+			chatMsg := &WsMessage{
+				Type:             "chat",
+				ConversationID:   reply.ConversationID,
+				ConversationType: reply.ConversationType,
+				FromAccount:      senderAccount,
+				FromName:         senderName,
+				Content:          storage.NormalizeContentURLs(reply.Content),
+				MsgID:            reply.MsgID,
+				Seq:              reply.Seq,
+				Timestamp:        reply.Timestamp,
+			}
+			GlobalManager.pushToMembers(reply.MemberIDs, reply.SenderID, chatMsg)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			reader.CommitMessages(ctx, msg)
+			cancel()
+		}
+	}()
+	klog.Infof("Bot回复Kafka消费者已启动")
 }

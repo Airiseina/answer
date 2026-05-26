@@ -220,20 +220,6 @@ func (p *CreateBotReq) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 7:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField7(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -290,7 +276,7 @@ func (p *CreateBotReq) FastReadField3(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.AvatarUrl = _field
+	p.SystemPrompt = _field
 	return offset, nil
 }
 
@@ -304,7 +290,7 @@ func (p *CreateBotReq) FastReadField4(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.SystemPrompt = _field
+	p.ApiKey = _field
 	return offset, nil
 }
 
@@ -318,25 +304,11 @@ func (p *CreateBotReq) FastReadField5(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.ApiKey = _field
-	return offset, nil
-}
-
-func (p *CreateBotReq) FastReadField6(buf []byte) (int, error) {
-	offset := 0
-
-	var _field string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
 	p.Model = _field
 	return offset, nil
 }
 
-func (p *CreateBotReq) FastReadField7(buf []byte) (int, error) {
+func (p *CreateBotReq) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -363,7 +335,6 @@ func (p *CreateBotReq) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
-		offset += p.fastWriteField7(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -378,7 +349,6 @@ func (p *CreateBotReq) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
-		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -401,35 +371,28 @@ func (p *CreateBotReq) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 func (p *CreateBotReq) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.AvatarUrl)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.SystemPrompt)
 	return offset
 }
 
 func (p *CreateBotReq) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.SystemPrompt)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.ApiKey)
 	return offset
 }
 
 func (p *CreateBotReq) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.ApiKey)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.Model)
 	return offset
 }
 
 func (p *CreateBotReq) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.Model)
-	return offset
-}
-
-func (p *CreateBotReq) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
 	if p.IsSetBaseUrl() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BaseUrl)
 	}
 	return offset
@@ -452,32 +415,25 @@ func (p *CreateBotReq) field2Length() int {
 func (p *CreateBotReq) field3Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.AvatarUrl)
+	l += thrift.Binary.StringLengthNocopy(p.SystemPrompt)
 	return l
 }
 
 func (p *CreateBotReq) field4Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.SystemPrompt)
+	l += thrift.Binary.StringLengthNocopy(p.ApiKey)
 	return l
 }
 
 func (p *CreateBotReq) field5Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.ApiKey)
-	return l
-}
-
-func (p *CreateBotReq) field6Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.Model)
 	return l
 }
 
-func (p *CreateBotReq) field7Length() int {
+func (p *CreateBotReq) field6Length() int {
 	l := 0
 	if p.IsSetBaseUrl() {
 		l += thrift.Binary.FieldBeginLength()

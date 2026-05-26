@@ -2,21 +2,29 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
+
+	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/segmentio/kafka-go"
 )
 
+const botReplyTopic = "bot-reply-topic"
+
 type WorkService struct {
-	llmClient *llm.Client
+	llmClient   *llm.Client
+	kafkaWriter *kafka.Writer
 }
 
-func NewWorkService(llmClient *llm.Client) *WorkService {
+func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer) *WorkService {
 	return &WorkService{
-		llmClient: llmClient,
+		llmClient:   llmClient,
+		kafkaWriter: kafkaWriter,
 	}
 }
 
@@ -55,7 +63,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	}
 	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
+	sendResp, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
 		SenderId:       botCfg.UserID,
 		ConversationId: conversationId,
 		PeerId:         0,
@@ -63,6 +71,26 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	})
 	if sendErr != nil {
 		return false, fmt.Errorf("bot[%d]消息入库失败: %w", botId, sendErr)
+	}
+	if svc.kafkaWriter != nil {
+		reply := map[string]interface{}{
+			"msg_id":            sendResp.GetMsgId(),
+			"seq":               sendResp.GetSeq(),
+			"conversation_id":   sendResp.GetConversationId(),
+			"conversation_type": sendResp.GetConversationType(),
+			"sender_id":         botCfg.UserID,
+			"content":           result,
+			"timestamp":         sendResp.GetTimestamp(),
+			"member_ids":        sendResp.GetMemberIds(),
+		}
+		replyJSON, _ := json.Marshal(reply)
+		if writeErr := svc.kafkaWriter.WriteMessages(context.Background(), kafka.Message{
+			Topic: botReplyTopic,
+			Key:   []byte(fmt.Sprintf("%d", sendResp.GetConversationId())),
+			Value: replyJSON,
+		}); writeErr != nil {
+			klog.Errorf("Bot[%d]回复推送消息写入Kafka失败: %v", botId, writeErr)
+		}
 	}
 	return true, nil
 }

@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
+	"time"
+
 	"github.com/Airiseina/answer/api_gateway/config"
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/routes"
@@ -9,8 +12,6 @@ import (
 	"github.com/Airiseina/answer/pkg/meter"
 	"github.com/Airiseina/answer/pkg/storage"
 	"github.com/Airiseina/answer/pkg/tracer"
-	"os"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/hlog"

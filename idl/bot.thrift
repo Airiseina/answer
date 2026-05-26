@@ -7,11 +7,10 @@ struct CommonRes {
 struct CreateBotReq {
     1: i64 creator_id
     2: string name
-    3: string avatar_url
-    4: string system_prompt
-    5: string api_key
-    6: string model
-    7: optional string base_url
+    3: string system_prompt
+    4: string api_key
+    5: string model
+    6: optional string base_url
 }
 
 struct CreateBotRes {

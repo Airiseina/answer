@@ -43,4 +43,5 @@ type UserDao interface {
 	GetUsersByAccounts(accounts []string) ([]model.User, error)
 	UpdateAvatar(userID int64, avatarURL string) error
 	CreateBotUser(name, avatarURL string) (int64, error)
+	UpdateBotUserName(userID int64, name string) error
 }

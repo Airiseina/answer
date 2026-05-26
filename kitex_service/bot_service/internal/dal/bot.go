@@ -42,7 +42,7 @@ func (d *botDao) GetSystemBot() (model.Bot, error) {
 
 func (d *botDao) GetUserBots(creatorId int64) ([]model.Bot, error) {
 	var bots []model.Bot
-	err := d.db.Where("creator_id = ? AND is_system = ?", creatorId, false).Find(&bots).Error
+	err := d.db.Where("creator_id = ? OR is_system = ?", creatorId, true).Find(&bots).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询用户Bot列表失败: %w", err)
 	}

@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"net"
+	"os"
+
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
@@ -11,8 +14,6 @@ import (
 	"github.com/Airiseina/answer/pkg/connect"
 	"github.com/Airiseina/answer/pkg/meter"
 	"github.com/Airiseina/answer/pkg/tracer"
-	"net"
-	"os"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"

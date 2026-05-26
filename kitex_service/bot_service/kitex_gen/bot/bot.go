@@ -39,11 +39,10 @@ var fieldIDToName_CommonRes = map[int16]string{
 type CreateBotReq struct {
 	CreatorId    int64   `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
 	Name         string  `thrift:"name,2" frugal:"2,default,string" json:"name"`
-	AvatarUrl    string  `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
-	SystemPrompt string  `thrift:"system_prompt,4" frugal:"4,default,string" json:"system_prompt"`
-	ApiKey       string  `thrift:"api_key,5" frugal:"5,default,string" json:"api_key"`
-	Model        string  `thrift:"model,6" frugal:"6,default,string" json:"model"`
-	BaseUrl      *string `thrift:"base_url,7,optional" frugal:"7,optional,string" json:"base_url,omitempty"`
+	SystemPrompt string  `thrift:"system_prompt,3" frugal:"3,default,string" json:"system_prompt"`
+	ApiKey       string  `thrift:"api_key,4" frugal:"4,default,string" json:"api_key"`
+	Model        string  `thrift:"model,5" frugal:"5,default,string" json:"model"`
+	BaseUrl      *string `thrift:"base_url,6,optional" frugal:"6,optional,string" json:"base_url,omitempty"`
 }
 
 func NewCreateBotReq() *CreateBotReq {
@@ -59,10 +58,6 @@ func (p *CreateBotReq) GetCreatorId() (v int64) {
 
 func (p *CreateBotReq) GetName() (v string) {
 	return p.Name
-}
-
-func (p *CreateBotReq) GetAvatarUrl() (v string) {
-	return p.AvatarUrl
 }
 
 func (p *CreateBotReq) GetSystemPrompt() (v string) {
@@ -91,9 +86,6 @@ func (p *CreateBotReq) SetCreatorId(val int64) {
 func (p *CreateBotReq) SetName(val string) {
 	p.Name = val
 }
-func (p *CreateBotReq) SetAvatarUrl(val string) {
-	p.AvatarUrl = val
-}
 func (p *CreateBotReq) SetSystemPrompt(val string) {
 	p.SystemPrompt = val
 }
@@ -121,11 +113,10 @@ func (p *CreateBotReq) String() string {
 var fieldIDToName_CreateBotReq = map[int16]string{
 	1: "creator_id",
 	2: "name",
-	3: "avatar_url",
-	4: "system_prompt",
-	5: "api_key",
-	6: "model",
-	7: "base_url",
+	3: "system_prompt",
+	4: "api_key",
+	5: "model",
+	6: "base_url",
 }
 
 type CreateBotRes struct {
