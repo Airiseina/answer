@@ -3,9 +3,9 @@
 package botservice
 
 import (
-	bot "bot_service/kitex_gen/bot"
 	"context"
 	"errors"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
 )

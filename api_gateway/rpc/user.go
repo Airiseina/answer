@@ -2,9 +2,9 @@ package rpc
 
 import (
 	"context"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user/loginservice"
 	"time"
-	"user_service/kitex_gen/user"
-	"user_service/kitex_gen/user/loginservice"
 
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/kitex/client"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	chat "chat_service/kitex_gen/chat"
-	"chat_service/kitex_gen/chat/chatservice"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
+	"github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat/chatservice"
 
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/kitex/client"

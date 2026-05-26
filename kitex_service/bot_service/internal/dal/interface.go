@@ -1,7 +1,7 @@
 package dal
 
 import (
-	"bot_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/model"
 
 	"gorm.io/gorm"
 )

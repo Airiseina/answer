@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"group_service/kitex_gen/group"
-	"group_service/kitex_gen/group/groupservice"
+	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
+	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group/groupservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"

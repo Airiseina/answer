@@ -1,12 +1,12 @@
 package storage
 
 import (
-	"answer_pkg/logger"
 	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/Airiseina/answer/pkg/logger"
 	"io"
 	"mime/multipart"
 	"net/http"

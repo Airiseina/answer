@@ -1,9 +1,9 @@
-module chat_service
+module github.com/Airiseina/answer/kitex_service/chat_service
 
 go 1.26.1
 
 require (
-	answer_pkg v0.0.0
+	github.com/Airiseina/answer/pkg v0.0.0
 	github.com/cloudwego/gopkg v0.2.0
 	github.com/cloudwego/kitex v0.16.2
 	github.com/kitex-contrib/obs-opentelemetry v0.3.0
@@ -107,4 +107,9 @@ require (
 	gorm.io/driver/postgres v1.6.0 // indirect
 )
 
-replace answer_pkg => ../../pkg
+require github.com/Airiseina/answer/kitex_service/group_service v0.0.0
+
+replace (
+	github.com/Airiseina/answer/kitex_service/group_service => ../group_service
+	github.com/Airiseina/answer/pkg => ../../pkg
+)

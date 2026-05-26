@@ -11,6 +11,7 @@ struct CreateBotReq {
     4: string system_prompt
     5: string api_key
     6: string model
+    7: optional string base_url
 }
 
 struct CreateBotRes {
@@ -27,6 +28,7 @@ struct BotInfo {
     6: string model
     7: bool is_system
     8: i64 created_at
+    9: optional string base_url
 }
 
 struct GetBotReq {
@@ -62,6 +64,7 @@ struct UpdateBotReq {
     5: optional string system_prompt
     6: optional string api_key
     7: optional string model
+    8: optional string base_url
 }
 
 struct DeleteBotReq {
@@ -88,6 +91,7 @@ struct GetBotConfigRes {
     3: optional string model
     4: optional string system_prompt
     5: optional i64 user_id
+    6: optional string base_url
 }
 
 struct AddBotToConversationReq {

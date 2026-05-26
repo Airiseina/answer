@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	bot "bot_service/kitex_gen/bot"
-	"bot_service/kitex_gen/bot/botservice"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
+	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot/botservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
@@ -49,6 +49,7 @@ type BotConfig struct {
 	Model        string
 	SystemPrompt string
 	UserID       int64
+	BaseUrl      string
 }
 
 func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
@@ -71,6 +72,9 @@ func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
 	}
 	if cfg.ApiKey == "" {
 		return nil, fmt.Errorf("Bot[%d]未配置API Key", botId)
+	}
+	if resp.BaseUrl != nil {
+		cfg.BaseUrl = resp.GetBaseUrl()
 	}
 	return cfg, nil
 }

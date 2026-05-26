@@ -3,8 +3,8 @@
 package chatservice
 
 import (
-	chat "chat_service/kitex_gen/chat"
 	"context"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
 )

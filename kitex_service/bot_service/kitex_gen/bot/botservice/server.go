@@ -2,7 +2,7 @@
 package botservice
 
 import (
-	bot "bot_service/kitex_gen/bot"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
 	server "github.com/cloudwego/kitex/server"
 )
 

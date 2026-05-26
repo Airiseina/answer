@@ -1,13 +1,14 @@
 package handle
 
 import (
-	"api_gateway/middleware"
-	"api_gateway/response"
-	"api_gateway/rpc"
 	"context"
 
-	bot "bot_service/kitex_gen/bot"
-	work "work_service/kitex_gen/work"
+	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/response"
+	"github.com/Airiseina/answer/api_gateway/rpc"
+
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -19,6 +20,7 @@ type CreateBotReq struct {
 	SystemPrompt string `json:"system_prompt" vd:"len($) > 0"`
 	ApiKey       string `json:"api_key"`
 	Model        string `json:"model" vd:"len($) > 0"`
+	BaseUrl      string `json:"base_url"`
 }
 
 func CreateBot(ctx context.Context, c *app.RequestContext) {
@@ -38,6 +40,7 @@ func CreateBot(ctx context.Context, c *app.RequestContext) {
 		SystemPrompt: req.SystemPrompt,
 		ApiKey:       req.ApiKey,
 		Model:        req.Model,
+		BaseUrl:      &req.BaseUrl,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "创建Bot失败: %v", err)
@@ -54,6 +57,7 @@ type UpdateBotReq struct {
 	SystemPrompt string `json:"system_prompt"`
 	ApiKey       string `json:"api_key"`
 	Model        string `json:"model"`
+	BaseUrl      string `json:"base_url"`
 }
 
 func UpdateBot(ctx context.Context, c *app.RequestContext) {
@@ -84,6 +88,9 @@ func UpdateBot(ctx context.Context, c *app.RequestContext) {
 	}
 	if req.Model != "" {
 		rpcReq.Model = &req.Model
+	}
+	if req.BaseUrl != "" {
+		rpcReq.BaseUrl = &req.BaseUrl
 	}
 	resp, err := rpc.UpdateBot(ctx, rpcReq)
 	if err != nil {
@@ -200,4 +207,18 @@ func ChatWithBot(ctx context.Context, c *app.RequestContext) {
 	response.Success(c, map[string]interface{}{
 		"success": resp.Success,
 	})
+}
+
+func GetSystemBot(ctx context.Context, c *app.RequestContext) {
+	resp, err := rpc.GetSystemBot(ctx)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "获取系统Bot失败: %v", err)
+		response.Error(c, "获取系统Bot失败", nil)
+		return
+	}
+	result := map[string]interface{}{"success": resp.Success}
+	if resp.BotId != 0 {
+		result["bot_id"] = resp.BotId
+	}
+	response.Success(c, result)
 }

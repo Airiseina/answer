@@ -1,16 +1,17 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
 	"context"
-	"msg_gateway/config"
-	"msg_gateway/core"
-	"msg_gateway/rpc"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/Airiseina/answer/msg_gateway/config"
+	"github.com/Airiseina/answer/msg_gateway/core"
+	"github.com/Airiseina/answer/msg_gateway/rpc"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/golang-jwt/jwt/v4"

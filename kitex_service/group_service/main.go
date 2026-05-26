@@ -1,19 +1,21 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
 	"context"
-	"group_service/internal/config"
-	"group_service/internal/dal"
-	"group_service/internal/model"
-	"group_service/internal/service"
-	"group_service/rpc"
 
-	"group_service/kitex_gen/group/groupservice"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
+
 	"net"
 	"os"
+
+	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group/groupservice"
 
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/kitex/pkg/klog"

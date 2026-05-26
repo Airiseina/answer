@@ -1,6 +1,6 @@
 package storage
 
-import "answer_pkg/logger"
+import "github.com/Airiseina/answer/pkg/logger"
 
 func Init() {
 	InitSeaweedFS()

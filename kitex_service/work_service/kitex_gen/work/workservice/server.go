@@ -2,8 +2,8 @@
 package workservice
 
 import (
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	server "github.com/cloudwego/kitex/server"
-	work "work_service/kitex_gen/work"
 )
 
 // NewServer creates a server.Server with the given handler and options.

@@ -3,22 +3,27 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
-	"work_service/internal/service"
-	"work_service/rpc"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	botTaskStream   = "bot:task:stream"
-	consumerGroup   = "bot-worker-group"
-	consumerName    = "worker-1"
-	pendingIdleTime = 5 * time.Minute
+	botTaskStream     = "bot:task:stream"
+	consumerGroup     = "bot-worker-group"
+	consumerName      = "worker-1"
+	pendingIdleTime   = 5 * time.Minute
+	maxConcurrentBots = 10
+	perBotQueueSize   = 50
+	botIdleTimeout    = 10 * time.Minute
 )
 
 type BotTask struct {
@@ -31,12 +36,16 @@ type BotTask struct {
 type BotTaskConsumer struct {
 	rdb         *redis.Client
 	workService *service.WorkService
+	botChans    sync.Map
+	sem         chan struct{}
+	mu          sync.Mutex
 }
 
 func NewBotTaskConsumer(rdb *redis.Client, workService *service.WorkService) *BotTaskConsumer {
 	return &BotTaskConsumer{
 		rdb:         rdb,
 		workService: workService,
+		sem:         make(chan struct{}, maxConcurrentBots),
 	}
 }
 
@@ -50,6 +59,89 @@ func (c *BotTaskConsumer) ensureGroup(ctx context.Context) {
 	err := c.rdb.XGroupCreateMkStream(ctx, botTaskStream, consumerGroup, "0").Err()
 	if err != nil {
 		klog.Infof("创建消费者组[%s]（可能已存在）: %v", consumerGroup, err)
+	}
+}
+
+func (c *BotTaskConsumer) getOrCreateBotChan(ctx context.Context, botID int64) chan redis.XMessage {
+	if ch, ok := c.botChans.Load(botID); ok {
+		return ch.(chan redis.XMessage)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if ch, ok := c.botChans.Load(botID); ok {
+		return ch.(chan redis.XMessage)
+	}
+	ch := make(chan redis.XMessage, perBotQueueSize)
+	c.botChans.Store(botID, ch)
+	go c.botWorker(ctx, botID, ch)
+	return ch
+}
+
+func (c *BotTaskConsumer) botWorker(ctx context.Context, botID int64, ch chan redis.XMessage) {
+	idleTimer := time.NewTimer(botIdleTimeout)
+	defer idleTimer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-ch:
+			if !idleTimer.Stop() {
+				select {
+				case <-idleTimer.C:
+				default:
+				}
+			}
+			idleTimer.Reset(botIdleTimeout)
+
+			select {
+			case c.sem <- struct{}{}:
+				c.processMessage(ctx, msg)
+				<-c.sem
+			case <-ctx.Done():
+				return
+			}
+		case <-idleTimer.C:
+			c.mu.Lock()
+			select {
+			case msg := <-ch:
+				c.mu.Unlock()
+				idleTimer.Reset(botIdleTimeout)
+				select {
+				case c.sem <- struct{}{}:
+					c.processMessage(ctx, msg)
+					<-c.sem
+				case <-ctx.Done():
+					return
+				}
+			default:
+				c.botChans.Delete(botID)
+				c.mu.Unlock()
+				return
+			}
+		}
+	}
+}
+
+func (c *BotTaskConsumer) routeMessage(ctx context.Context, msg redis.XMessage) {
+	taskJSON, ok := msg.Values["task"].(string)
+	if !ok {
+		klog.Errorf("消息[%s]缺少task字段", msg.ID)
+		c.ack(ctx, msg.ID)
+		return
+	}
+	var task BotTask
+	if err := json.Unmarshal([]byte(taskJSON), &task); err != nil {
+		klog.Errorf("解析Bot任务失败[%s]: %v", msg.ID, err)
+		c.ack(ctx, msg.ID)
+		return
+	}
+
+	ch := c.getOrCreateBotChan(ctx, task.BotID)
+	select {
+	case ch <- msg:
+	case <-ctx.Done():
+		return
 	}
 }
 
@@ -68,7 +160,7 @@ func (c *BotTaskConsumer) consumeNew(ctx context.Context) {
 			Block:    5 * time.Second,
 		}).Result()
 		if err != nil {
-			if err == redis.Nil {
+			if errors.Is(err, redis.Nil) {
 				continue
 			}
 			klog.Errorf("XReadGroup读取新消息失败: %v", err)
@@ -77,7 +169,7 @@ func (c *BotTaskConsumer) consumeNew(ctx context.Context) {
 		}
 		for _, stream := range streams {
 			for _, msg := range stream.Messages {
-				c.processMessage(ctx, msg)
+				c.routeMessage(ctx, msg)
 			}
 		}
 	}
@@ -101,7 +193,7 @@ func (c *BotTaskConsumer) consumePending(ctx context.Context) {
 			Idle:   pendingIdleTime,
 		}).Result()
 		if err != nil {
-			if err != redis.Nil {
+			if !errors.Is(err, redis.Nil) {
 				klog.Errorf("XPendingExt查询失败: %v", err)
 			}
 			continue
@@ -119,7 +211,7 @@ func (c *BotTaskConsumer) consumePending(ctx context.Context) {
 				continue
 			}
 			for _, msg := range msgs {
-				c.processMessage(ctx, msg)
+				c.routeMessage(ctx, msg)
 			}
 		}
 	}
@@ -139,8 +231,11 @@ func (c *BotTaskConsumer) processMessage(ctx context.Context, msg redis.XMessage
 		return
 	}
 
-	if !c.validateTask(ctx, &task) {
-		c.ack(ctx, msg.ID)
+	valid, ackOnFailure := c.validateTask(ctx, &task)
+	if !valid {
+		if ackOnFailure {
+			c.ack(ctx, msg.ID)
+		}
 		return
 	}
 
@@ -148,15 +243,16 @@ func (c *BotTaskConsumer) processMessage(ctx context.Context, msg redis.XMessage
 	_, err := c.workService.HandleMessage(ctx, task.BotID, task.ConversationID, task.SenderID, task.Content, nil)
 	if err != nil {
 		klog.Errorf("Bot[%d]处理消息失败: %v", task.BotID, err)
+		return
 	}
 	c.ack(ctx, msg.ID)
 }
 
-func (c *BotTaskConsumer) validateTask(ctx context.Context, task *BotTask) bool {
+func (c *BotTaskConsumer) validateTask(ctx context.Context, task *BotTask) (valid bool, ackOnFailure bool) {
 	members, err := rpc.GetConversationMembers(ctx, task.ConversationID)
 	if err != nil {
 		klog.Errorf("查询会话[%d]成员失败: %v", task.ConversationID, err)
-		return false
+		return false, false
 	}
 	senderInConv := false
 	for _, m := range members {
@@ -167,9 +263,9 @@ func (c *BotTaskConsumer) validateTask(ctx context.Context, task *BotTask) bool 
 	}
 	if !senderInConv {
 		klog.Errorf("鉴权失败: 发送者[%d]不在会话[%d]成员列表中", task.SenderID, task.ConversationID)
-		return false
+		return false, true
 	}
-	return true
+	return true, false
 }
 
 func (c *BotTaskConsumer) ack(ctx context.Context, msgID string) {

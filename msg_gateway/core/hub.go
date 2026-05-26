@@ -1,8 +1,6 @@
 package core
 
 import (
-	"answer_pkg/meter"
-	"answer_pkg/storage"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -15,8 +13,11 @@ import (
 	"sync"
 	"time"
 
-	chat "chat_service/kitex_gen/chat"
-	"msg_gateway/rpc"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/storage"
+
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
+	"github.com/Airiseina/answer/msg_gateway/rpc"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/redis/go-redis/v9"

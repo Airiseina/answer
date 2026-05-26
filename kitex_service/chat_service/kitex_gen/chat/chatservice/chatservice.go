@@ -3,9 +3,9 @@
 package chatservice
 
 import (
-	chat "chat_service/kitex_gen/chat"
 	"context"
 	"errors"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
 )

@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bot_service/internal/service"
-	"bot_service/kitex_gen/bot"
 	"context"
+
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )
@@ -13,7 +14,11 @@ type BotServiceImpl struct {
 }
 
 func (s *BotServiceImpl) CreateBot(ctx context.Context, req *bot.CreateBotReq) (resp *bot.CreateBotRes, err error) {
-	botId, err := s.botService.CreateBot(ctx, req.CreatorId, req.Name, req.AvatarUrl, req.SystemPrompt, req.ApiKey, req.Model)
+	baseURL := ""
+	if req.IsSetBaseUrl() {
+		baseURL = req.GetBaseUrl()
+	}
+	botId, err := s.botService.CreateBot(ctx, req.CreatorId, req.Name, req.AvatarUrl, req.SystemPrompt, req.ApiKey, req.Model, baseURL)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建Bot时发生系统错误: %v", req.CreatorId, err)
 		return &bot.CreateBotRes{Success: false}, err
@@ -42,6 +47,7 @@ func (s *BotServiceImpl) GetBot(ctx context.Context, req *bot.GetBotReq) (resp *
 			Model:        b.Model,
 			IsSystem:     b.IsSystem,
 			CreatedAt:    b.CreatedAt,
+			BaseUrl:      &b.BaseURL,
 		},
 	}, nil
 }
@@ -75,6 +81,7 @@ func (s *BotServiceImpl) GetUserBots(ctx context.Context, req *bot.GetUserBotsRe
 			Model:        b.Model,
 			IsSystem:     b.IsSystem,
 			CreatedAt:    b.CreatedAt,
+			BaseUrl:      &b.BaseURL,
 		})
 	}
 	return &bot.GetUserBotsRes{Success: true, Bots: list}, nil
@@ -96,6 +103,9 @@ func (s *BotServiceImpl) UpdateBot(ctx context.Context, req *bot.UpdateBotReq) (
 	}
 	if req.IsSetModel() {
 		updates["model"] = req.GetModel()
+	}
+	if req.IsSetBaseUrl() {
+		updates["base_url"] = req.GetBaseUrl()
 	}
 	if len(updates) == 0 {
 		return &bot.CommonRes{Success: false}, nil
@@ -142,6 +152,7 @@ func (s *BotServiceImpl) GetBotConfig(ctx context.Context, req *bot.GetBotConfig
 		Model:        &b.Model,
 		SystemPrompt: &b.SystemPrompt,
 		UserId:       &b.UserId,
+		BaseUrl:      &b.BaseURL,
 	}, nil
 }
 

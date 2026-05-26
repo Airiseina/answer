@@ -1,8 +1,8 @@
 package dal
 
 import (
-	"chat_service/internal/model"
 	"context"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"

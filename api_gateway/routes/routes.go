@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"api_gateway/handle"
-	"api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/handle"
+	"github.com/Airiseina/answer/api_gateway/middleware"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 )
@@ -57,4 +57,5 @@ func Routes(h *server.Hertz) {
 	authGroup.GET("/bot/list", handle.GetUserBots)
 	authGroup.POST("/bot/add_to_conversation", handle.AddBotToConversation)
 	authGroup.POST("/bot/chat", handle.ChatWithBot)
+	authGroup.GET("/bot/system", handle.GetSystemBot)
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"user_service/kitex_gen/user"
-	"user_service/kitex_gen/user/loginservice"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user/loginservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"

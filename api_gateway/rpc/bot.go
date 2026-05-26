@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	bot "bot_service/kitex_gen/bot"
-	"bot_service/kitex_gen/bot/botservice"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
+	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot/botservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
@@ -69,4 +69,8 @@ func IsBot(ctx context.Context, req *bot.IsBotReq) (*bot.IsBotRes, error) {
 
 func AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq) (*bot.AddBotToConversationRes, error) {
 	return botCli.AddBotToConversation(ctx, req)
+}
+
+func GetSystemBot(ctx context.Context) (*bot.GetSystemBotRes, error) {
+	return botCli.GetSystemBot(ctx)
 }

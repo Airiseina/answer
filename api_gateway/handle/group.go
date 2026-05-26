@@ -1,11 +1,11 @@
 package handle
 
 import (
-	"api_gateway/middleware"
-	"api_gateway/response"
-	"api_gateway/rpc"
 	"context"
-	"group_service/kitex_gen/group"
+	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/response"
+	"github.com/Airiseina/answer/api_gateway/rpc"
+	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"chat_service/internal/dal"
-	"chat_service/internal/model"
-	"chat_service/internal/service"
-	chat "chat_service/kitex_gen/chat"
 	"context"
 	"fmt"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/service"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	"time"
 
-	"answer_pkg/meter"
+	"github.com/Airiseina/answer/pkg/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

@@ -3,8 +3,8 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/model"
 	"time"
-	"user_service/internal/model"
 
 	"gorm.io/gorm"
 )

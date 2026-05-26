@@ -37,12 +37,13 @@ var fieldIDToName_CommonRes = map[int16]string{
 }
 
 type CreateBotReq struct {
-	CreatorId    int64  `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
-	Name         string `thrift:"name,2" frugal:"2,default,string" json:"name"`
-	AvatarUrl    string `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
-	SystemPrompt string `thrift:"system_prompt,4" frugal:"4,default,string" json:"system_prompt"`
-	ApiKey       string `thrift:"api_key,5" frugal:"5,default,string" json:"api_key"`
-	Model        string `thrift:"model,6" frugal:"6,default,string" json:"model"`
+	CreatorId    int64   `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
+	Name         string  `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	AvatarUrl    string  `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
+	SystemPrompt string  `thrift:"system_prompt,4" frugal:"4,default,string" json:"system_prompt"`
+	ApiKey       string  `thrift:"api_key,5" frugal:"5,default,string" json:"api_key"`
+	Model        string  `thrift:"model,6" frugal:"6,default,string" json:"model"`
+	BaseUrl      *string `thrift:"base_url,7,optional" frugal:"7,optional,string" json:"base_url,omitempty"`
 }
 
 func NewCreateBotReq() *CreateBotReq {
@@ -75,6 +76,15 @@ func (p *CreateBotReq) GetApiKey() (v string) {
 func (p *CreateBotReq) GetModel() (v string) {
 	return p.Model
 }
+
+var CreateBotReq_BaseUrl_DEFAULT string
+
+func (p *CreateBotReq) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return CreateBotReq_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
 func (p *CreateBotReq) SetCreatorId(val int64) {
 	p.CreatorId = val
 }
@@ -93,6 +103,13 @@ func (p *CreateBotReq) SetApiKey(val string) {
 func (p *CreateBotReq) SetModel(val string) {
 	p.Model = val
 }
+func (p *CreateBotReq) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+
+func (p *CreateBotReq) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
 
 func (p *CreateBotReq) String() string {
 	if p == nil {
@@ -108,6 +125,7 @@ var fieldIDToName_CreateBotReq = map[int16]string{
 	4: "system_prompt",
 	5: "api_key",
 	6: "model",
+	7: "base_url",
 }
 
 type CreateBotRes struct {
@@ -149,14 +167,15 @@ var fieldIDToName_CreateBotRes = map[int16]string{
 }
 
 type BotInfo struct {
-	BotId        int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
-	CreatorId    int64  `thrift:"creator_id,2" frugal:"2,default,i64" json:"creator_id"`
-	Name         string `thrift:"name,3" frugal:"3,default,string" json:"name"`
-	AvatarUrl    string `thrift:"avatar_url,4" frugal:"4,default,string" json:"avatar_url"`
-	SystemPrompt string `thrift:"system_prompt,5" frugal:"5,default,string" json:"system_prompt"`
-	Model        string `thrift:"model,6" frugal:"6,default,string" json:"model"`
-	IsSystem     bool   `thrift:"is_system,7" frugal:"7,default,bool" json:"is_system"`
-	CreatedAt    int64  `thrift:"created_at,8" frugal:"8,default,i64" json:"created_at"`
+	BotId        int64   `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	CreatorId    int64   `thrift:"creator_id,2" frugal:"2,default,i64" json:"creator_id"`
+	Name         string  `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	AvatarUrl    string  `thrift:"avatar_url,4" frugal:"4,default,string" json:"avatar_url"`
+	SystemPrompt string  `thrift:"system_prompt,5" frugal:"5,default,string" json:"system_prompt"`
+	Model        string  `thrift:"model,6" frugal:"6,default,string" json:"model"`
+	IsSystem     bool    `thrift:"is_system,7" frugal:"7,default,bool" json:"is_system"`
+	CreatedAt    int64   `thrift:"created_at,8" frugal:"8,default,i64" json:"created_at"`
+	BaseUrl      *string `thrift:"base_url,9,optional" frugal:"9,optional,string" json:"base_url,omitempty"`
 }
 
 func NewBotInfo() *BotInfo {
@@ -197,6 +216,15 @@ func (p *BotInfo) GetIsSystem() (v bool) {
 func (p *BotInfo) GetCreatedAt() (v int64) {
 	return p.CreatedAt
 }
+
+var BotInfo_BaseUrl_DEFAULT string
+
+func (p *BotInfo) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return BotInfo_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
 func (p *BotInfo) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -221,6 +249,13 @@ func (p *BotInfo) SetIsSystem(val bool) {
 func (p *BotInfo) SetCreatedAt(val int64) {
 	p.CreatedAt = val
 }
+func (p *BotInfo) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+
+func (p *BotInfo) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
 
 func (p *BotInfo) String() string {
 	if p == nil {
@@ -238,6 +273,7 @@ var fieldIDToName_BotInfo = map[int16]string{
 	6: "model",
 	7: "is_system",
 	8: "created_at",
+	9: "base_url",
 }
 
 type GetBotReq struct {
@@ -429,6 +465,7 @@ type UpdateBotReq struct {
 	SystemPrompt *string `thrift:"system_prompt,5,optional" frugal:"5,optional,string" json:"system_prompt,omitempty"`
 	ApiKey       *string `thrift:"api_key,6,optional" frugal:"6,optional,string" json:"api_key,omitempty"`
 	Model        *string `thrift:"model,7,optional" frugal:"7,optional,string" json:"model,omitempty"`
+	BaseUrl      *string `thrift:"base_url,8,optional" frugal:"8,optional,string" json:"base_url,omitempty"`
 }
 
 func NewUpdateBotReq() *UpdateBotReq {
@@ -490,6 +527,15 @@ func (p *UpdateBotReq) GetModel() (v string) {
 	}
 	return *p.Model
 }
+
+var UpdateBotReq_BaseUrl_DEFAULT string
+
+func (p *UpdateBotReq) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return UpdateBotReq_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
 func (p *UpdateBotReq) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -510,6 +556,9 @@ func (p *UpdateBotReq) SetApiKey(val *string) {
 }
 func (p *UpdateBotReq) SetModel(val *string) {
 	p.Model = val
+}
+func (p *UpdateBotReq) SetBaseUrl(val *string) {
+	p.BaseUrl = val
 }
 
 func (p *UpdateBotReq) IsSetName() bool {
@@ -532,6 +581,10 @@ func (p *UpdateBotReq) IsSetModel() bool {
 	return p.Model != nil
 }
 
+func (p *UpdateBotReq) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
 func (p *UpdateBotReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -547,6 +600,7 @@ var fieldIDToName_UpdateBotReq = map[int16]string{
 	5: "system_prompt",
 	6: "api_key",
 	7: "model",
+	8: "base_url",
 }
 
 type DeleteBotReq struct {
@@ -698,6 +752,7 @@ type GetBotConfigRes struct {
 	Model        *string `thrift:"model,3,optional" frugal:"3,optional,string" json:"model,omitempty"`
 	SystemPrompt *string `thrift:"system_prompt,4,optional" frugal:"4,optional,string" json:"system_prompt,omitempty"`
 	UserId       *int64  `thrift:"user_id,5,optional" frugal:"5,optional,i64" json:"user_id,omitempty"`
+	BaseUrl      *string `thrift:"base_url,6,optional" frugal:"6,optional,string" json:"base_url,omitempty"`
 }
 
 func NewGetBotConfigRes() *GetBotConfigRes {
@@ -746,6 +801,15 @@ func (p *GetBotConfigRes) GetUserId() (v int64) {
 	}
 	return *p.UserId
 }
+
+var GetBotConfigRes_BaseUrl_DEFAULT string
+
+func (p *GetBotConfigRes) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return GetBotConfigRes_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
 func (p *GetBotConfigRes) SetSuccess(val bool) {
 	p.Success = val
 }
@@ -760,6 +824,9 @@ func (p *GetBotConfigRes) SetSystemPrompt(val *string) {
 }
 func (p *GetBotConfigRes) SetUserId(val *int64) {
 	p.UserId = val
+}
+func (p *GetBotConfigRes) SetBaseUrl(val *string) {
+	p.BaseUrl = val
 }
 
 func (p *GetBotConfigRes) IsSetApiKey() bool {
@@ -778,6 +845,10 @@ func (p *GetBotConfigRes) IsSetUserId() bool {
 	return p.UserId != nil
 }
 
+func (p *GetBotConfigRes) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
 func (p *GetBotConfigRes) String() string {
 	if p == nil {
 		return "<nil>"
@@ -791,6 +862,7 @@ var fieldIDToName_GetBotConfigRes = map[int16]string{
 	3: "model",
 	4: "system_prompt",
 	5: "user_id",
+	6: "base_url",
 }
 
 type AddBotToConversationReq struct {

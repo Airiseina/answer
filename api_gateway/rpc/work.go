@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	work "work_service/kitex_gen/work"
-	"work_service/kitex_gen/work/workservice"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
+	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"

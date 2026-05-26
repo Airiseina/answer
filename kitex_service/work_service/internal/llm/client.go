@@ -1,97 +1,60 @@
 package llm
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
+
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
 )
 
 type ChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string
+	Content string
 }
 
-type ChatRequest struct {
-	Model       string        `json:"model"`
-	Messages    []ChatMessage `json:"messages"`
-	Temperature float64       `json:"temperature,omitempty"`
+type Client struct{}
+
+func NewClient() *Client {
+	return &Client{}
 }
 
-type ChatResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-		FinishReason string `json:"finish_reason"`
-	} `json:"choices"`
-}
-
-type Client struct {
-	BaseURL    string
-	HTTPClient *http.Client
-}
-
-func NewClient(baseURL string) *Client {
-	if baseURL == "" {
-		baseURL = "https://open.bigmodel.cn/api/paas/v4"
+func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt string, history []ChatMessage, userContent string) (string, error) {
+	var opts []option.RequestOption
+	if apiKey != "" {
+		opts = append(opts, option.WithAPIKey(apiKey))
 	}
-	return &Client{
-		BaseURL:    strings.TrimRight(baseURL, "/"),
-		HTTPClient: &http.Client{},
+	if baseURL != "" {
+		opts = append(opts, option.WithBaseURL(baseURL))
 	}
-}
+	client := openai.NewClient(opts...)
 
-func (c *Client) Chat(apiKey, model, systemPrompt string, history []ChatMessage, userContent string) (string, error) {
-	messages := make([]ChatMessage, 0, len(history)+2)
-	if systemPrompt != "" {
-		messages = append(messages, ChatMessage{Role: "system", Content: systemPrompt})
-	}
-	messages = append(messages, history...)
-	messages = append(messages, ChatMessage{Role: "user", Content: userContent})
-
-	reqBody := ChatRequest{
+	params := openai.ChatCompletionNewParams{
 		Model:       model,
-		Messages:    messages,
-		Temperature: 0.7,
+		Temperature: openai.Float(0.7),
 	}
-	data, err := json.Marshal(reqBody)
+
+	if systemPrompt != "" {
+		params.Messages = append(params.Messages, openai.SystemMessage(systemPrompt))
+	}
+	for _, h := range history {
+		switch h.Role {
+		case "user":
+			params.Messages = append(params.Messages, openai.UserMessage(h.Content))
+		case "assistant":
+			params.Messages = append(params.Messages, openai.AssistantMessage(h.Content))
+		default:
+			params.Messages = append(params.Messages, openai.SystemMessage(h.Content))
+		}
+	}
+	params.Messages = append(params.Messages, openai.UserMessage(userContent))
+
+	resp, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {
-		return "", fmt.Errorf("序列化请求失败: %w", err)
+		return "", fmt.Errorf("调用OpenAI失败: %w", err)
 	}
-
-	req, err := http.NewRequest("POST", c.BaseURL+"/chat/completions", bytes.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("创建请求失败: %w", err)
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("OpenAI返回空响应")
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("请求LLM失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("读取响应失败: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("LLM返回非200: %d, %s", resp.StatusCode, string(body))
-	}
-
-	var chatResp ChatResponse
-	if err := json.Unmarshal(body, &chatResp); err != nil {
-		return "", fmt.Errorf("解析响应失败: %w", err)
-	}
-
-	if len(chatResp.Choices) == 0 {
-		return "", fmt.Errorf("LLM返回空响应")
-	}
-
-	return chatResp.Choices[0].Message.Content, nil
+	return resp.Choices[0].Message.Content, nil
 }

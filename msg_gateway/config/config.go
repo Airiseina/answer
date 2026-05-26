@@ -1,8 +1,8 @@
 package config
 
 import (
-	"answer_pkg/config"
-	"answer_pkg/storage"
+	"github.com/Airiseina/answer/pkg/config"
+	"github.com/Airiseina/answer/pkg/storage"
 
 	"github.com/spf13/viper"
 )

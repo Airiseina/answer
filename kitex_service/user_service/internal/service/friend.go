@@ -1,8 +1,8 @@
 package service
 
 import (
-	"user_service/internal/dal/mysql"
-	"user_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/dal/mysql"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/model"
 )
 
 type FriendService struct {

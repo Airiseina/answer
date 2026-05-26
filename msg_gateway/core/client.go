@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 
-	"answer_pkg/meter"
+	"github.com/Airiseina/answer/pkg/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/gorilla/websocket"

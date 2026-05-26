@@ -5,9 +5,9 @@ package workservice
 import (
 	"context"
 	"errors"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
-	work "work_service/kitex_gen/work"
 )
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")

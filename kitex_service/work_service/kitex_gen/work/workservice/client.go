@@ -4,9 +4,9 @@ package workservice
 
 import (
 	"context"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
-	work "work_service/kitex_gen/work"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.

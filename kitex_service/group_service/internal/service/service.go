@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"group_service/internal/dal"
-	"group_service/internal/model"
-	"group_service/rpc"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
 	"time"
 
-	"answer_pkg/snowflake"
+	"github.com/Airiseina/answer/pkg/snowflake"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )

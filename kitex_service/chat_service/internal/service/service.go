@@ -1,15 +1,16 @@
 package service
 
 import (
-	"answer_pkg/snowflake"
-	"chat_service/internal/dal"
-	"chat_service/internal/model"
-	"chat_service/rpc"
 	"context"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/chat_service/rpc"
+	"github.com/Airiseina/answer/pkg/snowflake"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/redis/go-redis/v9"

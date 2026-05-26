@@ -5,9 +5,9 @@ package groupservice
 import (
 	"context"
 	"errors"
+	group "github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
-	group "group_service/kitex_gen/group"
 )
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")

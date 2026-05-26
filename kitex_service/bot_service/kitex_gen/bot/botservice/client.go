@@ -3,8 +3,8 @@
 package botservice
 
 import (
-	bot "bot_service/kitex_gen/bot"
 	"context"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
 )

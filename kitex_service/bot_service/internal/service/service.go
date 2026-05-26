@@ -1,13 +1,14 @@
 package service
 
 import (
-	"bot_service/internal/dal"
-	"bot_service/internal/model"
-	"bot_service/rpc"
 	"context"
 	"fmt"
+	"os"
 
-	"answer_pkg/snowflake"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
+	"github.com/Airiseina/answer/pkg/snowflake"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/spf13/viper"
@@ -25,7 +26,7 @@ func NewBotService(dao dal.BotDao) *BotService {
 	}
 }
 
-func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, avatarUrl, systemPrompt, apiKey, model_ string) (int64, error) {
+func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, avatarUrl, systemPrompt, apiKey, model_, baseURL string) (int64, error) {
 	botId := svc.snowNode.Generate()
 	bot := model.Bot{
 		ID:           botId,
@@ -35,6 +36,7 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, ava
 		SystemPrompt: systemPrompt,
 		ApiKey:       apiKey,
 		Model:        model_,
+		BaseURL:      baseURL,
 		IsSystem:     false,
 	}
 	err := svc.dao.CreateBot(bot)
@@ -70,6 +72,7 @@ type BotInfoDTO struct {
 	ApiKey       string
 	SystemPrompt string
 	Model        string
+	BaseURL      string
 	IsSystem     bool
 	CreatedAt    int64
 }
@@ -87,6 +90,7 @@ func (svc *BotService) GetBot(botId int64) (BotInfoDTO, error) {
 		AvatarUrl:    info.AvatarURL,
 		SystemPrompt: info.SystemPrompt,
 		Model:        info.Model,
+		BaseURL:      info.BaseURL,
 		IsSystem:     info.IsSystem,
 		CreatedAt:    info.CreatedAt.UnixMilli(),
 	}
@@ -115,6 +119,7 @@ func (svc *BotService) GetUserBots(creatorId int64) ([]BotInfoDTO, error) {
 			AvatarUrl:    info.AvatarURL,
 			SystemPrompt: info.SystemPrompt,
 			Model:        info.Model,
+			BaseURL:      info.BaseURL,
 			IsSystem:     info.IsSystem,
 			CreatedAt:    info.CreatedAt.UnixMilli(),
 		})
@@ -229,15 +234,26 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	botId := svc.snowNode.Generate()
-	name := viper.GetString("ai.system_bot_name")
+	name := viper.GetString("ai.system.bot_name")
+	systemPrompt := viper.GetString("ai.system.bot_prompt")
+	promptFile := viper.GetString("ai.system.bot_prompt_file")
+	if promptFile != "" {
+		data, err := os.ReadFile(promptFile)
+		if err != nil {
+			klog.Warnf("读取系统Bot prompt文件失败: %v, 使用默认prompt", err)
+		} else {
+			systemPrompt = string(data)
+		}
+	}
 	systemBot := model.Bot{
 		ID:           botId,
 		CreatorID:    0,
 		Name:         name,
 		AvatarURL:    "",
-		SystemPrompt: viper.GetString("ai.system_bot_prompt"),
-		ApiKey:       viper.GetString("ai.system_bot_api_key"),
-		Model:        viper.GetString("ai.system_bot_model"),
+		SystemPrompt: systemPrompt,
+		ApiKey:       viper.GetString("ai.system.bot_api_key"),
+		Model:        viper.GetString("ai.system.bot_model"),
+		BaseURL:      viper.GetString("ai.system.bot_base_url"),
 		IsSystem:     true,
 	}
 	err = svc.dao.CreateBot(systemBot)

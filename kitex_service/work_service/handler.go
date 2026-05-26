@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"work_service/internal/service"
-	work "work_service/kitex_gen/work"
+
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )

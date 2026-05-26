@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"group_service/internal/service"
-	"group_service/kitex_gen/group"
-	"group_service/rpc"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
+	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
 
-	"answer_pkg/meter"
+	"github.com/Airiseina/answer/pkg/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

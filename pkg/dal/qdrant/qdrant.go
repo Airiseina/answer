@@ -1,9 +1,9 @@
 package qdrant
 
 import (
-	"answer_pkg/logger"
 	"context"
 	"fmt"
+	"github.com/Airiseina/answer/pkg/logger"
 
 	"github.com/qdrant/go-client/qdrant"
 	"go.uber.org/zap"

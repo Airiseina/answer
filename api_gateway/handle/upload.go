@@ -1,10 +1,10 @@
 package handle
 
 import (
-	"answer_pkg/storage"
-	"api_gateway/middleware"
-	"api_gateway/response"
 	"context"
+	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/response"
+	"github.com/Airiseina/answer/pkg/storage"
 	"io"
 	"net/http"
 	"strings"

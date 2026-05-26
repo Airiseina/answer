@@ -4,9 +4,9 @@ package groupservice
 
 import (
 	"context"
+	group "github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
-	group "group_service/kitex_gen/group"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.

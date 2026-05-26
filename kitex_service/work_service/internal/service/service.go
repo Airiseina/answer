@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	chat "chat_service/kitex_gen/chat"
-	"work_service/internal/llm"
-	"work_service/rpc"
-
-	"github.com/cloudwego/kitex/pkg/klog"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
+	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
 )
 
 type WorkService struct {
@@ -51,24 +49,20 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		}
 		chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
 	}
-	go func() {
-		result, llmErr := svc.llmClient.Chat(botCfg.ApiKey, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
-		if llmErr != nil {
-			klog.Errorf("Bot[%d]调用LLM失败: %v", botId, llmErr)
-			return
-		}
-
-		sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
-			SenderId:       botCfg.UserID,
-			ConversationId: conversationId,
-			PeerId:         0,
-			Content:        result,
-		})
-		if sendErr != nil {
-			klog.Errorf("Bot[%d]消息入库失败: %v", botId, sendErr)
-		}
-	}()
+	result, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+	if llmErr != nil {
+		return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
+	}
+	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
+		SenderId:       botCfg.UserID,
+		ConversationId: conversationId,
+		PeerId:         0,
+		Content:        result,
+	})
+	if sendErr != nil {
+		return false, fmt.Errorf("bot[%d]消息入库失败: %w", botId, sendErr)
+	}
 	return true, nil
 }

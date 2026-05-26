@@ -1,7 +1,7 @@
 package mysql
 
 import (
-	"user_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/model"
 
 	"gorm.io/gorm"
 )

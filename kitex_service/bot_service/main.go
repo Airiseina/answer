@@ -1,18 +1,19 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
-	"bot_service/internal/config"
-	"bot_service/internal/dal"
-	"bot_service/internal/model"
-	"bot_service/internal/service"
-	"bot_service/kitex_gen/bot/botservice"
-	"bot_service/rpc"
 	"context"
 	"net"
 	"os"
+
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot/botservice"
+	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"

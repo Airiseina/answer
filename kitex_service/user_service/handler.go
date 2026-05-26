@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"user_service/internal/service"
-	"user_service/kitex_gen/user"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
 
-	"answer_pkg/meter"
+	"github.com/Airiseina/answer/pkg/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

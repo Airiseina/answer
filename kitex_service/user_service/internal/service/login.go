@@ -1,7 +1,7 @@
 package service
 
 import (
-	"user_service/internal/dal/mysql"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/dal/mysql"
 
 	"golang.org/x/crypto/bcrypt"
 )

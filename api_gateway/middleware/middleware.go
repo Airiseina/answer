@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"api_gateway/response"
-	"api_gateway/rpc"
 	"context"
 	"errors"
+	"github.com/Airiseina/answer/api_gateway/response"
+	"github.com/Airiseina/answer/api_gateway/rpc"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
 	"time"
-	"user_service/kitex_gen/user"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"

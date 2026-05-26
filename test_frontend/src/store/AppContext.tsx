@@ -109,6 +109,7 @@ interface AppContextType extends AppState {
   addConversation: (conv: Conversation) => void;
   setFriends: (friends: FriendInfo[]) => void;
   openChatWith: (targetAccount: string, name: string, type: number) => void;
+  openSystemAI: () => Promise<void>;
   loadConversations: () => void;
   sendTyping: (convId: string) => void;
   loadOnlineStatus: (accounts: string[]) => void;
@@ -612,6 +613,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveConvId('');
   }, [auth.account, addConversation]);
 
+  const openSystemAI = useCallback(async () => {
+    const sysRes = await api('GET', '/api/bot/system');
+    if (sysRes.code !== 0 || !sysRes.data?.bot_id) {
+      return;
+    }
+    const botId = sysRes.data.bot_id;
+    const addRes = await api('POST', '/api/bot/add_to_conversation', {
+      bot_id: botId,
+      conversation_id: 0,
+      conversation_type: 1,
+    });
+    if (addRes.code !== 0) {
+      return;
+    }
+    const convId = String(addRes.data?.conversation_id || '');
+    if (!convId || convId === '0') {
+      const existing = conversationsRef.current.find(c =>
+        c.type === 1 && c.memberAccounts.includes(String(botId))
+      );
+      if (existing) {
+        setActiveConvId(existing.id);
+      }
+      return;
+    }
+    await loadConversations();
+    setActiveConvId(convId);
+  }, [auth.account, loadConversations]);
+
   const lastTypingSentRef = useRef<number>(0);
   const sendTyping = useCallback((convId: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -738,7 +767,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       auth, conversations, messages, wsConnected, activeConvId, friends, onlineStatus, memberInfo, typingStatus, systemNotification,
       login, logout, wsConnect, wsDisconnect, sendMessage, setActiveConvId, addConversation,
-      setFriends, openChatWith, loadConversations, sendTyping, loadOnlineStatus, loadConversationMembers, updateAvatar, recallMessage, editMessage, clearSystemNotification,
+      setFriends, openChatWith, openSystemAI, loadConversations, sendTyping, loadOnlineStatus, loadConversationMembers, updateAvatar, recallMessage, editMessage, clearSystemNotification,
     }}>
       {children}
     </AppContext.Provider>

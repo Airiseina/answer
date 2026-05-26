@@ -1,14 +1,14 @@
 package main
 
 import (
-	"answer_pkg/meter"
-	"answer_pkg/storage"
-	"answer_pkg/tracer"
-	"api_gateway/config"
-	"api_gateway/middleware"
-	"api_gateway/routes"
-	"api_gateway/rpc"
 	"context"
+	"github.com/Airiseina/answer/api_gateway/config"
+	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/routes"
+	"github.com/Airiseina/answer/api_gateway/rpc"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/storage"
+	"github.com/Airiseina/answer/pkg/tracer"
 	"os"
 	"time"
 

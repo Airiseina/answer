@@ -11,6 +11,7 @@ type Bot struct {
 	SystemPrompt string    `gorm:"type:text;not null" json:"system_prompt"`
 	ApiKey       string    `gorm:"type:varchar(500);not null" json:"api_key"`
 	Model        string    `gorm:"type:varchar(100);not null" json:"model"`
+	BaseURL      string    `gorm:"type:varchar(500);default:''" json:"base_url"`
 	IsSystem     bool      `gorm:"default:false;index" json:"is_system"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`

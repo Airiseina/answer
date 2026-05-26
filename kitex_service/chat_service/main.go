@@ -1,16 +1,16 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
-	"chat_service/internal/config"
-	"chat_service/internal/dal"
-	"chat_service/internal/model"
-	"chat_service/internal/service"
-	chat "chat_service/kitex_gen/chat/chatservice"
-	"chat_service/rpc"
 	"context"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/service"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat/chatservice"
+	"github.com/Airiseina/answer/kitex_service/chat_service/rpc"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
 	"net"
 	"os"
 

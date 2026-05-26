@@ -1,8 +1,8 @@
 package dal
 
 import (
-	"chat_service/internal/model"
 	"fmt"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 )
 
 // CreateMessage 将消息写入 PostgreSQL

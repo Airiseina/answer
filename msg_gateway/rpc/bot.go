@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	bot "bot_service/kitex_gen/bot"
-	"bot_service/kitex_gen/bot/botservice"
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
+	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot/botservice"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"

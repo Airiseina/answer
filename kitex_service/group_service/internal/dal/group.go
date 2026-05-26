@@ -2,7 +2,7 @@ package dal
 
 import (
 	"fmt"
-	"group_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/group_service/internal/model"
 
 	"gorm.io/gorm"
 )

@@ -1,18 +1,19 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
 	"context"
 	"net"
 	"os"
-	"work_service/internal/config"
-	"work_service/internal/consumer"
-	"work_service/internal/llm"
-	"work_service/internal/service"
-	"work_service/kitex_gen/work/workservice"
-	"work_service/rpc"
+
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/consumer"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
+	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"
@@ -51,7 +52,7 @@ func main() {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
 	rpc.Connect()
-	llmClient := llm.NewClient(viper.GetString("llm.base_url"))
+	llmClient := llm.NewClient()
 	workService := service.NewWorkService(llmClient)
 	rdb, err := connect.ConnectRedis()
 	if err != nil {

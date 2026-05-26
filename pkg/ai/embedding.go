@@ -1,9 +1,12 @@
 package ai
 
 import (
-	"answer_pkg/logger"
 	"context"
 
+	"github.com/volcengine/volcengine-go-sdk/service/arkruntime/model"
+	"github.com/volcengine/volcengine-go-sdk/volcengine"
+
+	"github.com/Airiseina/answer/pkg/logger"
 	"go.uber.org/zap"
 )
 

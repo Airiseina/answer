@@ -2,8 +2,8 @@
 package groupservice
 
 import (
+	group "github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	server "github.com/cloudwego/kitex/server"
-	group "group_service/kitex_gen/group"
 )
 
 // NewServer creates a server.Server with the given handler and options.

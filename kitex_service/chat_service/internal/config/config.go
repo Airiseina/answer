@@ -1,7 +1,7 @@
 package config
 
 import (
-	"answer_pkg/config"
+	"github.com/Airiseina/answer/pkg/config"
 
 	"github.com/spf13/viper"
 )

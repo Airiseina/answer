@@ -1,11 +1,11 @@
 package dal
 
 import (
-	"chat_service/internal/model"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 	"strconv"
 	"time"
 

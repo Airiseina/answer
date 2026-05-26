@@ -1,17 +1,18 @@
 package main
 
 import (
-	"answer_pkg/connect"
-	"answer_pkg/meter"
-	"answer_pkg/tracer"
 	"context"
 	"net"
 	"os"
-	"user_service/internal/config"
-	"user_service/internal/dal/mysql"
-	"user_service/internal/model"
-	"user_service/internal/service"
-	"user_service/kitex_gen/user/loginservice"
+
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/dal/mysql"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/user_service/internal/service"
+	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user/loginservice"
+	"github.com/Airiseina/answer/pkg/connect"
+	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"

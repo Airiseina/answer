@@ -2,7 +2,7 @@
 package chatservice
 
 import (
-	chat "chat_service/kitex_gen/chat"
+	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	server "github.com/cloudwego/kitex/server"
 )
 

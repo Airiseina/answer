@@ -2,8 +2,8 @@
 package loginservice
 
 import (
+	user "github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
 	server "github.com/cloudwego/kitex/server"
-	user "user_service/kitex_gen/user"
 )
 
 // NewServer creates a server.Server with the given handler and options.
