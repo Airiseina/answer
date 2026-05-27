@@ -65,18 +65,20 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.Bot{})
+	err = db.AutoMigrate(&model.Bot{}, &model.McpServer{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
 	botDao := dal.NewBotDao(db)
+	mcpServerDao := dal.NewMcpServerDao(db)
 	botService := service.NewBotService(botDao)
+	mcpServerService := service.NewMcpServerService(mcpServerDao, botDao)
 	systemBotId, err := botService.InitSystemBot(context.Background())
 	if err != nil {
 		klog.Fatalf("系统Bot初始化失败:%v", err)
 	}
 	klog.Infof("系统Bot ID: %d", systemBotId)
-	svr := botservice.NewServer(&BotServiceImpl{botService: botService},
+	svr := botservice.NewServer(&BotServiceImpl{botService: botService, mcpServerService: mcpServerService},
 		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "botservice"}),
 		server.WithServiceAddr(addr),

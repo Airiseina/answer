@@ -57,4 +57,8 @@ func Routes(h *server.Hertz) {
 	authGroup.GET("/bot/list", handle.GetUserBots)
 	authGroup.POST("/bot/add_to_conversation", handle.AddBotToConversation)
 	authGroup.GET("/bot/system", handle.GetSystemBot)
+	authGroup.POST("/bot/mcp/create", handle.CreateMcpServer)
+	authGroup.GET("/bot/mcp/list", handle.GetBotMcpServers)
+	authGroup.POST("/bot/mcp/update", handle.UpdateMcpServer)
+	authGroup.POST("/bot/mcp/delete", handle.DeleteMcpServer)
 }

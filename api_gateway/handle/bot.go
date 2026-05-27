@@ -215,3 +215,179 @@ func GetSystemBot(ctx context.Context, c *app.RequestContext) {
 	}
 	response.Success(c, result)
 }
+
+type CreateMcpServerReq struct {
+	BotId       int64  `json:"bot_id,string" vd:"$ > 0"`
+	Name        string `json:"name" vd:"len($) > 0"`
+	Url         string `json:"url" vd:"len($) > 0"`
+	Description string `json:"description"`
+	Transport   string `json:"transport"`
+	AuthType    string `json:"auth_type"`
+	AuthToken   string `json:"auth_token"`
+}
+
+func CreateMcpServer(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userId := userInfo.Id
+
+	var req CreateMcpServerReq
+	if err := c.BindAndValidate(&req); err != nil {
+		response.Error(c, "参数错误", err.Error())
+		return
+	}
+	rpcReq := &bot.CreateMcpServerReq{
+		OperatorId: userId,
+		BotId:      req.BotId,
+		Name:       req.Name,
+		Url:        req.Url,
+	}
+	if req.Description != "" {
+		rpcReq.Description = &req.Description
+	}
+	if req.Transport != "" {
+		rpcReq.Transport = &req.Transport
+	}
+	if req.AuthType != "" {
+		rpcReq.AuthType = &req.AuthType
+	}
+	if req.AuthToken != "" {
+		rpcReq.AuthToken = &req.AuthToken
+	}
+	resp, err := rpc.CreateMcpServer(ctx, rpcReq)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "创建McpServer失败: %v", err)
+		response.Error(c, "创建McpServer失败", nil)
+		return
+	}
+	response.Success(c, map[string]interface{}{"id": fmt.Sprintf("%d", resp.Id), "success": resp.Success})
+}
+
+type GetBotMcpServersReq struct {
+	BotId int64 `json:"bot_id,string" vd:"$ > 0" query:"bot_id"`
+}
+
+type mcpServerItem struct {
+	ID          string `json:"id"`
+	BotId       string `json:"bot_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Transport   string `json:"transport"`
+	Url         string `json:"url"`
+	AuthType    string `json:"auth_type"`
+	Enabled     bool   `json:"enabled"`
+	CreatedAt   string `json:"created_at"`
+}
+
+func GetBotMcpServers(ctx context.Context, c *app.RequestContext) {
+	var req GetBotMcpServersReq
+	if err := c.BindAndValidate(&req); err != nil {
+		response.Error(c, "参数错误", err.Error())
+		return
+	}
+	resp, err := rpc.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: req.BotId})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "获取Bot[%d]的McpServer列表失败: %v", req.BotId, err)
+		response.Error(c, "获取McpServer列表失败", nil)
+		return
+	}
+	var items []mcpServerItem
+	for _, s := range resp.Servers {
+		items = append(items, mcpServerItem{
+			ID:          fmt.Sprintf("%d", s.Id),
+			BotId:       fmt.Sprintf("%d", s.BotId),
+			Name:        s.Name,
+			Description: s.Description,
+			Transport:   s.Transport,
+			Url:         s.Url,
+			AuthType:    s.AuthType,
+			Enabled:     s.Enabled,
+			CreatedAt:   fmt.Sprintf("%d", s.CreatedAt),
+		})
+	}
+	if items == nil {
+		items = []mcpServerItem{}
+	}
+	response.Success(c, map[string]interface{}{"servers": items})
+}
+
+type UpdateMcpServerReq struct {
+	Id          int64  `json:"id,string" vd:"$ > 0"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Transport   string `json:"transport"`
+	Url         string `json:"url"`
+	AuthType    string `json:"auth_type"`
+	AuthToken   string `json:"auth_token"`
+	Enabled     *bool  `json:"enabled"`
+}
+
+func UpdateMcpServer(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userId := userInfo.Id
+
+	var req UpdateMcpServerReq
+	if err := c.BindAndValidate(&req); err != nil {
+		response.Error(c, "参数错误", err.Error())
+		return
+	}
+	rpcReq := &bot.UpdateMcpServerReq{
+		Id:         req.Id,
+		OperatorId: userId,
+	}
+	if req.Name != "" {
+		rpcReq.Name = &req.Name
+	}
+	if req.Description != "" {
+		rpcReq.Description = &req.Description
+	}
+	if req.Transport != "" {
+		rpcReq.Transport = &req.Transport
+	}
+	if req.Url != "" {
+		rpcReq.Url = &req.Url
+	}
+	if req.AuthType != "" {
+		rpcReq.AuthType = &req.AuthType
+	}
+	if req.AuthToken != "" {
+		rpcReq.AuthToken = &req.AuthToken
+	}
+	if req.Enabled != nil {
+		rpcReq.Enabled = req.Enabled
+	}
+	resp, err := rpc.UpdateMcpServer(ctx, rpcReq)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "更新McpServer失败: %v", err)
+		response.Error(c, "更新McpServer失败", nil)
+		return
+	}
+	response.Success(c, map[string]interface{}{"success": resp.Success})
+}
+
+type DeleteMcpServerReq struct {
+	Id int64 `json:"id,string" vd:"$ > 0"`
+}
+
+func DeleteMcpServer(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userId := userInfo.Id
+
+	var req DeleteMcpServerReq
+	if err := c.BindAndValidate(&req); err != nil {
+		response.Error(c, "参数错误", err.Error())
+		return
+	}
+	resp, err := rpc.DeleteMcpServer(ctx, &bot.DeleteMcpServerReq{
+		Id:         req.Id,
+		OperatorId: userId,
+	})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "删除McpServer失败: %v", err)
+		response.Error(c, "删除McpServer失败", nil)
+		return
+	}
+	response.Success(c, map[string]interface{}{"success": resp.Success})
+}

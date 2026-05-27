@@ -105,6 +105,61 @@ struct AddBotToConversationRes {
     2: optional i64 conversation_id
 }
 
+struct McpServerInfo {
+    1: i64 id
+    2: i64 bot_id
+    3: string name
+    4: string description
+    5: string transport
+    6: string url
+    7: string auth_type
+    8: optional string auth_token
+    9: bool enabled
+    10: i64 created_at
+}
+
+struct CreateMcpServerReq {
+    1: i64 operator_id
+    2: i64 bot_id
+    3: string name
+    4: string url
+    5: optional string description
+    6: optional string transport
+    7: optional string auth_type
+    8: optional string auth_token
+}
+
+struct CreateMcpServerRes {
+    1: bool success
+    2: i64 id
+}
+
+struct GetBotMcpServersReq {
+    1: i64 bot_id
+}
+
+struct GetBotMcpServersRes {
+    1: bool success
+    2: list<McpServerInfo> servers
+}
+
+struct UpdateMcpServerReq {
+    1: i64 id
+    2: i64 operator_id
+    3: optional string name
+    4: optional string description
+    5: optional string transport
+    6: optional string url
+    7: optional string auth_type
+    8: optional string auth_token
+    9: optional bool enabled
+}
+
+struct DeleteMcpServerReq {
+    1: i64 id
+    2: i64 operator_id
+}
+
 service BotService {
     CreateBotRes CreateBot(1: CreateBotReq req)
     GetBotRes GetBot(1: GetBotReq req)
@@ -115,4 +170,9 @@ service BotService {
     IsBotRes IsBot(1: IsBotReq req)
     GetBotConfigRes GetBotConfig(1: GetBotConfigReq req)
     AddBotToConversationRes AddBotToConversation(1: AddBotToConversationReq req)
+
+    CreateMcpServerRes CreateMcpServer(1: CreateMcpServerReq req)
+    GetBotMcpServersRes GetBotMcpServers(1: GetBotMcpServersReq req)
+    CommonRes UpdateMcpServer(1: UpdateMcpServerReq req)
+    CommonRes DeleteMcpServer(1: DeleteMcpServerReq req)
 }

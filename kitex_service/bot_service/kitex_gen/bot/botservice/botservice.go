@@ -76,6 +76,34 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateMcpServer": kitex.NewMethodInfo(
+		createMcpServerHandler,
+		newBotServiceCreateMcpServerArgs,
+		newBotServiceCreateMcpServerResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetBotMcpServers": kitex.NewMethodInfo(
+		getBotMcpServersHandler,
+		newBotServiceGetBotMcpServersArgs,
+		newBotServiceGetBotMcpServersResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateMcpServer": kitex.NewMethodInfo(
+		updateMcpServerHandler,
+		newBotServiceUpdateMcpServerArgs,
+		newBotServiceUpdateMcpServerResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteMcpServer": kitex.NewMethodInfo(
+		deleteMcpServerHandler,
+		newBotServiceDeleteMcpServerArgs,
+		newBotServiceDeleteMcpServerResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -304,6 +332,78 @@ func newBotServiceAddBotToConversationResult() interface{} {
 	return bot.NewBotServiceAddBotToConversationResult()
 }
 
+func createMcpServerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceCreateMcpServerArgs)
+	realResult := result.(*bot.BotServiceCreateMcpServerResult)
+	success, err := handler.(bot.BotService).CreateMcpServer(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceCreateMcpServerArgs() interface{} {
+	return bot.NewBotServiceCreateMcpServerArgs()
+}
+
+func newBotServiceCreateMcpServerResult() interface{} {
+	return bot.NewBotServiceCreateMcpServerResult()
+}
+
+func getBotMcpServersHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceGetBotMcpServersArgs)
+	realResult := result.(*bot.BotServiceGetBotMcpServersResult)
+	success, err := handler.(bot.BotService).GetBotMcpServers(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceGetBotMcpServersArgs() interface{} {
+	return bot.NewBotServiceGetBotMcpServersArgs()
+}
+
+func newBotServiceGetBotMcpServersResult() interface{} {
+	return bot.NewBotServiceGetBotMcpServersResult()
+}
+
+func updateMcpServerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceUpdateMcpServerArgs)
+	realResult := result.(*bot.BotServiceUpdateMcpServerResult)
+	success, err := handler.(bot.BotService).UpdateMcpServer(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceUpdateMcpServerArgs() interface{} {
+	return bot.NewBotServiceUpdateMcpServerArgs()
+}
+
+func newBotServiceUpdateMcpServerResult() interface{} {
+	return bot.NewBotServiceUpdateMcpServerResult()
+}
+
+func deleteMcpServerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceDeleteMcpServerArgs)
+	realResult := result.(*bot.BotServiceDeleteMcpServerResult)
+	success, err := handler.(bot.BotService).DeleteMcpServer(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceDeleteMcpServerArgs() interface{} {
+	return bot.NewBotServiceDeleteMcpServerArgs()
+}
+
+func newBotServiceDeleteMcpServerResult() interface{} {
+	return bot.NewBotServiceDeleteMcpServerResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -398,6 +498,46 @@ func (p *kClient) AddBotToConversation(ctx context.Context, req *bot.AddBotToCon
 	_args.Req = req
 	var _result bot.BotServiceAddBotToConversationResult
 	if err = p.c.Call(ctx, "AddBotToConversation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateMcpServer(ctx context.Context, req *bot.CreateMcpServerReq) (r *bot.CreateMcpServerRes, err error) {
+	var _args bot.BotServiceCreateMcpServerArgs
+	_args.Req = req
+	var _result bot.BotServiceCreateMcpServerResult
+	if err = p.c.Call(ctx, "CreateMcpServer", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetBotMcpServers(ctx context.Context, req *bot.GetBotMcpServersReq) (r *bot.GetBotMcpServersRes, err error) {
+	var _args bot.BotServiceGetBotMcpServersArgs
+	_args.Req = req
+	var _result bot.BotServiceGetBotMcpServersResult
+	if err = p.c.Call(ctx, "GetBotMcpServers", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateMcpServer(ctx context.Context, req *bot.UpdateMcpServerReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceUpdateMcpServerArgs
+	_args.Req = req
+	var _result bot.BotServiceUpdateMcpServerResult
+	if err = p.c.Call(ctx, "UpdateMcpServer", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceDeleteMcpServerArgs
+	_args.Req = req
+	var _result bot.BotServiceDeleteMcpServerResult
+	if err = p.c.Call(ctx, "DeleteMcpServer", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

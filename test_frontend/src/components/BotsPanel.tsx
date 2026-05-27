@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { api, uploadFile } from '../api/client'
 import { useApp } from '../store/AppContext'
 import './BotsPanel.css'
@@ -10,6 +10,17 @@ const AI_PROVIDERS = [
   { label: 'DeepSeek', value: 'deepseek', baseUrl: 'https://api.deepseek.com/v1' },
   { label: '月之暗面 (Kimi)', value: 'moonshot', baseUrl: 'https://api.moonshot.cn/v1' },
   { label: '自定义', value: 'custom', baseUrl: '' },
+]
+
+const MCP_TRANSPORTS = [
+  { label: 'SSE', value: 'sse' },
+  { label: 'HTTP', value: 'http' },
+]
+
+const MCP_AUTH_TYPES = [
+  { label: '无认证', value: 'none' },
+  { label: 'Bearer Token', value: 'bearer' },
+  { label: 'Basic Auth', value: 'basic' },
 ]
 
 interface BotInfo {
@@ -24,9 +35,21 @@ interface BotInfo {
   created_at: string
 }
 
+interface McpServerInfo {
+  id: string
+  bot_id: string
+  name: string
+  description: string
+  transport: string
+  url: string
+  auth_type: string
+  enabled: boolean
+  created_at: string
+}
+
 export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
   const { conversations, setActiveConvId, loadConversations } = useApp()
-  const [tab, setTab] = useState<'create' | 'list'>('list')
+  const [tab, setTab] = useState<'create' | 'list' | 'mcp'>('list')
   const [bots, setBots] = useState<BotInfo[]>([])
   const [toast, setToast] = useState('')
   const [addBotModal, setAddBotModal] = useState<{ botId: string; botName: string } | null>(null)
@@ -41,6 +64,11 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
   const [model, setModel] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const [mcpBotId, setMcpBotId] = useState('')
+  const [mcpServers, setMcpServers] = useState<McpServerInfo[]>([])
+  const [mcpModal, setMcpModal] = useState<'create' | 'edit' | null>(null)
+  const [mcpForm, setMcpForm] = useState({ id: '', name: '', url: '', description: '', transport: 'sse', auth_type: 'none', auth_token: '' })
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -185,6 +213,102 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
     if (avatarInputRef.current) avatarInputRef.current.value = ''
   }
 
+  const loadMcpServers = async (botId: string) => {
+    if (!botId) return
+    const res = await api('GET', `/api/bot/mcp/list?bot_id=${botId}`)
+    if (res.code === 0) {
+      setMcpServers(res.data?.servers || [])
+    } else {
+      showToast(res.msg || '获取 MCP Server 列表失败')
+    }
+  }
+
+  useEffect(() => {
+    if (tab === 'list') loadBots()
+  }, [tab])
+
+  useEffect(() => {
+    if (tab === 'mcp' && mcpBotId) {
+      loadMcpServers(mcpBotId)
+    } else if (tab === 'mcp' && !mcpBotId && bots.length === 0) {
+      loadBots()
+    }
+  }, [tab, mcpBotId])
+
+  const handleMcpCreate = async () => {
+    if (!mcpBotId || !mcpForm.name || !mcpForm.url) {
+      showToast('请填写必填项')
+      return
+    }
+    const res = await api('POST', '/api/bot/mcp/create', {
+      bot_id: mcpBotId,
+      name: mcpForm.name,
+      url: mcpForm.url,
+      description: mcpForm.description,
+      transport: mcpForm.transport,
+      auth_type: mcpForm.auth_type,
+      auth_token: mcpForm.auth_token,
+    })
+    if (res.code === 0) {
+      showToast('MCP Server 添加成功')
+      setMcpModal(null)
+      setMcpForm({ id: '', name: '', url: '', description: '', transport: 'sse', auth_type: 'none', auth_token: '' })
+      loadMcpServers(mcpBotId)
+    } else {
+      showToast(res.msg || '添加失败')
+    }
+  }
+
+  const handleMcpUpdate = async () => {
+    const payload: Record<string, any> = { id: mcpForm.id }
+    if (mcpForm.name) payload.name = mcpForm.name
+    if (mcpForm.url) payload.url = mcpForm.url
+    if (mcpForm.description) payload.description = mcpForm.description
+    if (mcpForm.transport) payload.transport = mcpForm.transport
+    if (mcpForm.auth_type) payload.auth_type = mcpForm.auth_type
+    if (mcpForm.auth_token) payload.auth_token = mcpForm.auth_token
+    const res = await api('POST', '/api/bot/mcp/update', payload)
+    if (res.code === 0) {
+      showToast('MCP Server 已更新')
+      setMcpModal(null)
+      setMcpForm({ id: '', name: '', url: '', description: '', transport: 'sse', auth_type: 'none', auth_token: '' })
+      loadMcpServers(mcpBotId)
+    } else {
+      showToast(res.msg || '更新失败')
+    }
+  }
+
+  const handleMcpDelete = async (id: string) => {
+    const res = await api('POST', '/api/bot/mcp/delete', { id })
+    showToast(res.code === 0 ? 'MCP Server 已删除' : res.msg || '删除失败')
+    if (res.code === 0) loadMcpServers(mcpBotId)
+  }
+
+  const handleMcpToggle = async (server: McpServerInfo) => {
+    const res = await api('POST', '/api/bot/mcp/update', {
+      id: server.id,
+      enabled: !server.enabled,
+    })
+    if (res.code === 0) {
+      loadMcpServers(mcpBotId)
+    } else {
+      showToast(res.msg || '切换状态失败')
+    }
+  }
+
+  const openMcpEditModal = (server: McpServerInfo) => {
+    setMcpForm({
+      id: server.id,
+      name: server.name,
+      url: server.url,
+      description: server.description,
+      transport: server.transport,
+      auth_type: server.auth_type,
+      auth_token: '',
+    })
+    setMcpModal('edit')
+  }
+
   const groupConversations = conversations.filter(c => c.type === 2)
 
   return (
@@ -194,8 +318,9 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
         <h3>AI 助手</h3>
       </div>
       <div className="bots-tabs">
-        <button className={`ctab ${tab === 'list' ? 'active' : ''}`} onClick={() => { setTab('list'); loadBots() }}>我的 Bot</button>
+        <button className={`ctab ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>我的 Bot</button>
         <button className={`ctab ${tab === 'create' ? 'active' : ''}`} onClick={() => setTab('create')}>创建 Bot</button>
+        <button className={`ctab ${tab === 'mcp' ? 'active' : ''}`} onClick={() => setTab('mcp')}>MCP 工具</button>
       </div>
       <div className="bots-content">
         {tab === 'create' && (
@@ -254,6 +379,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
                   {groupConversations.length > 0 && (
                     <button className="btn-icon" title="拉入群聊" onClick={() => { setAddBotModal({ botId: b.bot_id, botName: b.name }); setSelectedConvId('') }} style={{ flexShrink: 0 }}>👥</button>
                   )}
+                  <button className="btn-icon" title="MCP 工具管理" onClick={() => { setMcpBotId(b.bot_id); setTab('mcp') }} style={{ flexShrink: 0 }}>🔧</button>
                   {!b.is_system && (
                     <>
                       <button className="btn-icon" title="编辑" onClick={() => openEditModal(b)} style={{ flexShrink: 0 }}>✎</button>
@@ -262,6 +388,61 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
                   )}
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {tab === 'mcp' && (
+          <div className="mcp-tab">
+            <div className="form-field">
+              <label>选择 Bot</label>
+              <select value={mcpBotId} onChange={e => setMcpBotId(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
+                <option value="">-- 请选择 Bot --</option>
+                {bots.map(b => (
+                  <option key={b.bot_id} value={b.bot_id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {mcpBotId && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0 8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>MCP Server 列表</span>
+                  <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => {
+                    setMcpForm({ id: '', name: '', url: '', description: '', transport: 'sse', auth_type: 'none', auth_token: '' })
+                    setMcpModal('create')
+                  }}>+ 添加</button>
+                </div>
+
+                {mcpServers.length === 0 ? (
+                  <div className="contacts-empty" style={{ padding: '20px 0' }}>暂无 MCP Server，点击"添加"开始配置</div>
+                ) : (
+                  <div className="mcp-server-list">
+                    {mcpServers.map(s => (
+                      <div key={s.id} className="mcp-server-item">
+                        <div className="mcp-server-main">
+                          <div className="mcp-server-info">
+                            <div className="mcp-server-name">
+                              {s.name}
+                              <span className={`mcp-badge ${s.transport}`}>{s.transport.toUpperCase()}</span>
+                              <span className={`mcp-badge ${s.enabled ? 'enabled' : 'disabled'}`}>{s.enabled ? '已启用' : '已禁用'}</span>
+                            </div>
+                            <div className="mcp-server-url">{s.url}</div>
+                            {s.description && <div className="mcp-server-desc">{s.description}</div>}
+                          </div>
+                        </div>
+                        <div className="mcp-server-actions">
+                          <button className="btn-icon" title={s.enabled ? '禁用' : '启用'} onClick={() => handleMcpToggle(s)} style={{ flexShrink: 0 }}>
+                            {s.enabled ? '⏸' : '▶'}
+                          </button>
+                          <button className="btn-icon" title="编辑" onClick={() => openMcpEditModal(s)} style={{ flexShrink: 0 }}>✎</button>
+                          <button className="btn-icon" title="删除" onClick={() => handleMcpDelete(s.id)} style={{ flexShrink: 0, color: 'var(--danger)' }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -339,6 +520,54 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
             <div className="modal-actions">
               <button className="btn-cancel" onClick={() => setEditBot(null)}>取消</button>
               <button className="btn-primary" onClick={handleUpdate}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mcpModal && (
+        <div className="modal-overlay" onClick={() => setMcpModal(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3>{mcpModal === 'create' ? '添加 MCP Server' : '编辑 MCP Server'}</h3>
+            <div className="form-field">
+              <label>名称 *</label>
+              <input value={mcpForm.name} onChange={e => setMcpForm({ ...mcpForm, name: e.target.value })} placeholder="如: weather, search, mem0" />
+            </div>
+            <div className="form-field">
+              <label>SSE URL *</label>
+              <input value={mcpForm.url} onChange={e => setMcpForm({ ...mcpForm, url: e.target.value })} placeholder="http://mcp-server:8000/sse" />
+            </div>
+            <div className="form-field">
+              <label>描述</label>
+              <input value={mcpForm.description} onChange={e => setMcpForm({ ...mcpForm, description: e.target.value })} placeholder="MCP Server 功能描述" />
+            </div>
+            <div className="form-field">
+              <label>传输协议</label>
+              <select value={mcpForm.transport} onChange={e => setMcpForm({ ...mcpForm, transport: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
+                {MCP_TRANSPORTS.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label>认证类型</label>
+              <select value={mcpForm.auth_type} onChange={e => setMcpForm({ ...mcpForm, auth_type: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
+                {MCP_AUTH_TYPES.map(a => (
+                  <option key={a.value} value={a.value}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+            {mcpForm.auth_type !== 'none' && (
+              <div className="form-field">
+                <label>认证令牌</label>
+                <input type="password" value={mcpForm.auth_token} onChange={e => setMcpForm({ ...mcpForm, auth_token: e.target.value })} placeholder="Bearer Token 或 Base64(user:pass)" />
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setMcpModal(null)}>取消</button>
+              <button className="btn-primary" onClick={mcpModal === 'create' ? handleMcpCreate : handleMcpUpdate}>
+                {mcpModal === 'create' ? '添加' : '保存'}
+              </button>
             </div>
           </div>
         </div>

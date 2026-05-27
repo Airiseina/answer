@@ -20,6 +20,10 @@ type Client interface {
 	IsBot(ctx context.Context, req *bot.IsBotReq, callOptions ...callopt.Option) (r *bot.IsBotRes, err error)
 	GetBotConfig(ctx context.Context, req *bot.GetBotConfigReq, callOptions ...callopt.Option) (r *bot.GetBotConfigRes, err error)
 	AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq, callOptions ...callopt.Option) (r *bot.AddBotToConversationRes, err error)
+	CreateMcpServer(ctx context.Context, req *bot.CreateMcpServerReq, callOptions ...callopt.Option) (r *bot.CreateMcpServerRes, err error)
+	GetBotMcpServers(ctx context.Context, req *bot.GetBotMcpServersReq, callOptions ...callopt.Option) (r *bot.GetBotMcpServersRes, err error)
+	UpdateMcpServer(ctx context.Context, req *bot.UpdateMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -94,4 +98,24 @@ func (p *kBotServiceClient) GetBotConfig(ctx context.Context, req *bot.GetBotCon
 func (p *kBotServiceClient) AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq, callOptions ...callopt.Option) (r *bot.AddBotToConversationRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.AddBotToConversation(ctx, req)
+}
+
+func (p *kBotServiceClient) CreateMcpServer(ctx context.Context, req *bot.CreateMcpServerReq, callOptions ...callopt.Option) (r *bot.CreateMcpServerRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateMcpServer(ctx, req)
+}
+
+func (p *kBotServiceClient) GetBotMcpServers(ctx context.Context, req *bot.GetBotMcpServersReq, callOptions ...callopt.Option) (r *bot.GetBotMcpServersRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetBotMcpServers(ctx, req)
+}
+
+func (p *kBotServiceClient) UpdateMcpServer(ctx context.Context, req *bot.UpdateMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateMcpServer(ctx, req)
+}
+
+func (p *kBotServiceClient) DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteMcpServer(ctx, req)
 }

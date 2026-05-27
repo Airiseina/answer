@@ -959,6 +959,560 @@ var fieldIDToName_AddBotToConversationRes = map[int16]string{
 	2: "conversation_id",
 }
 
+type McpServerInfo struct {
+	Id          int64   `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	BotId       int64   `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	Name        string  `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	Description string  `thrift:"description,4" frugal:"4,default,string" json:"description"`
+	Transport   string  `thrift:"transport,5" frugal:"5,default,string" json:"transport"`
+	Url         string  `thrift:"url,6" frugal:"6,default,string" json:"url"`
+	AuthType    string  `thrift:"auth_type,7" frugal:"7,default,string" json:"auth_type"`
+	AuthToken   *string `thrift:"auth_token,8,optional" frugal:"8,optional,string" json:"auth_token,omitempty"`
+	Enabled     bool    `thrift:"enabled,9" frugal:"9,default,bool" json:"enabled"`
+	CreatedAt   int64   `thrift:"created_at,10" frugal:"10,default,i64" json:"created_at"`
+}
+
+func NewMcpServerInfo() *McpServerInfo {
+	return &McpServerInfo{}
+}
+
+func (p *McpServerInfo) InitDefault() {
+}
+
+func (p *McpServerInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *McpServerInfo) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *McpServerInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *McpServerInfo) GetDescription() (v string) {
+	return p.Description
+}
+
+func (p *McpServerInfo) GetTransport() (v string) {
+	return p.Transport
+}
+
+func (p *McpServerInfo) GetUrl() (v string) {
+	return p.Url
+}
+
+func (p *McpServerInfo) GetAuthType() (v string) {
+	return p.AuthType
+}
+
+var McpServerInfo_AuthToken_DEFAULT string
+
+func (p *McpServerInfo) GetAuthToken() (v string) {
+	if !p.IsSetAuthToken() {
+		return McpServerInfo_AuthToken_DEFAULT
+	}
+	return *p.AuthToken
+}
+
+func (p *McpServerInfo) GetEnabled() (v bool) {
+	return p.Enabled
+}
+
+func (p *McpServerInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+func (p *McpServerInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *McpServerInfo) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *McpServerInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *McpServerInfo) SetDescription(val string) {
+	p.Description = val
+}
+func (p *McpServerInfo) SetTransport(val string) {
+	p.Transport = val
+}
+func (p *McpServerInfo) SetUrl(val string) {
+	p.Url = val
+}
+func (p *McpServerInfo) SetAuthType(val string) {
+	p.AuthType = val
+}
+func (p *McpServerInfo) SetAuthToken(val *string) {
+	p.AuthToken = val
+}
+func (p *McpServerInfo) SetEnabled(val bool) {
+	p.Enabled = val
+}
+func (p *McpServerInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+
+func (p *McpServerInfo) IsSetAuthToken() bool {
+	return p.AuthToken != nil
+}
+
+func (p *McpServerInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("McpServerInfo(%+v)", *p)
+}
+
+var fieldIDToName_McpServerInfo = map[int16]string{
+	1:  "id",
+	2:  "bot_id",
+	3:  "name",
+	4:  "description",
+	5:  "transport",
+	6:  "url",
+	7:  "auth_type",
+	8:  "auth_token",
+	9:  "enabled",
+	10: "created_at",
+}
+
+type CreateMcpServerReq struct {
+	OperatorId  int64   `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	BotId       int64   `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	Name        string  `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	Url         string  `thrift:"url,4" frugal:"4,default,string" json:"url"`
+	Description *string `thrift:"description,5,optional" frugal:"5,optional,string" json:"description,omitempty"`
+	Transport   *string `thrift:"transport,6,optional" frugal:"6,optional,string" json:"transport,omitempty"`
+	AuthType    *string `thrift:"auth_type,7,optional" frugal:"7,optional,string" json:"auth_type,omitempty"`
+	AuthToken   *string `thrift:"auth_token,8,optional" frugal:"8,optional,string" json:"auth_token,omitempty"`
+}
+
+func NewCreateMcpServerReq() *CreateMcpServerReq {
+	return &CreateMcpServerReq{}
+}
+
+func (p *CreateMcpServerReq) InitDefault() {
+}
+
+func (p *CreateMcpServerReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *CreateMcpServerReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *CreateMcpServerReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *CreateMcpServerReq) GetUrl() (v string) {
+	return p.Url
+}
+
+var CreateMcpServerReq_Description_DEFAULT string
+
+func (p *CreateMcpServerReq) GetDescription() (v string) {
+	if !p.IsSetDescription() {
+		return CreateMcpServerReq_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var CreateMcpServerReq_Transport_DEFAULT string
+
+func (p *CreateMcpServerReq) GetTransport() (v string) {
+	if !p.IsSetTransport() {
+		return CreateMcpServerReq_Transport_DEFAULT
+	}
+	return *p.Transport
+}
+
+var CreateMcpServerReq_AuthType_DEFAULT string
+
+func (p *CreateMcpServerReq) GetAuthType() (v string) {
+	if !p.IsSetAuthType() {
+		return CreateMcpServerReq_AuthType_DEFAULT
+	}
+	return *p.AuthType
+}
+
+var CreateMcpServerReq_AuthToken_DEFAULT string
+
+func (p *CreateMcpServerReq) GetAuthToken() (v string) {
+	if !p.IsSetAuthToken() {
+		return CreateMcpServerReq_AuthToken_DEFAULT
+	}
+	return *p.AuthToken
+}
+func (p *CreateMcpServerReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *CreateMcpServerReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *CreateMcpServerReq) SetName(val string) {
+	p.Name = val
+}
+func (p *CreateMcpServerReq) SetUrl(val string) {
+	p.Url = val
+}
+func (p *CreateMcpServerReq) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *CreateMcpServerReq) SetTransport(val *string) {
+	p.Transport = val
+}
+func (p *CreateMcpServerReq) SetAuthType(val *string) {
+	p.AuthType = val
+}
+func (p *CreateMcpServerReq) SetAuthToken(val *string) {
+	p.AuthToken = val
+}
+
+func (p *CreateMcpServerReq) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *CreateMcpServerReq) IsSetTransport() bool {
+	return p.Transport != nil
+}
+
+func (p *CreateMcpServerReq) IsSetAuthType() bool {
+	return p.AuthType != nil
+}
+
+func (p *CreateMcpServerReq) IsSetAuthToken() bool {
+	return p.AuthToken != nil
+}
+
+func (p *CreateMcpServerReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateMcpServerReq(%+v)", *p)
+}
+
+var fieldIDToName_CreateMcpServerReq = map[int16]string{
+	1: "operator_id",
+	2: "bot_id",
+	3: "name",
+	4: "url",
+	5: "description",
+	6: "transport",
+	7: "auth_type",
+	8: "auth_token",
+}
+
+type CreateMcpServerRes struct {
+	Success bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Id      int64 `thrift:"id,2" frugal:"2,default,i64" json:"id"`
+}
+
+func NewCreateMcpServerRes() *CreateMcpServerRes {
+	return &CreateMcpServerRes{}
+}
+
+func (p *CreateMcpServerRes) InitDefault() {
+}
+
+func (p *CreateMcpServerRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *CreateMcpServerRes) GetId() (v int64) {
+	return p.Id
+}
+func (p *CreateMcpServerRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *CreateMcpServerRes) SetId(val int64) {
+	p.Id = val
+}
+
+func (p *CreateMcpServerRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateMcpServerRes(%+v)", *p)
+}
+
+var fieldIDToName_CreateMcpServerRes = map[int16]string{
+	1: "success",
+	2: "id",
+}
+
+type GetBotMcpServersReq struct {
+	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+}
+
+func NewGetBotMcpServersReq() *GetBotMcpServersReq {
+	return &GetBotMcpServersReq{}
+}
+
+func (p *GetBotMcpServersReq) InitDefault() {
+}
+
+func (p *GetBotMcpServersReq) GetBotId() (v int64) {
+	return p.BotId
+}
+func (p *GetBotMcpServersReq) SetBotId(val int64) {
+	p.BotId = val
+}
+
+func (p *GetBotMcpServersReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetBotMcpServersReq(%+v)", *p)
+}
+
+var fieldIDToName_GetBotMcpServersReq = map[int16]string{
+	1: "bot_id",
+}
+
+type GetBotMcpServersRes struct {
+	Success bool             `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Servers []*McpServerInfo `thrift:"servers,2" frugal:"2,default,list<McpServerInfo>" json:"servers"`
+}
+
+func NewGetBotMcpServersRes() *GetBotMcpServersRes {
+	return &GetBotMcpServersRes{}
+}
+
+func (p *GetBotMcpServersRes) InitDefault() {
+}
+
+func (p *GetBotMcpServersRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *GetBotMcpServersRes) GetServers() (v []*McpServerInfo) {
+	return p.Servers
+}
+func (p *GetBotMcpServersRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetBotMcpServersRes) SetServers(val []*McpServerInfo) {
+	p.Servers = val
+}
+
+func (p *GetBotMcpServersRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetBotMcpServersRes(%+v)", *p)
+}
+
+var fieldIDToName_GetBotMcpServersRes = map[int16]string{
+	1: "success",
+	2: "servers",
+}
+
+type UpdateMcpServerReq struct {
+	Id          int64   `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	OperatorId  int64   `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" json:"name,omitempty"`
+	Description *string `thrift:"description,4,optional" frugal:"4,optional,string" json:"description,omitempty"`
+	Transport   *string `thrift:"transport,5,optional" frugal:"5,optional,string" json:"transport,omitempty"`
+	Url         *string `thrift:"url,6,optional" frugal:"6,optional,string" json:"url,omitempty"`
+	AuthType    *string `thrift:"auth_type,7,optional" frugal:"7,optional,string" json:"auth_type,omitempty"`
+	AuthToken   *string `thrift:"auth_token,8,optional" frugal:"8,optional,string" json:"auth_token,omitempty"`
+	Enabled     *bool   `thrift:"enabled,9,optional" frugal:"9,optional,bool" json:"enabled,omitempty"`
+}
+
+func NewUpdateMcpServerReq() *UpdateMcpServerReq {
+	return &UpdateMcpServerReq{}
+}
+
+func (p *UpdateMcpServerReq) InitDefault() {
+}
+
+func (p *UpdateMcpServerReq) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *UpdateMcpServerReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+var UpdateMcpServerReq_Name_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetName() (v string) {
+	if !p.IsSetName() {
+		return UpdateMcpServerReq_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var UpdateMcpServerReq_Description_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetDescription() (v string) {
+	if !p.IsSetDescription() {
+		return UpdateMcpServerReq_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var UpdateMcpServerReq_Transport_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetTransport() (v string) {
+	if !p.IsSetTransport() {
+		return UpdateMcpServerReq_Transport_DEFAULT
+	}
+	return *p.Transport
+}
+
+var UpdateMcpServerReq_Url_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetUrl() (v string) {
+	if !p.IsSetUrl() {
+		return UpdateMcpServerReq_Url_DEFAULT
+	}
+	return *p.Url
+}
+
+var UpdateMcpServerReq_AuthType_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetAuthType() (v string) {
+	if !p.IsSetAuthType() {
+		return UpdateMcpServerReq_AuthType_DEFAULT
+	}
+	return *p.AuthType
+}
+
+var UpdateMcpServerReq_AuthToken_DEFAULT string
+
+func (p *UpdateMcpServerReq) GetAuthToken() (v string) {
+	if !p.IsSetAuthToken() {
+		return UpdateMcpServerReq_AuthToken_DEFAULT
+	}
+	return *p.AuthToken
+}
+
+var UpdateMcpServerReq_Enabled_DEFAULT bool
+
+func (p *UpdateMcpServerReq) GetEnabled() (v bool) {
+	if !p.IsSetEnabled() {
+		return UpdateMcpServerReq_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+func (p *UpdateMcpServerReq) SetId(val int64) {
+	p.Id = val
+}
+func (p *UpdateMcpServerReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *UpdateMcpServerReq) SetName(val *string) {
+	p.Name = val
+}
+func (p *UpdateMcpServerReq) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *UpdateMcpServerReq) SetTransport(val *string) {
+	p.Transport = val
+}
+func (p *UpdateMcpServerReq) SetUrl(val *string) {
+	p.Url = val
+}
+func (p *UpdateMcpServerReq) SetAuthType(val *string) {
+	p.AuthType = val
+}
+func (p *UpdateMcpServerReq) SetAuthToken(val *string) {
+	p.AuthToken = val
+}
+func (p *UpdateMcpServerReq) SetEnabled(val *bool) {
+	p.Enabled = val
+}
+
+func (p *UpdateMcpServerReq) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetTransport() bool {
+	return p.Transport != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetUrl() bool {
+	return p.Url != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetAuthType() bool {
+	return p.AuthType != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetAuthToken() bool {
+	return p.AuthToken != nil
+}
+
+func (p *UpdateMcpServerReq) IsSetEnabled() bool {
+	return p.Enabled != nil
+}
+
+func (p *UpdateMcpServerReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateMcpServerReq(%+v)", *p)
+}
+
+var fieldIDToName_UpdateMcpServerReq = map[int16]string{
+	1: "id",
+	2: "operator_id",
+	3: "name",
+	4: "description",
+	5: "transport",
+	6: "url",
+	7: "auth_type",
+	8: "auth_token",
+	9: "enabled",
+}
+
+type DeleteMcpServerReq struct {
+	Id         int64 `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+}
+
+func NewDeleteMcpServerReq() *DeleteMcpServerReq {
+	return &DeleteMcpServerReq{}
+}
+
+func (p *DeleteMcpServerReq) InitDefault() {
+}
+
+func (p *DeleteMcpServerReq) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *DeleteMcpServerReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+func (p *DeleteMcpServerReq) SetId(val int64) {
+	p.Id = val
+}
+func (p *DeleteMcpServerReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+
+func (p *DeleteMcpServerReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteMcpServerReq(%+v)", *p)
+}
+
+var fieldIDToName_DeleteMcpServerReq = map[int16]string{
+	1: "id",
+	2: "operator_id",
+}
+
 type BotService interface {
 	CreateBot(ctx context.Context, req *CreateBotReq) (r *CreateBotRes, err error)
 
@@ -977,6 +1531,14 @@ type BotService interface {
 	GetBotConfig(ctx context.Context, req *GetBotConfigReq) (r *GetBotConfigRes, err error)
 
 	AddBotToConversation(ctx context.Context, req *AddBotToConversationReq) (r *AddBotToConversationRes, err error)
+
+	CreateMcpServer(ctx context.Context, req *CreateMcpServerReq) (r *CreateMcpServerRes, err error)
+
+	GetBotMcpServers(ctx context.Context, req *GetBotMcpServersReq) (r *GetBotMcpServersRes, err error)
+
+	UpdateMcpServer(ctx context.Context, req *UpdateMcpServerReq) (r *CommonRes, err error)
+
+	DeleteMcpServer(ctx context.Context, req *DeleteMcpServerReq) (r *CommonRes, err error)
 }
 
 type BotServiceCreateBotArgs struct {
@@ -1641,5 +2203,309 @@ func (p *BotServiceAddBotToConversationResult) String() string {
 }
 
 var fieldIDToName_BotServiceAddBotToConversationResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceCreateMcpServerArgs struct {
+	Req *CreateMcpServerReq `thrift:"req,1" frugal:"1,default,CreateMcpServerReq" json:"req"`
+}
+
+func NewBotServiceCreateMcpServerArgs() *BotServiceCreateMcpServerArgs {
+	return &BotServiceCreateMcpServerArgs{}
+}
+
+func (p *BotServiceCreateMcpServerArgs) InitDefault() {
+}
+
+var BotServiceCreateMcpServerArgs_Req_DEFAULT *CreateMcpServerReq
+
+func (p *BotServiceCreateMcpServerArgs) GetReq() (v *CreateMcpServerReq) {
+	if !p.IsSetReq() {
+		return BotServiceCreateMcpServerArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceCreateMcpServerArgs) SetReq(val *CreateMcpServerReq) {
+	p.Req = val
+}
+
+func (p *BotServiceCreateMcpServerArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceCreateMcpServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceCreateMcpServerArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceCreateMcpServerArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceCreateMcpServerResult struct {
+	Success *CreateMcpServerRes `thrift:"success,0,optional" frugal:"0,optional,CreateMcpServerRes" json:"success,omitempty"`
+}
+
+func NewBotServiceCreateMcpServerResult() *BotServiceCreateMcpServerResult {
+	return &BotServiceCreateMcpServerResult{}
+}
+
+func (p *BotServiceCreateMcpServerResult) InitDefault() {
+}
+
+var BotServiceCreateMcpServerResult_Success_DEFAULT *CreateMcpServerRes
+
+func (p *BotServiceCreateMcpServerResult) GetSuccess() (v *CreateMcpServerRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceCreateMcpServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceCreateMcpServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateMcpServerRes)
+}
+
+func (p *BotServiceCreateMcpServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceCreateMcpServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceCreateMcpServerResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceCreateMcpServerResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceGetBotMcpServersArgs struct {
+	Req *GetBotMcpServersReq `thrift:"req,1" frugal:"1,default,GetBotMcpServersReq" json:"req"`
+}
+
+func NewBotServiceGetBotMcpServersArgs() *BotServiceGetBotMcpServersArgs {
+	return &BotServiceGetBotMcpServersArgs{}
+}
+
+func (p *BotServiceGetBotMcpServersArgs) InitDefault() {
+}
+
+var BotServiceGetBotMcpServersArgs_Req_DEFAULT *GetBotMcpServersReq
+
+func (p *BotServiceGetBotMcpServersArgs) GetReq() (v *GetBotMcpServersReq) {
+	if !p.IsSetReq() {
+		return BotServiceGetBotMcpServersArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceGetBotMcpServersArgs) SetReq(val *GetBotMcpServersReq) {
+	p.Req = val
+}
+
+func (p *BotServiceGetBotMcpServersArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceGetBotMcpServersArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetBotMcpServersArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetBotMcpServersArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceGetBotMcpServersResult struct {
+	Success *GetBotMcpServersRes `thrift:"success,0,optional" frugal:"0,optional,GetBotMcpServersRes" json:"success,omitempty"`
+}
+
+func NewBotServiceGetBotMcpServersResult() *BotServiceGetBotMcpServersResult {
+	return &BotServiceGetBotMcpServersResult{}
+}
+
+func (p *BotServiceGetBotMcpServersResult) InitDefault() {
+}
+
+var BotServiceGetBotMcpServersResult_Success_DEFAULT *GetBotMcpServersRes
+
+func (p *BotServiceGetBotMcpServersResult) GetSuccess() (v *GetBotMcpServersRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceGetBotMcpServersResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceGetBotMcpServersResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetBotMcpServersRes)
+}
+
+func (p *BotServiceGetBotMcpServersResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceGetBotMcpServersResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetBotMcpServersResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetBotMcpServersResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceUpdateMcpServerArgs struct {
+	Req *UpdateMcpServerReq `thrift:"req,1" frugal:"1,default,UpdateMcpServerReq" json:"req"`
+}
+
+func NewBotServiceUpdateMcpServerArgs() *BotServiceUpdateMcpServerArgs {
+	return &BotServiceUpdateMcpServerArgs{}
+}
+
+func (p *BotServiceUpdateMcpServerArgs) InitDefault() {
+}
+
+var BotServiceUpdateMcpServerArgs_Req_DEFAULT *UpdateMcpServerReq
+
+func (p *BotServiceUpdateMcpServerArgs) GetReq() (v *UpdateMcpServerReq) {
+	if !p.IsSetReq() {
+		return BotServiceUpdateMcpServerArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceUpdateMcpServerArgs) SetReq(val *UpdateMcpServerReq) {
+	p.Req = val
+}
+
+func (p *BotServiceUpdateMcpServerArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceUpdateMcpServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUpdateMcpServerArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUpdateMcpServerArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceUpdateMcpServerResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceUpdateMcpServerResult() *BotServiceUpdateMcpServerResult {
+	return &BotServiceUpdateMcpServerResult{}
+}
+
+func (p *BotServiceUpdateMcpServerResult) InitDefault() {
+}
+
+var BotServiceUpdateMcpServerResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceUpdateMcpServerResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceUpdateMcpServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceUpdateMcpServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceUpdateMcpServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceUpdateMcpServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUpdateMcpServerResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUpdateMcpServerResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceDeleteMcpServerArgs struct {
+	Req *DeleteMcpServerReq `thrift:"req,1" frugal:"1,default,DeleteMcpServerReq" json:"req"`
+}
+
+func NewBotServiceDeleteMcpServerArgs() *BotServiceDeleteMcpServerArgs {
+	return &BotServiceDeleteMcpServerArgs{}
+}
+
+func (p *BotServiceDeleteMcpServerArgs) InitDefault() {
+}
+
+var BotServiceDeleteMcpServerArgs_Req_DEFAULT *DeleteMcpServerReq
+
+func (p *BotServiceDeleteMcpServerArgs) GetReq() (v *DeleteMcpServerReq) {
+	if !p.IsSetReq() {
+		return BotServiceDeleteMcpServerArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceDeleteMcpServerArgs) SetReq(val *DeleteMcpServerReq) {
+	p.Req = val
+}
+
+func (p *BotServiceDeleteMcpServerArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceDeleteMcpServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceDeleteMcpServerArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceDeleteMcpServerArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceDeleteMcpServerResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceDeleteMcpServerResult() *BotServiceDeleteMcpServerResult {
+	return &BotServiceDeleteMcpServerResult{}
+}
+
+func (p *BotServiceDeleteMcpServerResult) InitDefault() {
+}
+
+var BotServiceDeleteMcpServerResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceDeleteMcpServerResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceDeleteMcpServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceDeleteMcpServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceDeleteMcpServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceDeleteMcpServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceDeleteMcpServerResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceDeleteMcpServerResult = map[int16]string{
 	0: "success",
 }

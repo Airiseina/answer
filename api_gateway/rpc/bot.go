@@ -74,3 +74,19 @@ func AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq)
 func GetSystemBot(ctx context.Context) (*bot.GetSystemBotRes, error) {
 	return botCli.GetSystemBot(ctx)
 }
+
+func CreateMcpServer(ctx context.Context, req *bot.CreateMcpServerReq) (*bot.CreateMcpServerRes, error) {
+	return botCli.CreateMcpServer(ctx, req)
+}
+
+func GetBotMcpServers(ctx context.Context, req *bot.GetBotMcpServersReq) (*bot.GetBotMcpServersRes, error) {
+	return botCli.GetBotMcpServers(ctx, req)
+}
+
+func UpdateMcpServer(ctx context.Context, req *bot.UpdateMcpServerReq) (*bot.CommonRes, error) {
+	return botCli.UpdateMcpServer(ctx, req)
+}
+
+func DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq) (*bot.CommonRes, error) {
+	return botCli.DeleteMcpServer(ctx, req)
+}
