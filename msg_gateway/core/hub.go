@@ -549,7 +549,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 		klog.Errorf("RPC RecallMessage失败: %v", err)
 		sender.Send(&WsMessage{
 			Type:    "system",
-			Reason:  "撤回失败",
+			Reason:  "撤回失败: " + err.Error(),
 			Success: false,
 		})
 		return

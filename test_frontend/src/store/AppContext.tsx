@@ -153,6 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [typingStatus, setTypingStatus] = useState<TypingStatusMap>({});
   const [systemNotification, setSystemNotification] = useState<string | null>(null);
   const [convMaxSeqs, setConvMaxSeqs] = useState<Record<string, number>>({});
+  const convMaxSeqsRef = useRef<Record<string, number>>({});
   const wsRef = useRef<WebSocket | null>(null);
   const activeConvRef = useRef<string | null>(null);
   activeConvRef.current = activeConvId;
@@ -161,6 +162,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const conversationsRef = useRef<Conversation[]>(conversations);
   conversationsRef.current = conversations;
   const clientSeqRef = useRef<number>(0);
+  const wsConnectedRef = useRef(false);
+  wsConnectedRef.current = wsConnected;
+
+  useEffect(() => {
+    convMaxSeqsRef.current = convMaxSeqs;
+  }, [convMaxSeqs]);
 
   const login = useCallback((token: string, account: string, avatarUrl?: string) => {
     localStorage.setItem('im_token', token);
@@ -186,6 +193,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFriends([]);
     setMemberInfo({});
     historyLoadedRef.current.clear();
+  }, []);
+
+  const sendSyncRequest = useCallback((ws: WebSocket) => {
+    const seqs = Object.entries(convMaxSeqsRef.current);
+    if (seqs.length === 0) return;
+    const convSeqs = seqs.map(([convId, lastSeq]) => ({
+      conversation_id: convId,
+      last_seq: lastSeq,
+    }));
+    ws.send(JSON.stringify({
+      type: 'sync',
+      conv_seqs: convSeqs,
+      limit: 50,
+    }));
   }, []);
 
   const loadConversations = useCallback(async () => {
@@ -223,6 +244,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
           return next;
         });
+        convMaxSeqsRef.current = { ...convMaxSeqsRef.current };
+        for (const [convId, seq] of Object.entries(seqMap)) {
+          if ((convMaxSeqsRef.current[convId] || 0) < seq) {
+            convMaxSeqsRef.current[convId] = seq;
+          }
+        }
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          sendSyncRequest(wsRef.current);
+        }
       }
       setConversations(prev => {
         const tempConvs = prev.filter(c => c.id === '');
@@ -293,20 +323,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     ws.onopen = () => {
       setWsConnected(true);
-      setConvMaxSeqs(prev => {
-        const seqs = Object.entries(prev);
-        if (seqs.length === 0) return prev;
-        const convSeqs = seqs.map(([convId, lastSeq]) => ({
-          conversation_id: convId,
-          last_seq: lastSeq,
-        }));
-        ws.send(JSON.stringify({
-          type: 'sync',
-          conv_seqs: convSeqs,
-          limit: 50,
-        }));
-        return prev;
-      });
+      sendSyncRequest(ws);
     };
     ws.onclose = () => { setWsConnected(false); wsRef.current = null; };
     ws.onerror = () => setWsConnected(false);

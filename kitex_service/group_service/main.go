@@ -62,7 +62,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.Group{}, &model.GroupMember{}, &model.GroupJoinRequest{})
+	err = db.AutoMigrate(&model.Group{}, &model.GroupMember{}, &model.GroupJoinRequest{}, &model.GroupNotice{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}

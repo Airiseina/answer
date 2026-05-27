@@ -226,7 +226,7 @@ func (s *ChatServiceImpl) RecallMessage(ctx context.Context, req *chat.RecallMes
 	result, err := s.chatService.RecallMessage(ctx, req.UserId, req.MsgId, req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]撤回消息[%d]失败: %v", req.UserId, req.MsgId, err)
-		return &chat.RecallMessageRes{Success: false}, nil
+		return nil, err
 	}
 	return &chat.RecallMessageRes{
 		Success:        true,

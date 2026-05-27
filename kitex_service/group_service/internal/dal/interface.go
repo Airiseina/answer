@@ -42,4 +42,7 @@ type GroupDao interface {
 	// DeleteGroup 删除群组及其所有成员记录（事务操作）
 	// 用于 CreateGroup 补偿回滚：会话创建失败时删除已创建的群组
 	DeleteGroup(groupId int64) error
+
+	CreateNotice(notice model.GroupNotice) error
+	GetNotices(groupId int64) ([]model.GroupNotice, error)
 }

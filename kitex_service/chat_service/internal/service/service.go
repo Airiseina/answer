@@ -270,13 +270,17 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 		return nil, nil
 	}
 	for _, msg := range messages {
+		content := msg.Content
+		if msg.Status == model.MsgStatusRecalled {
+			content = "该消息已撤回"
+		}
 		msgs = append(msgs, MessageDTO{
 			ClientSeq:      msg.ClientSeq,
 			MsgID:          msg.MsgID,
 			SenderID:       msg.SenderID,
 			ConversationID: msg.ConversationID,
 			Seq:            msg.Seq,
-			Content:        msg.Content,
+			Content:        content,
 			Timestamp:      msg.Timestamp,
 			Status:         msg.Status,
 			IsEdited:       msg.IsEdited,
@@ -531,10 +535,11 @@ type RecallMessageResult struct {
 // RecallMessage 撤回消息
 // 核心逻辑：
 //  1. 查询消息，校验消息是否存在
-//  2. 校验请求者是否为消息发送者（只有发送者可以撤回自己的消息）
+//  2. 权限校验：
+//     - 私聊：仅发送者可撤回
+//     - 群聊：群主可撤回任何消息，管理员可撤回非群主消息，普通成员仅可撤回自己的消息
 //  3. 校验消息是否已被撤回
-//  4. 校验消息是否在 2 分钟内（使用 Redis TTL 快速判断：消息发送时在 Redis 中设置
-//     recall:msg:{msgID} 键，TTL=2min，存在则可撤回，不存在则超时）
+//  4. 校验消息是否在 2 分钟内（使用 Redis TTL 快速判断）
 //  5. 更新 PostgreSQL SET status='recalled'
 //  6. 返回会话信息和成员列表（供推送使用）
 func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID int64, conversationID int64) (*RecallMessageResult, error) {
@@ -545,15 +550,55 @@ func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID i
 	if msg == nil {
 		return nil, fmt.Errorf("消息不存在")
 	}
-	if msg.SenderID != userID {
-		return nil, fmt.Errorf("只能撤回自己发送的消息")
+	if msg.ConversationID != conversationID {
+		return nil, fmt.Errorf("消息不属于该会话")
 	}
 	if msg.Status == model.MsgStatusRecalled {
 		return nil, fmt.Errorf("消息已被撤回")
 	}
-	// 使用 Redis TTL 快速判断是否在 2 分钟内
-	// 消息发送时设置 recall:msg:{msgID} 键，TTL=2min
-	// 键存在 → 可撤回；键不存在 → 超时
+
+	canRecall := false
+	convInfo, convErr := svc.conversationDao.GetConversationInfo(ctx, conversationID)
+	if convErr != nil || convInfo == nil {
+		if msg.SenderID != userID {
+			return nil, fmt.Errorf("只能撤回自己发送的消息")
+		}
+		canRecall = true
+	} else if convInfo.Type == model.ConvTypeGroup && convInfo.GroupID != 0 {
+		role, roleErr := rpc.GetMemberRole(ctx, convInfo.GroupID, userID)
+		if roleErr != nil {
+			if msg.SenderID != userID {
+				return nil, fmt.Errorf("只能撤回自己发送的消息")
+			}
+			canRecall = true
+		} else {
+			switch role {
+			case 2:
+				canRecall = true
+			case 1:
+				senderRole, senderRoleErr := rpc.GetMemberRole(ctx, convInfo.GroupID, msg.SenderID)
+				if senderRoleErr != nil || senderRole == 2 {
+					return nil, fmt.Errorf("管理员无法撤回群主的消息")
+				}
+				canRecall = true
+			default:
+				if msg.SenderID != userID {
+					return nil, fmt.Errorf("只能撤回自己发送的消息")
+				}
+				canRecall = true
+			}
+		}
+	} else {
+		if msg.SenderID != userID {
+			return nil, fmt.Errorf("只能撤回自己发送的消息")
+		}
+		canRecall = true
+	}
+
+	if !canRecall {
+		return nil, fmt.Errorf("无权撤回该消息")
+	}
+
 	recallKey := fmt.Sprintf("recall:msg:%d", msgID)
 	exists, err := svc.rdb.Exists(ctx, recallKey).Result()
 	if err != nil {
@@ -601,6 +646,9 @@ func (svc *ChatService) EditMessage(ctx context.Context, userID int64, msgID int
 	}
 	if msg == nil {
 		return nil, fmt.Errorf("消息不存在")
+	}
+	if msg.ConversationID != conversationID {
+		return nil, fmt.Errorf("消息不属于该会话")
 	}
 	if msg.SenderID != userID {
 		return nil, fmt.Errorf("只能编辑自己发送的消息")
@@ -741,13 +789,17 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 		}
 		var dtos []MessageDTO
 		for _, msg := range messages {
+			content := msg.Content
+			if msg.Status == model.MsgStatusRecalled {
+				content = "该消息已撤回"
+			}
 			dtos = append(dtos, MessageDTO{
 				ClientSeq:      msg.ClientSeq,
 				MsgID:          msg.MsgID,
 				SenderID:       msg.SenderID,
 				ConversationID: msg.ConversationID,
 				Seq:            msg.Seq,
-				Content:        msg.Content,
+				Content:        content,
 				Timestamp:      msg.Timestamp,
 				Status:         msg.Status,
 				IsEdited:       msg.IsEdited,

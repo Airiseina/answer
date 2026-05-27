@@ -11,6 +11,15 @@ interface GroupInfo {
   group_number: string
   create_time: number
   members: GroupMemberInfo[]
+  notices: GroupNoticeInfo[]
+}
+
+interface GroupNoticeInfo {
+  id: number
+  content: string
+  operator_id: number
+  operator_name: string
+  create_time: number
 }
 
 interface GroupMemberInfo {
@@ -305,7 +314,20 @@ export default function GroupsPanel({ onSwitchToChat }: { onSwitchToChat: () => 
                   </div>
                 </div>
                 <div className="gi-row"><span>群主</span><span>{groupInfo.owner_name}</span></div>
-                <div className="gi-row"><span>公告</span><span>{groupInfo.notice || '无'}</span></div>
+                <div className="gi-row"><span>当前公告</span><span>{groupInfo.notice || '无'}</span></div>
+                {groupInfo.notices && groupInfo.notices.length > 0 && (
+                  <div className="manage-section" style={{ marginTop: 8 }}>
+                    <h4>历史公告</h4>
+                    {groupInfo.notices.map((n, i) => (
+                      <div key={n.id || i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{n.content}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                          {n.operator_name && `${n.operator_name} · `}{new Date(n.create_time * 1000).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="gi-row"><span>成员数</span><span>{groupInfo.members?.length || 0}</span></div>
                 <button className="btn-primary full" style={{ marginTop: 8 }} onClick={() => startGroupChat(groupInfo.group_number, groupInfo.name)}>
                   进入群聊

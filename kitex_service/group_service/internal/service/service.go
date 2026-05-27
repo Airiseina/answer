@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/Airiseina/answer/kitex_service/group_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/group_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
-	"time"
 
 	"github.com/Airiseina/answer/pkg/snowflake"
 
@@ -206,6 +207,7 @@ type GroupDTO struct {
 	Notice      string
 	GroupNumber int64
 	CreatedAt   time.Time
+	Notices     []GroupNoticeDTO
 }
 
 type GroupMemberDTO struct {
@@ -214,6 +216,13 @@ type GroupMemberDTO struct {
 	Role     int64
 	IsMute   bool
 	JoinTime time.Time
+}
+
+type GroupNoticeDTO struct {
+	ID         int64
+	Content    string
+	OperatorID int64
+	CreateTime time.Time
 }
 
 func (service GroupService) GetGroupInfo(groupId int64) (GroupDTO, error) {
@@ -247,6 +256,17 @@ func (service GroupService) GetGroupInfo(groupId int64) (GroupDTO, error) {
 		Notice:      group.Notice,
 		GroupNumber: group.GroupNumber,
 		CreatedAt:   group.CreateTime,
+	}
+	notices, noticeErr := service.dao.GetNotices(groupId)
+	if noticeErr == nil && len(notices) > 0 {
+		for _, n := range notices {
+			groupDTO.Notices = append(groupDTO.Notices, GroupNoticeDTO{
+				ID:         n.ID,
+				Content:    n.Content,
+				OperatorID: n.OperatorID,
+				CreateTime: n.CreateTime,
+			})
+		}
 	}
 	return groupDTO, nil
 }
@@ -305,6 +325,14 @@ func (service GroupService) ChangeNotice(operatorId int64, groupId int64, notice
 	if err != nil {
 		return false, err
 	}
+	noticeRecord := model.GroupNotice{
+		GroupID:    groupId,
+		Content:    notice,
+		OperatorID: operatorId,
+	}
+	if createErr := service.dao.CreateNotice(noticeRecord); createErr != nil {
+		klog.Errorf("创建群公告记录失败: %v", createErr)
+	}
 	return true, nil
 }
 
@@ -343,6 +371,9 @@ func (service GroupService) Muted(operatorId int64, groupId int64, mutedId int64
 }
 
 func (service GroupService) SetAdmin(operatorId int64, groupId int64, targetId int64, role int64) (bool, error) {
+	if role != 0 && role != 1 {
+		return false, nil
+	}
 	info, err := service.dao.GetGroupInfo(groupId)
 	if err != nil {
 		return false, err
@@ -437,14 +468,14 @@ func (service GroupService) JoinGroup(userId int64, groupNumber int64, message s
 		return false, err
 	}
 	if group.ID == 0 {
-		return false, nil
+		return false, fmt.Errorf("群不存在")
 	}
 	isMember, err := service.dao.IsGroupMember(group.ID, userId)
 	if err != nil {
 		return false, err
 	}
 	if isMember {
-		return false, nil
+		return false, fmt.Errorf("已是群成员")
 	}
 	req := model.GroupJoinRequest{
 		GroupID: group.ID,

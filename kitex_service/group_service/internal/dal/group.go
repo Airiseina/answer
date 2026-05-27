@@ -261,3 +261,20 @@ func (db *gro) DeleteGroup(groupId int64) error {
 	}
 	return nil
 }
+
+func (db *gro) CreateNotice(notice model.GroupNotice) error {
+	err := db.db.Create(&notice).Error
+	if err != nil {
+		return fmt.Errorf("创建群公告失败: %w", err)
+	}
+	return nil
+}
+
+func (db *gro) GetNotices(groupId int64) ([]model.GroupNotice, error) {
+	var notices []model.GroupNotice
+	err := db.db.Where("group_id = ?", groupId).Order("create_time DESC").Find(&notices).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询群公告列表失败: %w", err)
+	}
+	return notices, nil
+}

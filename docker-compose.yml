@@ -317,6 +317,105 @@ services:
     networks:
       - answer-net
 
+  # ==========================================
+  # Mem0 记忆层 (自部署 MCP Server)
+  # ==========================================
+  mem0-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: answer_mem0_postgres
+    environment:
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: mem0_password
+      POSTGRES_DB: mem0
+    volumes:
+      - mem0_postgres_data:/var/lib/postgresql/data
+    networks:
+      - answer-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem0"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mcp-mem0:
+    build:
+      context: ./mcp-servers/mem0
+      dockerfile: Dockerfile
+    container_name: answer_mcp_mem0
+    ports:
+      - "9004:8000"
+    environment:
+      - MEM0_API_KEY=${MEM0_API_KEY:-}
+      - MEM0_HOST=mem0-postgres
+      - MEM0_PORT=5432
+      - MEM0_USER=mem0
+      - MEM0_PASSWORD=mem0_password
+      - MEM0_DB=mem0
+      - QDRANT_HOST=answer_qdrant
+      - QDRANT_PORT=6333
+      - OPENAI_API_KEY=${MEM0_LLM_API_KEY:-sk-placeholder}
+      - OPENAI_BASE_URL=${MEM0_LLM_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      - LLM_MODEL=${MEM0_LLM_MODEL:-glm-4-flash}
+      - EMBEDDING_MODEL=${MEM0_EMBEDDING_MODEL:-embedding-3}
+    depends_on:
+      mem0-postgres:
+        condition: service_healthy
+    networks:
+      - answer-net
+    restart: unless-stopped
+
+  # ==========================================
+  # MCP SSE Servers
+  # ==========================================
+  mcp-weather:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-weather
+    container_name: answer_mcp_weather
+    ports:
+      - "9001:8080"
+    networks:
+      - answer-net
+    restart: unless-stopped
+
+  mcp-brave-search:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-brave-search
+    container_name: answer_mcp_brave_search
+    ports:
+      - "9002:8000"
+    environment:
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+    networks:
+      - answer-net
+    restart: unless-stopped
+
+  mcp-lara-translate:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-lara
+    container_name: answer_mcp_lara_translate
+    ports:
+      - "9003:8000"
+    environment:
+      - LARA_ACCESS_KEY_ID=${LARA_ACCESS_KEY_ID:-}
+      - LARA_ACCESS_KEY_SECRET=${LARA_ACCESS_KEY_SECRET:-}
+    networks:
+      - answer-net
+    restart: unless-stopped
+
+  mcp-timeserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-timeserver
+    container_name: answer_mcp_timeserver
+    ports:
+      - "9005:8000"
+    networks:
+      - answer-net
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:latest
     container_name: answer_grafana
@@ -339,6 +438,7 @@ volumes:
   seaweedfs_master_data:
   seaweedfs_volume_data:
   seaweedfs_filer_data:
+  mem0_postgres_data:
 
 networks:
   answer-net:

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+
 	"github.com/Airiseina/answer/kitex_service/group_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
@@ -120,13 +122,34 @@ func (s *GroupServiceImpl) GetGroupInfo(ctx context.Context, req *group.GetGroup
 			JoinTime: member.JoinTime.Unix(),
 		})
 	}
+	noticeStr := groupInfo.Notice
+	if len(groupInfo.Notices) > 0 {
+		type noticeItem struct {
+			ID         int64  `json:"id"`
+			Content    string `json:"content"`
+			OperatorID int64  `json:"operator_id"`
+			CreateTime int64  `json:"create_time"`
+		}
+		var items []noticeItem
+		for _, n := range groupInfo.Notices {
+			items = append(items, noticeItem{
+				ID:         n.ID,
+				Content:    n.Content,
+				OperatorID: n.OperatorID,
+				CreateTime: n.CreateTime.Unix(),
+			})
+		}
+		if b, err := json.Marshal(items); err == nil {
+			noticeStr = string(b)
+		}
+	}
 	resp = &group.GetGroupInfoRes{
 		Group: &group.Group{
 			GroupId:     groupInfo.GroupId,
 			Name:        groupInfo.Name,
 			OwnerId:     groupInfo.OwnerID,
 			OwnerName:   groupInfo.OwnerName,
-			Notice:      groupInfo.Notice,
+			Notice:      noticeStr,
 			CreateTime:  groupInfo.CreatedAt.Unix(),
 			GroupNumber: groupInfo.GroupNumber,
 		},

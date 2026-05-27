@@ -39,3 +39,11 @@ type GroupJoinRequest struct {
 	Status     int64     `gorm:"type:tinyint;default:0;not null" json:"status"`
 	CreateTime time.Time `gorm:"autoCreateTime" json:"create_time"`
 }
+
+type GroupNotice struct {
+	ID         int64     `gorm:"primaryKey;autoIncrement" json:"id"`
+	GroupID    int64     `gorm:"not null;index" json:"group_id"`
+	Content    string    `gorm:"type:text;not null" json:"content"`
+	OperatorID int64     `gorm:"not null" json:"operator_id"`
+	CreateTime time.Time `gorm:"autoCreateTime" json:"create_time"`
+}

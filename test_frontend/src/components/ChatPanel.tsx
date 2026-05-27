@@ -21,7 +21,7 @@ export default function ChatPanel() {
   const [selectedBotIds, setSelectedBotIds] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; isSent: boolean; isRecalled: boolean } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; msgId: string; isSent: boolean; isRecalled: boolean; senderAccount?: string } | null>(null)
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editInput, setEditInput] = useState('')
   const [editHistoryModal, setEditHistoryModal] = useState<{ msgId: string; histories: any[] } | null>(null)
@@ -180,9 +180,9 @@ export default function ChatPanel() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
-  const handleContextMenu = (e: React.MouseEvent, msgId: string, isSent: boolean, isRecalled: boolean) => {
+  const handleContextMenu = (e: React.MouseEvent, msgId: string, isSent: boolean, isRecalled: boolean, senderAccount?: string) => {
     e.preventDefault()
-    setContextMenu({ x: e.clientX, y: e.clientY, msgId, isSent, isRecalled })
+    setContextMenu({ x: e.clientX, y: e.clientY, msgId, isSent, isRecalled, senderAccount })
   }
 
   const handleRecall = () => {
@@ -531,7 +531,7 @@ export default function ChatPanel() {
       <div className="chat-messages" onClick={() => setContextMenu(null)}>
         {msgs.map(msg => (
           <div key={msg.id} className={`msg-row ${msg.isSent ? 'sent' : 'received'}`}
-            onContextMenu={(e) => handleContextMenu(e, msg.id, msg.isSent, msg.status === 1)}
+            onContextMenu={(e) => handleContextMenu(e, msg.id, msg.isSent, msg.status === 1, msg.from)}
           >
             <div className="msg-avatar">
               {memberInfo[msg.from]?.avatar ? (
@@ -587,7 +587,7 @@ export default function ChatPanel() {
         <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={e => e.stopPropagation()}
         >
-          {contextMenu.isSent && !contextMenu.isRecalled && (
+          {!contextMenu.isRecalled && (contextMenu.isSent || (conv?.type === 2)) && (
             <div className="context-menu-item" onClick={handleRecall}>撤回</div>
           )}
           {contextMenu.isSent && !contextMenu.isRecalled && (

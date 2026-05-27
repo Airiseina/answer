@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
@@ -58,4 +59,35 @@ func CheckMuted(ctx context.Context, groupId int64, userId int64) (bool, error) 
 		return false, err
 	}
 	return resp.IsMuted, nil
+}
+
+func GetMemberRole(ctx context.Context, groupId int64, userId int64) (int64, error) {
+	resp, err := groupCli.GetGroupInfo(ctx, &group.GetGroupInfoReq{
+		GroupId: groupId,
+	})
+	if err != nil {
+		return -1, err
+	}
+	if resp.Group == nil || resp.Group.GroupId == 0 {
+		return -1, fmt.Errorf("群不存在")
+	}
+	for _, m := range resp.Members {
+		if m.UserId == userId {
+			return m.Role, nil
+		}
+	}
+	return -1, fmt.Errorf("用户不在群中")
+}
+
+func GetGroupOwnerID(ctx context.Context, groupId int64) (int64, error) {
+	resp, err := groupCli.GetGroupInfo(ctx, &group.GetGroupInfoReq{
+		GroupId: groupId,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if resp.Group == nil || resp.Group.GroupId == 0 {
+		return 0, fmt.Errorf("群不存在")
+	}
+	return resp.Group.OwnerId, nil
 }

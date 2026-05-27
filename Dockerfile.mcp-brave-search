@@ -1,0 +1,13 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+RUN npm install -g @brave/brave-search-mcp-server
+
+EXPOSE 8000
+
+ENV BRAVE_MCP_TRANSPORT=http
+ENV BRAVE_MCP_PORT=8000
+ENV BRAVE_MCP_HOST=0.0.0.0
+
+CMD ["node", "/usr/local/lib/node_modules/@brave/brave-search-mcp-server/dist/index.js"]

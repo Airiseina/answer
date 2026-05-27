@@ -2,11 +2,14 @@ package handle
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
+	"strings"
+
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
-	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -78,9 +81,13 @@ func InviteMembers(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "邀请成员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -135,9 +142,13 @@ func KickMembers(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "踢出成员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -191,9 +202,13 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "获取群组信息-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -210,7 +225,6 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 	result := make(map[string]interface{})
 	if resp.Group.GroupId != 0 {
 		result["name"] = resp.Group.Name
-		result["notice"] = resp.Group.Notice
 		result["create_time"] = resp.Group.CreateTime
 		result["group_number"] = strconv.FormatInt(resp.Group.GroupNumber, 10)
 
@@ -218,6 +232,36 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 		ownerAccountMap := buildAccountMap(ctx, ownerIDs)
 		result["owner_account"] = ownerAccountMap[resp.Group.OwnerId]
 		result["owner_name"] = resp.Group.OwnerName
+
+		type noticeItem struct {
+			ID         int64  `json:"id"`
+			Content    string `json:"content"`
+			OperatorID int64  `json:"operator_id"`
+			CreateTime int64  `json:"create_time"`
+		}
+		var notices []noticeItem
+		if jsonErr := json.Unmarshal([]byte(resp.Group.Notice), &notices); jsonErr == nil && len(notices) > 0 {
+			result["notice"] = notices[0].Content
+			var noticeOperatorIDs []int64
+			for _, n := range notices {
+				noticeOperatorIDs = append(noticeOperatorIDs, n.OperatorID)
+			}
+			noticeAccountMap := buildAccountMap(ctx, noticeOperatorIDs)
+			var noticeResults []map[string]interface{}
+			for _, n := range notices {
+				noticeResults = append(noticeResults, map[string]interface{}{
+					"id":            n.ID,
+					"content":       n.Content,
+					"operator_id":   n.OperatorID,
+					"operator_name": noticeAccountMap[n.OperatorID],
+					"create_time":   n.CreateTime,
+				})
+			}
+			result["notices"] = noticeResults
+		} else {
+			result["notice"] = resp.Group.Notice
+			result["notices"] = []interface{}{}
+		}
 	} else {
 		hlog.CtxErrorf(ctx, "输入错误的群号，group_id=%d", groupID)
 		response.Error(c, "操作失败", "请进行合法操作")
@@ -264,9 +308,13 @@ func ChangeOwner(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "转让群主-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -320,9 +368,13 @@ func ChangeNotice(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "修改群公告-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -370,9 +422,13 @@ func Muted(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "禁言操作-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -421,6 +477,10 @@ func SetAdmin(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数缺失", "请重新输入参数")
 		return
 	}
+	if param.Role != 0 && param.Role != 1 {
+		response.Error(c, "参数错误", "role只能为0(普通成员)或1(管理员)")
+		return
+	}
 	groupNumber, err := strconv.ParseInt(param.GroupNumber, 10, 64)
 	if err != nil || groupNumber == 0 {
 		response.Error(c, "参数错误", "group_number格式不正确")
@@ -428,9 +488,13 @@ func SetAdmin(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "设置管理员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -546,6 +610,22 @@ func JoinGroup(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数格式错误", "群号必须为数字")
 		return
 	}
+	if groupNumber == 0 {
+		response.Error(c, "参数错误", "群号不能为0")
+		return
+	}
+
+	searchResp, searchErr := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	if searchErr != nil {
+		hlog.CtxErrorf(ctx, "申请入群-群号查找失败, group_number=%d, err=%v", groupNumber, searchErr)
+		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
+		return
+	}
+
 	Identity, _ := c.Get(middleware.IdentityKey)
 	userInfo := Identity.(*middleware.Resp)
 	userId := userInfo.Id
@@ -556,13 +636,26 @@ func JoinGroup(ctx context.Context, c *app.RequestContext) {
 	}
 	resp, err := rpc.JoinGroup(ctx, req)
 	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "群不存在") {
+			response.Error(c, "群不存在", "请检查群号是否正确")
+			return
+		}
+		if strings.Contains(errMsg, "已是群成员") {
+			response.Error(c, "操作失败", "你已经是群成员")
+			return
+		}
+		if strings.Contains(errMsg, "已存在待处理") {
+			response.Error(c, "操作失败", "已存在待处理的申请")
+			return
+		}
 		hlog.CtxErrorf(ctx, "申请入群RPC调用失败, user_id=%d, group_number=%d, err=%v", userId, groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
 	if !resp.Success {
 		hlog.CtxWarnf(ctx, "申请入群失败, user_id=%d, group_number=%d", userId, groupNumber)
-		response.Error(c, "操作失败", "已存在待处理的申请或已是群成员")
+		response.Error(c, "操作失败", "申请入群失败")
 		return
 	}
 	hlog.CtxInfof(ctx, "申请入群成功, user_id=%d, group_number=%d", userId, groupNumber)
@@ -589,9 +682,13 @@ func HandleJoinReq(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "处理入群申请-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
 		return
 	}
 	groupID := searchResp.GroupInfo.GroupId
@@ -645,12 +742,41 @@ func GetJoinRequests(ctx context.Context, c *app.RequestContext) {
 	}
 
 	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
-	if err != nil || searchResp.GroupInfo.GroupId == 0 {
+	if err != nil {
 		hlog.CtxErrorf(ctx, "获取入群申请-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
+	if searchResp.GroupInfo.GroupId == 0 {
+		response.Error(c, "群不存在", "请检查群号是否正确")
+		return
+	}
 	groupID := searchResp.GroupInfo.GroupId
+
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	operatorId := userInfo.Id
+
+	groupInfoResp, err := rpc.GetGroupInfo(ctx, &group.GetGroupInfoReq{GroupId: groupID})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "获取入群申请-查询群信息失败, group_id=%d, err=%v", groupID, err)
+		response.Error(c, "系统繁忙", "请稍后重试")
+		return
+	}
+	isOwner := groupInfoResp.Group.OwnerId == operatorId
+	isAdmin := false
+	if !isOwner {
+		for _, m := range groupInfoResp.Members {
+			if m.UserId == operatorId && m.Role >= 1 {
+				isAdmin = true
+				break
+			}
+		}
+	}
+	if !isOwner && !isAdmin {
+		response.Error(c, "权限不足", "仅群主或管理员可查看入群申请")
+		return
+	}
 
 	req := &group.GetJoinRequestsReq{
 		GroupId: groupID,
