@@ -1,4 +1,4 @@
-from mem0_mcp_server import create_app, mcp
+from translate_mcp_server import create_app, mcp
 import argparse
 import uvicorn
 

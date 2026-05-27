@@ -391,16 +391,16 @@ services:
       - answer-net
     restart: unless-stopped
 
-  mcp-lara-translate:
+  mcp-translate:
     build:
-      context: .
-      dockerfile: Dockerfile.mcp-lara
-    container_name: answer_mcp_lara_translate
+      context: ./mcp-servers/translate
+      dockerfile: Dockerfile
+    container_name: answer_mcp_translate
     ports:
       - "9003:8000"
     environment:
-      - LARA_ACCESS_KEY_ID=${LARA_ACCESS_KEY_ID:-}
-      - LARA_ACCESS_KEY_SECRET=${LARA_ACCESS_KEY_SECRET:-}
+      - TRANSLATE_PROVIDER=${TRANSLATE_PROVIDER:-mymemory}
+      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
     networks:
       - answer-net
     restart: unless-stopped

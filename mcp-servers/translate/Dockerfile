@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["python", "-m", "mem0_mcp_server", "--mode", "sse", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "translate_mcp_server", "--mode", "sse", "--host", "0.0.0.0", "--port", "8000"]
