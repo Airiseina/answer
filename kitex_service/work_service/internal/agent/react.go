@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	einomodel "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/compose"
@@ -14,6 +15,11 @@ import (
 )
 
 const maxReActSteps = 10
+
+const (
+	llmTimeout = 30 * time.Second
+	mcpTimeout = 15 * time.Second
+)
 
 type Agent struct {
 	mcpPool *mcp.Pool
@@ -38,6 +44,7 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 		APIKey:  cfg.APIKey,
 		BaseURL: cfg.BaseURL,
 		Model:   cfg.Model,
+		Timeout: llmTimeout,
 	})
 	if err != nil {
 		return "", fmt.Errorf("创建ChatModel失败: %w", err)
@@ -45,7 +52,9 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 
 	toolsConfig := compose.ToolsNodeConfig{}
 	if len(cfg.McpServers) > 0 {
-		tools, toolsErr := a.mcpPool.GetAllTools(ctx, cfg.McpServers)
+		mcpCtx, mcpCancel := context.WithTimeout(ctx, mcpTimeout)
+		tools, toolsErr := a.mcpPool.GetAllTools(mcpCtx, cfg.McpServers)
+		mcpCancel()
 		if toolsErr != nil {
 			klog.Errorf("获取MCP工具失败: %v", toolsErr)
 		} else {

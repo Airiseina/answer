@@ -18,6 +18,7 @@ const (
 	maxConcurrentBots = 10
 	perBotQueueSize   = 50
 	botIdleTimeout    = 10 * time.Minute
+	handleTimeout     = 60 * time.Second
 )
 
 type FlexInt int64
@@ -163,9 +164,17 @@ func (c *BotTaskConsumer) processMessage(msg kafka.Message) {
 		return
 	}
 	klog.Infof("开始处理Bot任务: botId=%d, convId=%d, senderId=%d", task.BotID, task.ConversationID, task.SenderID)
-	_, err := c.workService.HandleMessage(context.Background(), int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, nil)
+
+	handleCtx, handleCancel := context.WithTimeout(context.Background(), handleTimeout)
+	defer handleCancel()
+
+	_, err := c.workService.HandleMessage(handleCtx, int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, nil)
 	if err != nil {
-		klog.Errorf("Bot[%d]处理消息失败: %v", task.BotID, err)
+		if handleCtx.Err() == context.DeadlineExceeded {
+			klog.Errorf("Bot[%d]处理消息超时(>%v): convId=%d, senderId=%d", task.BotID, handleTimeout, task.ConversationID, task.SenderID)
+		} else {
+			klog.Errorf("Bot[%d]处理消息失败: %v", task.BotID, err)
+		}
 	}
 	c.commitMessage(msg)
 }

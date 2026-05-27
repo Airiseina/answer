@@ -19,6 +19,12 @@ import (
 
 const botReplyTopic = "bot-reply-topic"
 
+const (
+	mcpTimeout        = 15 * time.Second
+	llmTimeout        = 30 * time.Second
+	memorySaveTimeout = 10 * time.Second
+)
+
 type WorkService struct {
 	llmClient   *llm.Client
 	kafkaWriter *kafka.Writer
@@ -65,6 +71,9 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	if len(allMcpServers) > 0 {
 		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history)
 	} else {
+		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
+		defer llmCancel()
+
 		var chatHistory []llm.ChatMessage
 		for i, h := range history {
 			role := "assistant"
@@ -73,7 +82,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 			}
 			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
 		}
-		llmResult, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
 		if llmErr != nil {
 			return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
 		}
@@ -118,7 +127,10 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	userID := fmt.Sprintf("%d", senderId)
 	runID := fmt.Sprintf("%d", conversationId)
 
-	memories := mcp.SearchMemories(ctx, svc.mcpPool, content, userID, 3)
+	memoryCtx, memoryCancel := context.WithTimeout(ctx, mcpTimeout)
+	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, 3)
+	memoryCancel()
+
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
 
 	var einoHistory []*schema.Message
@@ -130,7 +142,10 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		einoHistory = append(einoHistory, &schema.Message{Role: role, Content: h})
 	}
 
-	agentResult, err := svc.agent.Run(ctx, agent.AgentRunConfig{
+	agentCtx, agentCancel := context.WithTimeout(ctx, llmTimeout)
+	defer agentCancel()
+
+	agentResult, err := svc.agent.Run(agentCtx, agent.AgentRunConfig{
 		APIKey:       botCfg.ApiKey,
 		BaseURL:      botCfg.BaseUrl,
 		Model:        botCfg.Model,
@@ -141,6 +156,9 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	})
 	if err != nil {
 		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)
+		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
+		defer llmCancel()
+
 		var chatHistory []llm.ChatMessage
 		for i, h := range history {
 			role := "assistant"
@@ -149,7 +167,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 			}
 			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
 		}
-		llmResult, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
 		if llmErr != nil {
 			return fmt.Sprintf("抱歉，处理消息时出错: %v", err)
 		}
@@ -157,7 +175,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	}
 
 	go func() {
-		saveCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 		defer cancel()
 		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, agentResult)
 		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, runID)

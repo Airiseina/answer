@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	mcptool "github.com/cloudwego/eino-ext/components/tool/mcp"
 	"github.com/cloudwego/eino/components/tool"
@@ -11,6 +12,8 @@ import (
 	mcpclient "github.com/mark3labs/mcp-go/client"
 	mcpprotocol "github.com/mark3labs/mcp-go/mcp"
 )
+
+const defaultMcpTimeout = 15 * time.Second
 
 type ServerConfig struct {
 	Name      string
@@ -53,12 +56,15 @@ func (p *Pool) Connect(ctx context.Context, cfg ServerConfig) (*Connection, erro
 
 	klog.Infof("MCP Pool: 正在连接 %s (%s)", cfg.Name, cfg.URL)
 
+	connectCtx, connectCancel := context.WithTimeout(ctx, defaultMcpTimeout)
+	defer connectCancel()
+
 	cli, err := mcpclient.NewSSEMCPClient(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("创建SSE客户端失败[%s]: %w", cfg.Name, err)
 	}
 
-	if err := cli.Start(ctx); err != nil {
+	if err := cli.Start(connectCtx); err != nil {
 		return nil, fmt.Errorf("启动SSE连接失败[%s]: %w", cfg.Name, err)
 	}
 
@@ -68,11 +74,11 @@ func (p *Pool) Connect(ctx context.Context, cfg ServerConfig) (*Connection, erro
 		Name:    "answer-work-service",
 		Version: "1.0.0",
 	}
-	if _, err := cli.Initialize(ctx, initReq); err != nil {
+	if _, err := cli.Initialize(connectCtx, initReq); err != nil {
 		return nil, fmt.Errorf("MCP初始化失败[%s]: %w", cfg.Name, err)
 	}
 
-	tools, err := mcptool.GetTools(ctx, &mcptool.Config{Cli: cli})
+	tools, err := mcptool.GetTools(connectCtx, &mcptool.Config{Cli: cli})
 	if err != nil {
 		return nil, fmt.Errorf("获取MCP工具失败[%s]: %w", cfg.Name, err)
 	}
@@ -113,7 +119,10 @@ func (p *Pool) CallToolDirectly(ctx context.Context, serverName, toolName string
 		return "", fmt.Errorf("MCP Server %s 未连接", serverName)
 	}
 
-	result, err := conn.Client.CallTool(ctx, mcpprotocol.CallToolRequest{
+	callCtx, callCancel := context.WithTimeout(ctx, defaultMcpTimeout)
+	defer callCancel()
+
+	result, err := conn.Client.CallTool(callCtx, mcpprotocol.CallToolRequest{
 		Params: mcpprotocol.CallToolParams{
 			Name:      toolName,
 			Arguments: args,
