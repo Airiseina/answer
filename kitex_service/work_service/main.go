@@ -8,6 +8,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/consumer"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
@@ -57,7 +58,9 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接Kafka Producer失败: %v", err)
 	}
-	workService := service.NewWorkService(llmClient, kafkaWriter)
+	mcpPool := mcp.NewPool()
+	defer mcpPool.Close()
+	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool)
 	kafkaReader, err := connect.ConnectKafkaConsumerGroup("bot-worker-group", "bot-task-topic")
 	if err != nil {
 		klog.Fatalf("连接Kafka ConsumerGroup失败: %v", err)

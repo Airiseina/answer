@@ -90,3 +90,7 @@ func IsBot(ctx context.Context, userId int64) (bool, int64, error) {
 	}
 	return resp.IsBot, botId, nil
 }
+
+func GetBotMcpServers(ctx context.Context, botId int64) (*bot.GetBotMcpServersRes, error) {
+	return botCli.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: botId})
+}

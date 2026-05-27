@@ -7,9 +7,12 @@ import (
 	"time"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/agent"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
 
+	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/segmentio/kafka-go"
 )
@@ -19,12 +22,16 @@ const botReplyTopic = "bot-reply-topic"
 type WorkService struct {
 	llmClient   *llm.Client
 	kafkaWriter *kafka.Writer
+	mcpPool     *mcp.Pool
+	agent       *agent.Agent
 }
 
-func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer) *WorkService {
+func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer, mcpPool *mcp.Pool) *WorkService {
 	return &WorkService{
 		llmClient:   llmClient,
 		kafkaWriter: kafkaWriter,
+		mcpPool:     mcpPool,
+		agent:       agent.NewAgent(mcpPool),
 	}
 }
 
@@ -49,18 +56,30 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 			return false, fmt.Errorf("Bot[%d]不在会话[%d]中，请先将Bot拉入会话", botId, conversationId)
 		}
 	}
-	var chatHistory []llm.ChatMessage
-	for i, h := range history {
-		role := "assistant"
-		if i%2 == 0 {
-			role = "user"
+
+	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
+	botMcpServers := mcpServers
+	allMcpServers := append(mcp.GetBuiltinServerConfigs(), botMcpServers...)
+
+	var result string
+	if len(allMcpServers) > 0 {
+		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history)
+	} else {
+		var chatHistory []llm.ChatMessage
+		for i, h := range history {
+			role := "assistant"
+			if i%2 == 0 {
+				role = "user"
+			}
+			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
 		}
-		chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
+		llmResult, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+		if llmErr != nil {
+			return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
+		}
+		result = llmResult
 	}
-	result, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
-	if llmErr != nil {
-		return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
-	}
+
 	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	sendResp, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
@@ -93,4 +112,56 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		}
 	}
 	return true, nil
+}
+
+func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId int64, content string, history []string) string {
+	userID := fmt.Sprintf("%d", senderId)
+	runID := fmt.Sprintf("%d", conversationId)
+
+	memories := mcp.SearchMemories(ctx, svc.mcpPool, content, userID, 3)
+	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
+
+	var einoHistory []*schema.Message
+	for i, h := range history {
+		role := schema.Assistant
+		if i%2 == 0 {
+			role = schema.User
+		}
+		einoHistory = append(einoHistory, &schema.Message{Role: role, Content: h})
+	}
+
+	agentResult, err := svc.agent.Run(ctx, agent.AgentRunConfig{
+		APIKey:       botCfg.ApiKey,
+		BaseURL:      botCfg.BaseUrl,
+		Model:        botCfg.Model,
+		SystemPrompt: enhancedPrompt,
+		McpServers:   mcpServers,
+		History:      einoHistory,
+		UserContent:  content,
+	})
+	if err != nil {
+		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)
+		var chatHistory []llm.ChatMessage
+		for i, h := range history {
+			role := "assistant"
+			if i%2 == 0 {
+				role = "user"
+			}
+			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
+		}
+		llmResult, llmErr := svc.llmClient.Chat(ctx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+		if llmErr != nil {
+			return fmt.Sprintf("抱歉，处理消息时出错: %v", err)
+		}
+		return llmResult
+	}
+
+	go func() {
+		saveCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, agentResult)
+		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, runID)
+	}()
+
+	return agentResult
 }
