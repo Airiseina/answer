@@ -20,9 +20,9 @@ import (
 const botReplyTopic = "bot-reply-topic"
 
 const (
-	mcpTimeout        = 15 * time.Second
-	llmTimeout        = 30 * time.Second
-	memorySaveTimeout = 10 * time.Second
+	mcpTimeout        = 60 * time.Second
+	llmTimeout        = 180 * time.Second
+	memorySaveTimeout = 60 * time.Second
 )
 
 type WorkService struct {
@@ -62,18 +62,15 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 			return false, fmt.Errorf("Bot[%d]不在会话[%d]中，请先将Bot拉入会话", botId, conversationId)
 		}
 	}
-
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
 	botMcpServers := mcpServers
 	allMcpServers := append(mcp.GetBuiltinServerConfigs(), botMcpServers...)
-
 	var result string
 	if len(allMcpServers) > 0 {
 		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history)
 	} else {
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
-
 		var chatHistory []llm.ChatMessage
 		for i, h := range history {
 			role := "assistant"
@@ -88,7 +85,6 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		}
 		result = llmResult
 	}
-
 	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	sendResp, sendErr := rpc.SendMessage(sendCtx, &chat.SendMessageReq{
@@ -126,13 +122,10 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId int64, content string, history []string) string {
 	userID := fmt.Sprintf("%d", senderId)
 	runID := fmt.Sprintf("%d", conversationId)
-
 	memoryCtx, memoryCancel := context.WithTimeout(ctx, mcpTimeout)
-	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, 3)
+	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, "", 3)
 	memoryCancel()
-
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
-
 	var einoHistory []*schema.Message
 	for i, h := range history {
 		role := schema.Assistant
@@ -141,10 +134,8 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		}
 		einoHistory = append(einoHistory, &schema.Message{Role: role, Content: h})
 	}
-
 	agentCtx, agentCancel := context.WithTimeout(ctx, llmTimeout)
 	defer agentCancel()
-
 	agentResult, err := svc.agent.Run(agentCtx, agent.AgentRunConfig{
 		APIKey:       botCfg.ApiKey,
 		BaseURL:      botCfg.BaseUrl,
@@ -158,7 +149,6 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
-
 		var chatHistory []llm.ChatMessage
 		for i, h := range history {
 			role := "assistant"
@@ -169,17 +159,16 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		}
 		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
 		if llmErr != nil {
-			return fmt.Sprintf("抱歉，处理消息时出错: %v", err)
+			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
+			return fmt.Sprint("啊？你说啥😶?抱歉我没有听清,能再重复一遍吗(*/ω＼*)?")
 		}
 		return llmResult
 	}
-
 	go func() {
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 		defer cancel()
 		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, agentResult)
 		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, runID)
 	}()
-
 	return agentResult
 }

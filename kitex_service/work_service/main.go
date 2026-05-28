@@ -59,6 +59,7 @@ func main() {
 		klog.Fatalf("连接Kafka Producer失败: %v", err)
 	}
 	mcpPool := mcp.NewPool()
+	mcpPool.StartHealthCheck()
 	defer mcpPool.Close()
 	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool)
 	kafkaReader, err := connect.ConnectKafkaConsumerGroup("bot-worker-group", "bot-task-topic")

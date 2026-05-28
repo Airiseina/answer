@@ -37,6 +37,12 @@ type Metrics struct {
 	BotRequestTotal      metric.Int64Counter
 	BotResponseLatency   metric.Float64Histogram
 	BotTokenUsage        metric.Int64Counter
+	McpCallTotal         metric.Int64Counter
+	McpCallLatency       metric.Float64Histogram
+	McpCallErrors        metric.Int64Counter
+	McpConnectTotal      metric.Int64Counter
+	McpConnectErrors     metric.Int64Counter
+	McpReconnectTotal    metric.Int64Counter
 	GroupOpTotal         metric.Int64Counter
 	UserRegisterTotal    metric.Int64Counter
 	UserLoginTotal       metric.Int64Counter
@@ -98,6 +104,43 @@ func registerAll(serviceName string) {
 		metric.WithDescription("Bot Token 消耗量"),
 	)
 	mustRegister(err, "aim.bot.token.usage")
+
+	M.McpCallTotal, err = Meter().Int64Counter(
+		"aim.mcp.call.total",
+		metric.WithDescription("MCP 工具调用总数"),
+	)
+	mustRegister(err, "aim.mcp.call.total")
+
+	M.McpCallLatency, err = Meter().Float64Histogram(
+		"aim.mcp.call.latency",
+		metric.WithDescription("MCP 工具调用延迟(毫秒)"),
+		metric.WithUnit("ms"),
+	)
+	mustRegister(err, "aim.mcp.call.latency")
+
+	M.McpCallErrors, err = Meter().Int64Counter(
+		"aim.mcp.call.errors",
+		metric.WithDescription("MCP 工具调用错误数"),
+	)
+	mustRegister(err, "aim.mcp.call.errors")
+
+	M.McpConnectTotal, err = Meter().Int64Counter(
+		"aim.mcp.connect.total",
+		metric.WithDescription("MCP 连接总数"),
+	)
+	mustRegister(err, "aim.mcp.connect.total")
+
+	M.McpConnectErrors, err = Meter().Int64Counter(
+		"aim.mcp.connect.errors",
+		metric.WithDescription("MCP 连接错误数"),
+	)
+	mustRegister(err, "aim.mcp.connect.errors")
+
+	M.McpReconnectTotal, err = Meter().Int64Counter(
+		"aim.mcp.reconnect.total",
+		metric.WithDescription("MCP 重连总数"),
+	)
+	mustRegister(err, "aim.mcp.reconnect.total")
 
 	M.GroupOpTotal, err = Meter().Int64Counter(
 		"aim.group.operation.total",

@@ -61,7 +61,6 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 			toolsConfig.Tools = tools
 		}
 	}
-
 	reactAgent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
 		ToolsConfig:      toolsConfig,
@@ -70,7 +69,6 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("创建ReAct Agent失败: %w", err)
 	}
-
 	var messages []*schema.Message
 	if cfg.SystemPrompt != "" {
 		messages = append(messages, &schema.Message{
@@ -83,11 +81,9 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 		Role:    schema.User,
 		Content: cfg.UserContent,
 	})
-
 	result, err := reactAgent.Generate(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("ReAct Agent执行失败: %w", err)
 	}
-
 	return result.Content, nil
 }

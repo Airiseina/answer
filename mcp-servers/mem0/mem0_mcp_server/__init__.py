@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+import logging
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -11,7 +12,23 @@ import uvicorn
 
 from mem0 import Memory
 
+logger = logging.getLogger("mem0_mcp_server")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+
 mcp = FastMCP("mem0-memory")
+
+_llm_api_key = os.getenv("LLM_API_KEY", "")
+_embedding_api_key = os.getenv("EMBEDDING_API_KEY", "")
+
+if not _llm_api_key:
+    raise ValueError("LLM_API_KEY environment variable is not set. Please set it before starting the server.")
+if not _embedding_api_key:
+    raise ValueError("EMBEDDING_API_KEY environment variable is not set. Please set it before starting the server.")
+
+os.environ.setdefault("OPENAI_API_KEY", _llm_api_key)
+
+_embedding_provider = os.getenv("EMBEDDING_PROVIDER", "openai")
+_embedding_dims = int(os.getenv("EMBEDDING_DIMS", "2048"))
 
 _config = {
     "vector_store": {
@@ -20,24 +37,59 @@ _config = {
             "host": os.getenv("QDRANT_HOST", "answer_qdrant"),
             "port": int(os.getenv("QDRANT_PORT", "6333")),
             "collection_name": "mem0_memories",
+            "embedding_model_dims": _embedding_dims,
         },
     },
     "llm": {
         "provider": "openai",
         "config": {
-            "model": os.getenv("LLM_MODEL", "glm-4-flash"),
-            "openai_base_url": os.getenv("OPENAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
+            "model": os.getenv("LLM_MODEL", "deepseek-v4-flash"),
+            "openai_base_url": os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1"),
+            "api_key": _llm_api_key,
         },
     },
     "embedder": {
         "provider": "openai",
         "config": {
-            "model": os.getenv("EMBEDDING_MODEL", "embedding-3"),
-            "openai_base_url": os.getenv("OPENAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
+            "model": os.getenv("EMBEDDING_MODEL", "doubao-embedding-vision-251215"),
+            "openai_base_url": os.getenv("EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+            "api_key": _embedding_api_key,
+            "embedding_dims": _embedding_dims,
         },
     },
     "version": "v1.1",
 }
+
+logger.info("mem0 MCP Server 配置:")
+logger.info("  LLM: model=%s, base_url=%s, api_key=%s...%s",
+            _config["llm"]["config"]["model"],
+            _config["llm"]["config"]["openai_base_url"],
+            _llm_api_key[:4] if len(_llm_api_key) >= 4 else "****",
+            _llm_api_key[-4:] if len(_llm_api_key) >= 4 else "")
+logger.info("  Embedder: provider=%s, model=%s, base_url=%s, api_key=%s...%s, dims=%d",
+            _embedding_provider,
+            _config["embedder"]["config"]["model"],
+            _config["embedder"]["config"]["openai_base_url"],
+            _embedding_api_key[:4] if len(_embedding_api_key) >= 4 else "****",
+            _embedding_api_key[-4:] if len(_embedding_api_key) >= 4 else "",
+            _embedding_dims)
+logger.info("  VectorStore: qdrant@%s:%s",
+            _config["vector_store"]["config"]["host"],
+            _config["vector_store"]["config"]["port"])
+
+_custom_embedder = None
+if _embedding_provider == "volcengine":
+    from mem0.configs.embeddings.base import BaseEmbedderConfig
+    from mem0_mcp_server.volcengine_embedder import VolcengineEmbedding
+
+    _embedder_config = BaseEmbedderConfig(
+        model=os.getenv("EMBEDDING_MODEL", "doubao-embedding-vision-251215"),
+        api_key=_embedding_api_key,
+        openai_base_url=os.getenv("EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+        embedding_dims=_embedding_dims,
+    )
+    _custom_embedder = VolcengineEmbedding(_embedder_config)
+    logger.info("已创建 VolcengineEmbedding 自定义嵌入器")
 
 _mem0_client: Optional[Memory] = None
 
@@ -45,7 +97,12 @@ _mem0_client: Optional[Memory] = None
 def _get_client() -> Memory:
     global _mem0_client
     if _mem0_client is None:
+        logger.info("正在初始化 mem0 客户端...")
         _mem0_client = Memory.from_config(_config)
+        if _custom_embedder is not None:
+            _mem0_client.embedding_model = _custom_embedder
+            logger.info("已替换为 VolcengineEmbedding 自定义嵌入器")
+        logger.info("mem0 客户端初始化完成")
     return _mem0_client
 
 
@@ -67,15 +124,20 @@ def add_memory(
         metadata: Optional metadata dict to attach
     """
     client = _get_client()
-    kwargs = {"content": content, "user_id": user_id}
+    messages = [{"role": "user", "content": content}]
+    kwargs = {"messages": messages, "user_id": user_id}
     if run_id:
         kwargs["run_id"] = run_id
     if agent_id:
         kwargs["agent_id"] = agent_id
     if metadata:
         kwargs["metadata"] = metadata
-    result = client.add(**kwargs)
-    return json.dumps(result, ensure_ascii=False, default=str)
+    try:
+        result = client.add(**kwargs)
+        return json.dumps(result, ensure_ascii=False, default=str)
+    except Exception as e:
+        logger.error("add_memory 失败: %s", e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -96,13 +158,17 @@ def search_memories(
         limit: Maximum number of results to return (default 10)
     """
     client = _get_client()
-    kwargs = {"query": query, "user_id": user_id, "limit": limit}
+    filters = {"user_id": user_id}
     if run_id:
-        kwargs["run_id"] = run_id
+        filters["run_id"] = run_id
     if agent_id:
-        kwargs["agent_id"] = agent_id
-    results = client.search(**kwargs)
-    return json.dumps(results, ensure_ascii=False, default=str)
+        filters["agent_id"] = agent_id
+    try:
+        results = client.search(query=query, filters=filters, top_k=limit)
+        return json.dumps(results, ensure_ascii=False, default=str)
+    except Exception as e:
+        logger.error("search_memories 失败: %s", e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -121,13 +187,17 @@ def get_all_memories(
         limit: Maximum number of memories to return (default 100)
     """
     client = _get_client()
-    kwargs = {"user_id": user_id, "limit": limit}
+    filters = {"user_id": user_id}
     if run_id:
-        kwargs["run_id"] = run_id
+        filters["run_id"] = run_id
     if agent_id:
-        kwargs["agent_id"] = agent_id
-    results = client.get_all(**kwargs)
-    return json.dumps(results, ensure_ascii=False, default=str)
+        filters["agent_id"] = agent_id
+    try:
+        results = client.get_all(filters=filters, limit=limit)
+        return json.dumps(results, ensure_ascii=False, default=str)
+    except Exception as e:
+        logger.error("get_all_memories 失败: %s", e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -138,8 +208,12 @@ def delete_memory(memory_id: str) -> str:
         memory_id: The unique identifier of the memory to delete
     """
     client = _get_client()
-    client.delete(memory_id)
-    return json.dumps({"status": "deleted", "memory_id": memory_id})
+    try:
+        client.delete(memory_id)
+        return json.dumps({"status": "deleted", "memory_id": memory_id})
+    except Exception as e:
+        logger.error("delete_memory 失败: %s", e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -156,13 +230,17 @@ def delete_all_memories(
         agent_id: Optional agent identifier
     """
     client = _get_client()
-    kwargs = {"user_id": user_id}
+    filters = {"user_id": user_id}
     if run_id:
-        kwargs["run_id"] = run_id
+        filters["run_id"] = run_id
     if agent_id:
-        kwargs["agent_id"] = agent_id
-    client.delete_all(**kwargs)
-    return json.dumps({"status": "all_deleted", "user_id": user_id})
+        filters["agent_id"] = agent_id
+    try:
+        client.delete_all(filters=filters)
+        return json.dumps({"status": "all_deleted", "user_id": user_id})
+    except Exception as e:
+        logger.error("delete_all_memories 失败: %s", e)
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
 def create_app():

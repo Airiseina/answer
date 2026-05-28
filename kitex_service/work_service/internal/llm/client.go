@@ -28,12 +28,10 @@ func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt 
 		opts = append(opts, option.WithBaseURL(baseURL))
 	}
 	client := openai.NewClient(opts...)
-
 	params := openai.ChatCompletionNewParams{
 		Model:       model,
 		Temperature: openai.Float(0.7),
 	}
-
 	if systemPrompt != "" {
 		params.Messages = append(params.Messages, openai.SystemMessage(systemPrompt))
 	}
@@ -48,7 +46,6 @@ func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt 
 		}
 	}
 	params.Messages = append(params.Messages, openai.UserMessage(userContent))
-
 	resp, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {
 		return "", fmt.Errorf("调用OpenAI失败: %w", err)
