@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
@@ -55,4 +56,24 @@ func GetConversationMembers(ctx context.Context, conversationId int64) ([]int64,
 		return nil, err
 	}
 	return resp.MemberIds, nil
+}
+
+const (
+	ConvTypePrivate int16 = 1
+	ConvTypeGroup   int16 = 2
+)
+
+func GetConversationType(ctx context.Context, conversationId, userId int64) (int16, error) {
+	resp, err := chatCli.GetConversations(ctx, &chat.GetConversationsReq{
+		UserId: userId,
+	})
+	if err != nil {
+		return 0, err
+	}
+	for _, conv := range resp.Conversations {
+		if conv.ConversationId == conversationId {
+			return conv.Type, nil
+		}
+	}
+	return 0, fmt.Errorf("会话[%d]未找到", conversationId)
 }

@@ -46,6 +46,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	if err != nil {
 		return false, fmt.Errorf("获取Bot[%d]配置失败: %w", botId, err)
 	}
+	var isGroupChat bool
 	if botCfg.UserID > 0 {
 		members, memberErr := rpc.GetConversationMembers(ctx, conversationId)
 		if memberErr != nil {
@@ -61,13 +62,20 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		if !inConv {
 			return false, fmt.Errorf("Bot[%d]不在会话[%d]中，请先将Bot拉入会话", botId, conversationId)
 		}
+		convType, convErr := rpc.GetConversationType(ctx, conversationId, senderId)
+		if convErr != nil {
+			klog.CtxWarnf(ctx, "获取会话[%d]类型失败，按群聊处理: %v", conversationId, convErr)
+			isGroupChat = true
+		} else {
+			isGroupChat = convType != rpc.ConvTypePrivate || len(members) > 2
+		}
 	}
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
 	botMcpServers := mcpServers
 	allMcpServers := append(mcp.GetBuiltinServerConfigs(), botMcpServers...)
 	var result string
 	if len(allMcpServers) > 0 {
-		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history)
+		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history, isGroupChat)
 	} else {
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
@@ -84,6 +92,9 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 			return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
 		}
 		result = llmResult
+	}
+	if ctx.Err() != nil {
+		return false, fmt.Errorf("Bot[%d]处理消息超时，跳过发送", botId)
 	}
 	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -119,11 +130,15 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	return true, nil
 }
 
-func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId int64, content string, history []string) string {
+func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId int64, content string, history []string, isGroupChat bool) string {
 	userID := fmt.Sprintf("%d", senderId)
 	runID := fmt.Sprintf("%d", conversationId)
+	searchRunID := ""
+	if isGroupChat {
+		searchRunID = runID
+	}
 	memoryCtx, memoryCancel := context.WithTimeout(ctx, mcpTimeout)
-	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, "", 3)
+	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, searchRunID, 3)
 	memoryCancel()
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
 	var einoHistory []*schema.Message
@@ -168,7 +183,11 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 		defer cancel()
 		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, agentResult)
-		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, runID)
+		saveRunID := ""
+		if isGroupChat {
+			saveRunID = runID
+		}
+		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, saveRunID)
 	}()
 	return agentResult
 }

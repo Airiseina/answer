@@ -17,7 +17,7 @@ import (
 const maxReActSteps = 10
 
 const (
-	llmTimeout = 30 * time.Second
+	llmTimeout = 120 * time.Second
 	mcpTimeout = 15 * time.Second
 )
 

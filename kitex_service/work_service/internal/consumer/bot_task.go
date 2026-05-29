@@ -18,7 +18,7 @@ const (
 	maxConcurrentBots = 10
 	perBotQueueSize   = 50
 	botIdleTimeout    = 10 * time.Minute
-	handleTimeout     = 60 * time.Second
+	handleTimeout     = 300 * time.Second
 )
 
 type FlexInt int64
