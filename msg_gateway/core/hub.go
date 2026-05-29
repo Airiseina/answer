@@ -798,7 +798,7 @@ func (manager *Manager) triggerBots(senderID, conversationID int64, convType int
 		if memberID == senderID {
 			continue
 		}
-		isBot, botId, err := rpc.IsBot(context.Background(), memberID)
+		isBot, botId, err := rpc.IsBotCached(context.Background(), memberID)
 		if err != nil {
 			klog.Errorf("查询用户[%d]是否为Bot失败: %v", memberID, err)
 			continue

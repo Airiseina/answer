@@ -50,6 +50,7 @@ type BotConfig struct {
 	SystemPrompt string
 	UserID       int64
 	BaseUrl      string
+	Name         string
 }
 
 func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {

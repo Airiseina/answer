@@ -1,0 +1,203 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "在线用户数",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "aim_online_users",
+          "legendFormat": "在线用户",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "unit": "none"
+        }
+      }
+    },
+    {
+      "title": "消息吞吐量 (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(aim_message_sent_total[1m])",
+          "legendFormat": "发送",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(aim_message_received_total[1m])",
+          "legendFormat": "接收",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "title": "WebSocket 连接数",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(aim_ws_connect_total[5m])",
+          "legendFormat": "连接",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(aim_ws_disconnect_total[5m])",
+          "legendFormat": "断开",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "消息投递延迟 (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(aim_message_latency_bucket[5m]))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(aim_message_latency_bucket[5m]))",
+          "legendFormat": "P95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(aim_message_latency_bucket[5m]))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      }
+    },
+    {
+      "title": "Bot 请求总数",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "rate(aim_bot_request_total[1m])",
+          "legendFormat": "{{bot_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      }
+    },
+    {
+      "title": "Bot 响应延迟 (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(aim_bot_response_latency_bucket[5m]))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(aim_bot_response_latency_bucket[5m]))",
+          "legendFormat": "P95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(aim_bot_response_latency_bucket[5m]))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      }
+    },
+    {
+      "title": "MCP 工具调用",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+      "targets": [
+        {
+          "expr": "rate(aim_mcp_call_total[1m])",
+          "legendFormat": "{{server}}/{{tool}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(aim_mcp_call_errors[1m])",
+          "legendFormat": "errors/{{server}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "MCP 调用延迟 (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(aim_mcp_call_latency_bucket[5m]))",
+          "legendFormat": "P95/{{server}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      }
+    },
+    {
+      "title": "MCP 连接状态",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "aim_mcp_connect_total",
+          "legendFormat": "连接/{{server}}",
+          "refId": "A"
+        },
+        {
+          "expr": "aim_mcp_connect_errors",
+          "legendFormat": "错误/{{server}}",
+          "refId": "B"
+        },
+        {
+          "expr": "aim_mcp_reconnect_total",
+          "legendFormat": "重连/{{server}}",
+          "refId": "C"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["aim", "monitoring"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "AIM 监控仪表盘",
+  "uid": "aim-monitoring",
+  "version": 1
+}

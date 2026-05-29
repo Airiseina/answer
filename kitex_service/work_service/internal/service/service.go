@@ -11,6 +11,9 @@ import (
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
+	"github.com/Airiseina/answer/pkg/meter"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/kitex/pkg/klog"
@@ -42,10 +45,12 @@ func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer, mcpPool *m
 }
 
 func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId, senderId int64, content string, history []string) (bool, error) {
+	start := time.Now()
 	botCfg, err := rpc.GetBotConfig(ctx, botId)
 	if err != nil {
 		return false, fmt.Errorf("获取Bot[%d]配置失败: %w", botId, err)
 	}
+	meter.M.BotRequestTotal.Add(ctx, 1, metric.WithAttributes(attribute.Int64("bot_id", botId)))
 	var isGroupChat bool
 	if botCfg.UserID > 0 {
 		members, memberErr := rpc.GetConversationMembers(ctx, conversationId)
@@ -69,6 +74,9 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		} else {
 			isGroupChat = convType != rpc.ConvTypePrivate || len(members) > 2
 		}
+	}
+	if botCfg.UserID > 0 && botCfg.Name == "" {
+		botCfg.Name = rpc.GetUserName(ctx, botCfg.UserID)
 	}
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
 	botMcpServers := mcpServers
@@ -107,6 +115,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	if sendErr != nil {
 		return false, fmt.Errorf("bot[%d]消息入库失败: %w", botId, sendErr)
 	}
+	meter.M.BotResponseLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attribute.Int64("bot_id", botId)))
 	if svc.kafkaWriter != nil {
 		reply := map[string]interface{}{
 			"msg_id":            sendResp.GetMsgId(),
@@ -141,6 +150,9 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, searchRunID, 3)
 	memoryCancel()
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
+	if botCfg.Name != "" {
+		enhancedPrompt += fmt.Sprintf("\n\n你的名字是「%s」，当用户用@提及你时（如@%s），他们就是在和你说话。请自然地回应。", botCfg.Name, botCfg.Name)
+	}
 	var einoHistory []*schema.Message
 	for i, h := range history {
 		role := schema.Assistant
