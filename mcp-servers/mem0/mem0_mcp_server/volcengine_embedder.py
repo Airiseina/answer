@@ -2,8 +2,6 @@ import os
 import logging
 from typing import Optional, Literal
 
-import httpx
-
 from mem0.configs.embeddings.base import BaseEmbedderConfig
 from mem0.embeddings.base import EmbeddingBase
 
@@ -33,7 +31,11 @@ class VolcengineEmbedding(EmbeddingBase):
                 "Set EMBEDDING_API_KEY or ARK_API_KEY environment variable."
             )
 
-        self._client = httpx.Client(timeout=60.0)
+        from volcenginesdkarkruntime import Ark
+        self._ark_client = Ark(
+            api_key=self.api_key,
+            base_url=self.base_url,
+        )
         logger.info(
             "VolcengineEmbedding 初始化: model=%s, base_url=%s, dims=%d",
             self.config.model,
@@ -47,43 +49,28 @@ class VolcengineEmbedding(EmbeddingBase):
         memory_action: Optional[Literal["add", "search", "update"]] = None,
     ):
         text = text.replace("\n", " ")
-        url = f"{self.base_url}/embeddings/multimodal"
-        payload = {
+        kwargs = {
             "model": self.config.model,
             "input": [{"type": "text", "text": text}],
             "encoding_format": "float",
         }
         if self.config.embedding_dims in (1024, 2048):
-            payload["dimensions"] = self.config.embedding_dims
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-        }
+            kwargs["dimensions"] = self.config.embedding_dims
 
         try:
-            response = self._client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(
-                "Volcengine embedding API 错误: status=%d, body=%s",
-                e.response.status_code,
-                e.response.text[:500],
-            )
-            raise
-        except httpx.RequestError as e:
-            logger.error("Volcengine embedding 请求失败: %s", e)
+            resp = self._ark_client.multimodal_embeddings.create(**kwargs)
+        except Exception as e:
+            logger.error("Volcengine multimodal embedding 请求失败: %s", e)
             raise
 
-        if isinstance(data.get("data"), dict):
-            return data["data"]["embedding"]
-        elif isinstance(data.get("data"), list) and len(data["data"]) > 0:
-            return data["data"][0]["embedding"]
+        if hasattr(resp.data, "embedding"):
+            return resp.data.embedding
+        elif isinstance(resp.data, list) and len(resp.data) > 0:
+            return resp.data[0].embedding
         else:
             raise ValueError(
                 f"Unexpected response format from Volcengine multimodal API: "
-                f"type(data)={type(data.get('data')).__name__}"
+                f"type={type(resp.data).__name__}"
             )
 
     def embed_batch(self, texts, memory_action="add"):

@@ -65,15 +65,16 @@ func isMcpToolError(result string) bool {
 	return strings.HasPrefix(result, "Error executing tool") || strings.Contains(result, `"error"`)
 }
 
-func SearchMemories(ctx context.Context, pool *Pool, query string, userID string, runID string, limit int) string {
+func SearchMemories(ctx context.Context, pool *Pool, query string, userID string, botID string, runID string, limit int) string {
 	if err := ensureMem0Connected(ctx, pool); err != nil {
 		klog.Errorf("确保mem0连接失败: %v", err)
 		return ""
 	}
 	args := map[string]any{
-		"query":   query,
-		"user_id": userID,
-		"limit":   limit,
+		"query":    query,
+		"user_id":  userID,
+		"agent_id": botID,
+		"limit":    limit,
 	}
 	if runID != "" {
 		args["run_id"] = runID
@@ -90,15 +91,16 @@ func SearchMemories(ctx context.Context, pool *Pool, query string, userID string
 	return result
 }
 
-func SaveMemory(ctx context.Context, pool *Pool, content string, userID string, runID string) {
+func SaveMemory(ctx context.Context, pool *Pool, content string, userID string, botID string, runID string) {
 	if err := ensureMem0Connected(ctx, pool); err != nil {
 		klog.Errorf("确保mem0连接失败: %v", err)
 		return
 	}
 	result, err := pool.CallToolWithTimeout(ctx, "mem0", "add_memory", map[string]any{
-		"content": content,
-		"user_id": userID,
-		"run_id":  runID,
+		"content":  content,
+		"user_id":  userID,
+		"agent_id": botID,
+		"run_id":   runID,
 	}, memoryMcpTimeout)
 	if err != nil {
 		klog.Errorf("保存记忆失败: %v", err)

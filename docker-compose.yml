@@ -355,15 +355,15 @@ services:
       - MEM0_DB=mem0
       - QDRANT_HOST=answer_qdrant
       - QDRANT_PORT=6333
-      - LLM_MODEL=${MEM0_LLM_MODEL:-deepseek-v4-flash}
-      - LLM_BASE_URL=${MEM0_LLM_BASE_URL:-https://api.deepseek.com/v1}
-      - LLM_API_KEY=${MEM0_LLM_API_KEY:-}
-      - EMBEDDING_MODEL=${MEM0_EMBEDDING_MODEL:-doubao-embedding-vision-251215}
-      - EMBEDDING_BASE_URL=${MEM0_EMBEDDING_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
-      - EMBEDDING_API_KEY=${MEM0_EMBEDDING_API_KEY:-}
+      - LLM_MODEL=${MEM0_LLM_MODEL}
+      - LLM_BASE_URL=${MEM0_LLM_BASE_URL}
+      - LLM_API_KEY=${MEM0_LLM_API_KEY}
+      - EMBEDDING_MODEL=${MEM0_EMBEDDING_MODEL}
+      - EMBEDDING_BASE_URL=${MEM0_EMBEDDING_BASE_URL}
+      - EMBEDDING_API_KEY=${MEM0_EMBEDDING_API_KEY}
       - EMBEDDING_PROVIDER=${MEM0_EMBEDDING_PROVIDER:-volcengine}
-      - EMBEDDING_DIMS=${MEM0_EMBEDDING_DIMS:-2048}
-      - OPENAI_API_KEY=${MEM0_LLM_API_KEY:-}
+      - EMBEDDING_DIMS=${MEM0_EMBEDDING_DIMS}
+      - OPENAI_API_KEY=${MEM0_LLM_API_KEY}
     depends_on:
       mem0-postgres:
         condition: service_healthy
@@ -434,14 +434,19 @@ services:
     ports:
       - "9006:8001"
     environment:
-      - KNOWLEDGE_SERVICE_ADDR=http://knowledge-service:4326
+      - KNOWLEDGE_SERVICE_ADDR=http://host.docker.internal:4326
+      - MYSQL_HOST=answer_mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=123456
+      - MYSQL_DB=answer
       - QDRANT_HOST=answer_qdrant
       - QDRANT_PORT=6334
       - QDRANT_HTTP_PORT=6333
-      - EMBEDDING_MODEL=${KNOWLEDGE_EMBEDDING_MODEL:-doubao-embedding-vision-251215}
-      - EMBEDDING_BASE_URL=${KNOWLEDGE_EMBEDDING_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
-      - EMBEDDING_API_KEY=${KNOWLEDGE_EMBEDDING_API_KEY:-}
-      - EMBEDDING_DIMS=${KNOWLEDGE_EMBEDDING_DIMS:-2048}
+      - EMBEDDING_MODEL=${KNOWLEDGE_EMBEDDING_MODEL}
+      - EMBEDDING_BASE_URL=${KNOWLEDGE_EMBEDDING_BASE_URL}
+      - EMBEDDING_API_KEY=${KNOWLEDGE_DOUBAO_EMBEDDING_API_KEY}
+      - EMBEDDING_DIMS=${KNOWLEDGE_EMBEDDING_DIMS}
     networks:
       - answer-net
     restart: unless-stopped
@@ -449,27 +454,27 @@ services:
   # ==========================================
   # Knowledge Service (Kitex 微服务)
   # ==========================================
-  knowledge-service:
-    build:
-      context: .
-      dockerfile: kitex_service/knowledge_service/Dockerfile
-    container_name: answer_knowledge_service
-    environment:
-      - MYSQL_HOST=mysql
-      - ETCD_ADDR=etcd:2379
-      - OTEL_ADDR=otel-collector:4317
-      - KITEX_IP_TO_REGISTRY=answer_knowledge_service
-      - KAFKA_BROKERS=kafka-1:9092
-      - QDRANT_HOST=answer_qdrant
-      - QDRANT_PORT=6334
-    networks:
-      - answer-net
-    depends_on:
-      - mysql
-      - etcd
-      - kafka-1
-      - qdrant
-      - otel-collector
+#  knowledge-service:
+#    build:
+#      context: .
+#      dockerfile: kitex_service/knowledge_service/Dockerfile
+#    container_name: answer_knowledge_service
+#    environment:
+#      - MYSQL_HOST=mysql
+#      - ETCD_ADDR=etcd:2379
+#      - OTEL_ADDR=otel-collector:4317
+#      - KITEX_IP_TO_REGISTRY=answer_knowledge_service
+#      - KAFKA_BROKERS=kafka-1:9092
+#      - QDRANT_HOST=answer_qdrant
+#      - QDRANT_PORT=6334
+#    networks:
+#      - answer-net
+#    depends_on:
+#      - mysql
+#      - etcd
+#      - kafka-1
+#      - qdrant
+#      - otel-collector
 
   grafana:
     image: grafana/grafana:latest

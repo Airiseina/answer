@@ -133,7 +133,21 @@ def add_memory(
     if metadata:
         kwargs["metadata"] = metadata
     try:
+        logger.info("add_memory 调用: user_id=%s, agent_id=%s, run_id=%s, content_len=%d", user_id, agent_id, run_id, len(content))
         result = client.add(**kwargs)
+        result_list = result.get("results", []) if isinstance(result, dict) else result
+        if not result_list:
+            logger.info("add_memory infer=True返回空，回退到infer=False直接存储")
+            fallback_kwargs = {"messages": messages, "user_id": user_id, "infer": False}
+            if run_id:
+                fallback_kwargs["run_id"] = run_id
+            if agent_id:
+                fallback_kwargs["agent_id"] = agent_id
+            fallback_metadata = metadata.copy() if metadata else {}
+            fallback_metadata["source"] = "fallback"
+            fallback_kwargs["metadata"] = fallback_metadata
+            result = client.add(**fallback_kwargs)
+        logger.info("add_memory 结果: %s", json.dumps(result, ensure_ascii=False, default=str))
         return json.dumps(result, ensure_ascii=False, default=str)
     except Exception as e:
         logger.error("add_memory 失败: %s", e)
@@ -164,7 +178,12 @@ def search_memories(
     if agent_id:
         filters["agent_id"] = agent_id
     try:
+        logger.info("search_memories 调用: query=%s, user_id=%s, agent_id=%s, run_id=%s, limit=%d", query[:50], user_id, agent_id, run_id, limit)
         results = client.search(query=query, filters=filters, top_k=limit)
+        if isinstance(results, dict) and "results" in results:
+            results = results["results"]
+        results.sort(key=lambda m: 1 if isinstance(m, dict) and isinstance(m.get("metadata"), dict) and m["metadata"].get("source") == "fallback" else 0)
+        logger.info("search_memories 结果数: %d", len(results))
         return json.dumps(results, ensure_ascii=False, default=str)
     except Exception as e:
         logger.error("search_memories 失败: %s", e)
@@ -194,6 +213,8 @@ def get_all_memories(
         filters["agent_id"] = agent_id
     try:
         results = client.get_all(filters=filters, limit=limit)
+        if isinstance(results, dict) and "results" in results:
+            results = results["results"]
         return json.dumps(results, ensure_ascii=False, default=str)
     except Exception as e:
         logger.error("get_all_memories 失败: %s", e)

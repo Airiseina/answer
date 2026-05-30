@@ -84,7 +84,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	allMcpServers := append(mcp.GetBuiltinServerConfigs(), botMcpServers...)
 	var result string
 	if len(allMcpServers) > 0 {
-		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, content, history, isGroupChat)
+		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, botId, content, history, isGroupChat)
 	} else {
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
@@ -140,31 +140,31 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	return true, nil
 }
 
-func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId int64, content string, history []string, isGroupChat bool) string {
+func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId, botId int64, content string, history []string, isGroupChat bool) string {
 	userID := fmt.Sprintf("%d", senderId)
+	botID := fmt.Sprintf("%d", botId)
 	runID := fmt.Sprintf("%d", conversationId)
 	searchRunID := ""
 	if isGroupChat {
 		searchRunID = runID
 	}
 	memoryCtx, memoryCancel := context.WithTimeout(ctx, mcpTimeout)
-	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, searchRunID, 3)
+	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, botID, searchRunID, 3)
 	memoryCancel()
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
 	knowledgeCtx, knowledgeCancel := context.WithTimeout(ctx, mcpTimeout)
-	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, fmt.Sprintf("%d", botCfg.UserID))
+	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, botID)
 	knowledgeCancel()
 	if kbResult != "" {
 		var kbList struct {
-			Success        bool `json:"success"`
 			KnowledgeBases []struct {
-				KbId int64 `json:"kb_id"`
+				Id int64 `json:"id"`
 			} `json:"knowledge_bases"`
 		}
-		if err := json.Unmarshal([]byte(kbResult), &kbList); err == nil && kbList.Success && len(kbList.KnowledgeBases) > 0 {
+		if err := json.Unmarshal([]byte(kbResult), &kbList); err == nil && len(kbList.KnowledgeBases) > 0 {
 			var kbIDs []string
 			for _, kb := range kbList.KnowledgeBases {
-				kbIDs = append(kbIDs, fmt.Sprintf("%d", kb.KbId))
+				kbIDs = append(kbIDs, fmt.Sprintf("%d", kb.Id))
 			}
 			searchCtx, searchCancel := context.WithTimeout(ctx, mcpTimeout)
 			knowledgeResult := mcp.SearchKnowledge(searchCtx, svc.mcpPool, content, strings.Join(kbIDs, ","), 5)
@@ -221,7 +221,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		if isGroupChat {
 			saveRunID = runID
 		}
-		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, saveRunID)
+		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
 	}()
 	return agentResult
 }

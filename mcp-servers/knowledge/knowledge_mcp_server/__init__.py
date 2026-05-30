@@ -10,6 +10,7 @@ from starlette.routing import Mount, Route
 import uvicorn
 
 import httpx
+import pymysql
 
 logger = logging.getLogger("knowledge_mcp_server")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
@@ -25,8 +26,15 @@ _embedding_base_url = os.getenv("EMBEDDING_BASE_URL", "https://ark.cn-beijing.vo
 _embedding_model = os.getenv("EMBEDDING_MODEL", "doubao-embedding-vision-251215")
 _embedding_dims = int(os.getenv("EMBEDDING_DIMS", "2048"))
 
+_mysql_host = os.getenv("MYSQL_HOST", "answer_mysql")
+_mysql_port = int(os.getenv("MYSQL_PORT", "3306"))
+_mysql_user = os.getenv("MYSQL_USER", "root")
+_mysql_password = os.getenv("MYSQL_PASSWORD", "123456")
+_mysql_db = os.getenv("MYSQL_DB", "answer")
+
 logger.info("knowledge MCP Server 配置:")
 logger.info("  KnowledgeService: %s", _knowledge_service_addr)
+logger.info("  MySQL: %s:%d/%s", _mysql_host, _mysql_port, _mysql_db)
 logger.info("  Qdrant: %s:%d (gRPC), %s:%d (HTTP)", _qdrant_host, _qdrant_port, _qdrant_host, _qdrant_http_port)
 logger.info("  Embedding: model=%s, base_url=%s, dims=%d", _embedding_model, _embedding_base_url, _embedding_dims)
 
@@ -38,6 +46,18 @@ def _get_http_client() -> httpx.Client:
     if _http_client is None:
         _http_client = httpx.Client(timeout=30.0)
     return _http_client
+
+
+def _get_mysql_conn():
+    return pymysql.connect(
+        host=_mysql_host,
+        port=_mysql_port,
+        user=_mysql_user,
+        password=_mysql_password,
+        database=_mysql_db,
+        charset="utf8mb4",
+        cursorclass=pymysql.cursors.DictCursor,
+    )
 
 
 def _call_knowledge_service(method: str, endpoint: str, payload: dict = None) -> dict:
@@ -55,21 +75,44 @@ def _call_knowledge_service(method: str, endpoint: str, payload: dict = None) ->
         return {"error": str(e)}
 
 
+_ark_client: Optional = None
+
+
+def _get_ark_client():
+    global _ark_client
+    if _ark_client is None:
+        from volcenginesdkarkruntime import AsyncArk
+        _ark_client = AsyncArk(
+            api_key=_embedding_api_key,
+            base_url=_embedding_base_url,
+        )
+    return _ark_client
+
+
 async def _get_embedding(text: str) -> list:
-    import openai
-    client = openai.AsyncOpenAI(
-        api_key=_embedding_api_key,
-        base_url=_embedding_base_url,
-    )
-    resp = await client.embeddings.create(
-        model=_embedding_model,
-        input=text,
-    )
-    return resp.data[0].embedding
+    text = text.replace("\n", " ")
+    client = _get_ark_client()
+    kwargs = {
+        "model": _embedding_model,
+        "input": [{"type": "text", "text": text}],
+        "encoding_format": "float",
+    }
+    if _embedding_dims in (1024, 2048):
+        kwargs["dimensions"] = _embedding_dims
+    try:
+        resp = await client.multimodal_embeddings.create(**kwargs)
+    except Exception as e:
+        logger.error("Volcengine multimodal embedding 请求失败: %s", e)
+        raise
+    if hasattr(resp.data, "embedding"):
+        return resp.data.embedding
+    elif isinstance(resp.data, list) and len(resp.data) > 0:
+        return resp.data[0].embedding
+    else:
+        raise ValueError(f"Unexpected response format from Volcengine multimodal API: type={type(resp.data).__name__}")
 
 
 async def _search_qdrant(kb_ids: list, query_vector: list, top_k: int = 5) -> list:
-    import grpc
     from qdrant_client import QdrantClient
     from qdrant_client import models
 
@@ -147,8 +190,18 @@ def list_knowledge_bases(
         owner_id: The user identifier
     """
     try:
-        result = _call_knowledge_service("GET", "/api/knowledge/bases", {"owner_id": owner_id})
-        return json.dumps(result, ensure_ascii=False, default=str)
+        conn = _get_mysql_conn()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id, name, description, owner_id, doc_count, created_at, updated_at "
+                    "FROM knowledge_base WHERE owner_id = %s",
+                    (int(owner_id),),
+                )
+                rows = cursor.fetchall()
+            return json.dumps({"knowledge_bases": rows}, ensure_ascii=False, default=str)
+        finally:
+            conn.close()
     except Exception as e:
         logger.error("list_knowledge_bases 失败: %s", e)
         return json.dumps({"error": str(e)}, ensure_ascii=False)
@@ -164,8 +217,20 @@ def get_bot_knowledge_bases(
         bot_id: The bot identifier
     """
     try:
-        result = _call_knowledge_service("GET", "/api/knowledge/bot-bases", {"bot_id": bot_id})
-        return json.dumps(result, ensure_ascii=False, default=str)
+        conn = _get_mysql_conn()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT kb.id, kb.name, kb.description, kb.owner_id, kb.doc_count, kb.created_at, kb.updated_at "
+                    "FROM knowledge_base kb "
+                    "INNER JOIN bot_knowledge bk ON kb.id = bk.kb_id "
+                    "WHERE bk.bot_id = %s",
+                    (int(bot_id),),
+                )
+                rows = cursor.fetchall()
+            return json.dumps({"knowledge_bases": rows}, ensure_ascii=False, default=str)
+        finally:
+            conn.close()
     except Exception as e:
         logger.error("get_bot_knowledge_bases 失败: %s", e)
         return json.dumps({"error": str(e)}, ensure_ascii=False)

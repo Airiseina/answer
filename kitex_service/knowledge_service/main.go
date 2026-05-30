@@ -11,8 +11,10 @@ import (
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/kitex_gen/knowledge/knowledgeservice"
+	"github.com/Airiseina/answer/pkg/ai"
 	"github.com/Airiseina/answer/pkg/connect"
 	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/storage"
 	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
@@ -60,6 +62,8 @@ func main() {
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
+	storage.Init(v)
+	ai.AiInit()
 	qdrantClient, err := initQdrant()
 	if err != nil {
 		klog.Fatalf("连接Qdrant失败:%v", err)
@@ -77,7 +81,15 @@ func main() {
 	kafkaBrokers := []string{v.GetString("kafka.brokers")}
 	docParseTopic := v.GetString("kafka.topic.doc_parse")
 	kafkaGroup := v.GetString("kafka.group.knowledge")
-	docConsumer := consumer.NewDocParseConsumer(kafkaBrokers, docParseTopic, kafkaGroup, knowledgeService)
+	docConsumer := consumer.NewDocParseConsumer(kafkaBrokers, docParseTopic, kafkaGroup, knowledgeService, docDao)
+	stuckDocs, err := docDao.GetStuckDocuments()
+	if err == nil && len(stuckDocs) > 0 {
+		for _, doc := range stuckDocs {
+			_ = docDao.UpdateStatus(doc.ID, model.DocStatusPending, 0, "")
+			_ = knowledgeService.RepublishDocParse(doc.ID, doc.KBID)
+		}
+		klog.Infof("已重置%d个卡在parsing状态的文档", len(stuckDocs))
+	}
 	go docConsumer.Start()
 	defer docConsumer.Stop()
 	svr := knowledgeservice.NewServer(

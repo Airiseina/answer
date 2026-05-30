@@ -24,6 +24,8 @@ type DocumentDao interface {
 	DeleteByKBID(kbID int64) error
 	DeleteByID(docID int64) error
 	GetPendingDocuments(limit int) ([]model.KbDocument, error)
+	ResetStuckDocuments() error
+	GetStuckDocuments() ([]model.KbDocument, error)
 }
 
 type BotKnowledgeDao interface {

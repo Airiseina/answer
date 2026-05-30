@@ -143,7 +143,7 @@ func (svc *KnowledgeService) AddDocument(ctx context.Context, kbID, operatorID i
 		return 0, err
 	}
 	_ = svc.kbDao.IncrDocCount(kbID, 1)
-	if err := svc.publishDocParse(docID); err != nil {
+	if err := svc.publishDocParse(docID, kbID); err != nil {
 		klog.Warnf("文档[%d]解析消息发送失败(将等待轮询): %v", docID, err)
 	}
 	return docID, nil
@@ -377,10 +377,14 @@ func (svc *KnowledgeService) chunkDocument(parsed *parser.ParsedDocument, doc mo
 
 func (svc *KnowledgeService) downloadDocument(ctx context.Context, doc model.KbDocument) (string, error) {
 	fileURL := doc.FileURL
-	if strings.HasPrefix(fileURL, "/files") {
-		fileURL = storage.FilerURL + strings.TrimPrefix(fileURL, storage.PublicURL)
+	if strings.HasPrefix(fileURL, storage.PublicURL) {
+		fileURL = strings.TrimPrefix(fileURL, storage.PublicURL)
 	}
-	data, err := storage.Client.GetObject(ctx, filepath.Base(fileURL))
+	if strings.HasPrefix(fileURL, storage.BasePath) {
+		fileURL = strings.TrimPrefix(fileURL, storage.BasePath)
+	}
+	fileURL = strings.TrimPrefix(fileURL, "/")
+	data, err := storage.Client.GetObject(ctx, fileURL)
 	if err != nil {
 		return "", fmt.Errorf("下载文档失败: %w", err)
 	}
@@ -483,7 +487,7 @@ func getInt64Value(v *qdrant.Value) int64 {
 	}
 }
 
-func (svc *KnowledgeService) publishDocParse(docID int64) error {
+func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
 	if svc.kafkaBroker == "" || svc.kafkaTopic == "" {
 		return nil
 	}
@@ -496,8 +500,9 @@ func (svc *KnowledgeService) publishDocParse(docID int64) error {
 	defer writer.Close()
 	type docParseMsg struct {
 		DocID int64 `json:"doc_id"`
+		KbID  int64 `json:"kb_id"`
 	}
-	msg := docParseMsg{DocID: docID}
+	msg := docParseMsg{DocID: docID, KbID: kbID}
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("序列化文档解析消息失败: %w", err)
@@ -505,4 +510,8 @@ func (svc *KnowledgeService) publishDocParse(docID int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return writer.WriteMessages(ctx, kafka.Message{Value: data})
+}
+
+func (svc *KnowledgeService) RepublishDocParse(docID int64, kbID int64) error {
+	return svc.publishDocParse(docID, kbID)
 }

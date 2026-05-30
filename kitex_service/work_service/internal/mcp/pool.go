@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,14 +38,17 @@ type Connection struct {
 }
 
 type Pool struct {
-	mu       sync.RWMutex
-	conns    map[string]*Connection
-	cancelHC context.CancelFunc
+	mu         sync.RWMutex
+	conns      map[string]*Connection
+	cancelHC   context.CancelFunc
+	reconnMu   map[string]*sync.Mutex
+	reconnMuMu sync.Mutex
 }
 
 func NewPool() *Pool {
 	return &Pool{
-		conns: make(map[string]*Connection),
+		conns:    make(map[string]*Connection),
+		reconnMu: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -157,10 +161,47 @@ func (p *Pool) CallToolWithTimeout(ctx context.Context, serverName, toolName str
 		},
 	})
 	if err != nil {
-		meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
-		meter.M.McpCallErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		meter.M.McpCallLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attrs...))
-		return "", fmt.Errorf("MCP调用失败[%s.%s]: %w", serverName, toolName, err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "connection has been closed") || strings.Contains(errStr, "connection closed") || strings.Contains(errStr, "transport error") {
+			klog.Warnf("MCP调用连接已断开[%s.%s]，尝试重连: %v", serverName, toolName, err)
+			reconnCtx, reconnCancel := context.WithTimeout(context.Background(), defaultMcpTimeout)
+			reconnErr := p.Reconnect(reconnCtx, serverName)
+			reconnCancel()
+			if reconnErr != nil {
+				meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+				meter.M.McpCallErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
+				meter.M.McpCallLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attrs...))
+				return "", fmt.Errorf("MCP调用失败[%s.%s](连接断开，重连也失败): %w, 重连错误: %v", serverName, toolName, err, reconnErr)
+			}
+			p.mu.RLock()
+			conn, ok = p.conns[serverName]
+			p.mu.RUnlock()
+			if !ok {
+				meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+				meter.M.McpCallErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
+				return "", fmt.Errorf("MCP调用失败[%s.%s]: 重连后连接不存在", serverName, toolName)
+			}
+			retryCtx, retryCancel := context.WithTimeout(ctx, timeout)
+			defer retryCancel()
+			result, err = conn.Client.CallTool(retryCtx, mcpprotocol.CallToolRequest{
+				Params: mcpprotocol.CallToolParams{
+					Name:      toolName,
+					Arguments: args,
+				},
+			})
+			if err != nil {
+				meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+				meter.M.McpCallErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
+				meter.M.McpCallLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attrs...))
+				return "", fmt.Errorf("MCP调用失败[%s.%s](重连后重试): %w", serverName, toolName, err)
+			}
+			klog.Infof("MCP调用重连后重试成功[%s.%s]", serverName, toolName)
+		} else {
+			meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+			meter.M.McpCallErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
+			meter.M.McpCallLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attrs...))
+			return "", fmt.Errorf("MCP调用失败[%s.%s]: %w", serverName, toolName, err)
+		}
 	}
 	meter.M.McpCallTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
 	meter.M.McpCallLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attrs...))
@@ -199,7 +240,22 @@ func (p *Pool) HealthCheck(ctx context.Context) []string {
 	return unhealthy
 }
 
+func (p *Pool) getReconnMu(serverName string) *sync.Mutex {
+	p.reconnMuMu.Lock()
+	defer p.reconnMuMu.Unlock()
+	if mu, ok := p.reconnMu[serverName]; ok {
+		return mu
+	}
+	mu := &sync.Mutex{}
+	p.reconnMu[serverName] = mu
+	return mu
+}
+
 func (p *Pool) Reconnect(ctx context.Context, serverName string) error {
+	mu := p.getReconnMu(serverName)
+	mu.Lock()
+	defer mu.Unlock()
+
 	p.mu.Lock()
 	oldConn, ok := p.conns[serverName]
 	if !ok {
@@ -208,6 +264,9 @@ func (p *Pool) Reconnect(ctx context.Context, serverName string) error {
 	}
 	cfg := oldConn.Cfg
 	if oldConn.Client != nil {
+		if setter, ok := oldConn.Client.(interface{ OnConnectionLost(func(error)) }); ok {
+			setter.OnConnectionLost(nil)
+		}
 		_ = oldConn.Client.Close()
 	}
 	delete(p.conns, serverName)

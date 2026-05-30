@@ -151,8 +151,9 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   const handleDelete = async (botId: string) => {
     const res = await api('POST', '/api/bot/delete', { bot_id: botId })
-    showToast(res.code === 0 ? '已删除' : res.msg || '删除失败')
-    if (res.code === 0) loadBots()
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '已删除' : (res.msg || '删除失败'))
+    if (ok) loadBots()
   }
 
   const handleStartBotChat = async (botId: string) => {
@@ -312,8 +313,9 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   const handleMcpDelete = async (id: string) => {
     const res = await api('POST', '/api/bot/mcp/delete', { id })
-    showToast(res.code === 0 ? 'MCP Server 已删除' : res.msg || '删除失败')
-    if (res.code === 0) loadMcpServers(mcpBotId)
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? 'MCP Server 已删除' : (res.msg || '删除失败'))
+    if (ok) loadMcpServers(mcpBotId)
   }
 
   const handleMcpToggle = async (server: McpServerInfo) => {
@@ -359,7 +361,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
       name: kbForm.name,
       description: kbForm.description,
     })
-    if (res.code === 0) {
+    if (res.code === 0 && res.data?.kb_id) {
       showToast('知识库创建成功')
       setKbModal(null)
       setKbForm({ kb_id: '', name: '', description: '' })
@@ -375,7 +377,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
       name: kbForm.name,
       description: kbForm.description,
     })
-    if (res.code === 0) {
+    if (res.code === 0 && res.data?.success) {
       showToast('知识库已更新')
       setKbModal(null)
       setKbForm({ kb_id: '', name: '', description: '' })
@@ -387,8 +389,9 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   const handleKbDelete = async (kbId: string) => {
     const res = await api('POST', '/api/knowledge/delete', { kb_id: kbId })
-    showToast(res.code === 0 ? '知识库已删除' : res.msg || '删除失败')
-    if (res.code === 0) {
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '知识库已删除' : (res.msg || '删除失败'))
+    if (ok) {
       if (selectedKbId === kbId) {
         setSelectedKbId('')
         setDocuments([])
@@ -437,14 +440,16 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   const handleDocDelete = async (docId: string) => {
     const res = await api('POST', '/api/knowledge/document/delete', { doc_id: docId })
-    showToast(res.code === 0 ? '文档已删除' : res.msg || '删除失败')
-    if (res.code === 0) loadDocuments(selectedKbId)
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '文档已删除' : (res.msg || '删除失败'))
+    if (ok) loadDocuments(selectedKbId)
   }
 
   const handleDocRetry = async (docId: string) => {
     const res = await api('POST', '/api/knowledge/document/retry', { doc_id: docId })
-    showToast(res.code === 0 ? '已重新提交解析' : res.msg || '重试失败')
-    if (res.code === 0) loadDocuments(selectedKbId)
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '已重新提交解析' : (res.msg || '重试失败'))
+    if (ok) loadDocuments(selectedKbId)
   }
 
   const loadBotKnowledgeBases = async (botId: string) => {
@@ -457,7 +462,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
   const handleBindKb = async (kbId: string) => {
     if (!bindKbBotId) return
     const res = await api('POST', '/api/knowledge/bind', { bot_id: bindKbBotId, kb_id: kbId })
-    if (res.code === 0) {
+    if (res.code === 0 && res.data?.success) {
       showToast('已绑定知识库')
       loadBotKnowledgeBases(bindKbBotId)
     } else {
@@ -468,7 +473,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
   const handleUnbindKb = async (kbId: string) => {
     if (!bindKbBotId) return
     const res = await api('POST', '/api/knowledge/unbind', { bot_id: bindKbBotId, kb_id: kbId })
-    if (res.code === 0) {
+    if (res.code === 0 && res.data?.success) {
       showToast('已解绑知识库')
       loadBotKnowledgeBases(bindKbBotId)
     } else {

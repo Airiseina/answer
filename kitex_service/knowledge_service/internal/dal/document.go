@@ -75,3 +75,25 @@ func (d *documentDao) GetPendingDocuments(limit int) ([]model.KbDocument, error)
 	}
 	return docs, nil
 }
+
+func (d *documentDao) ResetStuckDocuments() error {
+	result := d.db.Model(&model.KbDocument{}).
+		Where("status = ?", model.DocStatusParsing).
+		Update("status", model.DocStatusPending)
+	if result.Error != nil {
+		return fmt.Errorf("重置卡住的文档状态失败: %w", result.Error)
+	}
+	if result.RowsAffected > 0 {
+		fmt.Printf("已重置%d个卡在parsing状态的文档为pending\n", result.RowsAffected)
+	}
+	return nil
+}
+
+func (d *documentDao) GetStuckDocuments() ([]model.KbDocument, error) {
+	var docs []model.KbDocument
+	err := d.db.Where("status = ?", model.DocStatusParsing).Find(&docs).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询卡住的文档失败: %w", err)
+	}
+	return docs, nil
+}
