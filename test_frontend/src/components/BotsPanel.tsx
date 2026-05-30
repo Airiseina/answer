@@ -47,9 +47,29 @@ interface McpServerInfo {
   created_at: string
 }
 
+interface KnowledgeBaseInfo {
+  kb_id: string
+  owner_id: string
+  name: string
+  description: string
+  doc_count: number
+  created_at: string
+}
+
+interface DocumentInfo {
+  doc_id: string
+  kb_id: string
+  file_name: string
+  file_type: string
+  file_size: number
+  status: string
+  chunk_count: number
+  created_at: string
+}
+
 export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
   const { conversations, setActiveConvId, loadConversations } = useApp()
-  const [tab, setTab] = useState<'create' | 'list' | 'mcp'>('list')
+  const [tab, setTab] = useState<'create' | 'list' | 'mcp' | 'knowledge'>('list')
   const [bots, setBots] = useState<BotInfo[]>([])
   const [toast, setToast] = useState('')
   const [addBotModal, setAddBotModal] = useState<{ botId: string; botName: string } | null>(null)
@@ -69,6 +89,17 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
   const [mcpServers, setMcpServers] = useState<McpServerInfo[]>([])
   const [mcpModal, setMcpModal] = useState<'create' | 'edit' | null>(null)
   const [mcpForm, setMcpForm] = useState({ id: '', name: '', url: '', description: '', transport: 'sse', auth_type: 'none', auth_token: '' })
+
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBaseInfo[]>([])
+  const [kbModal, setKbModal] = useState<'create' | 'edit' | null>(null)
+  const [kbForm, setKbForm] = useState({ kb_id: '', name: '', description: '' })
+  const [selectedKbId, setSelectedKbId] = useState('')
+  const [documents, setDocuments] = useState<DocumentInfo[]>([])
+  const [docFile, setDocFile] = useState<File | null>(null)
+  const docInputRef = useRef<HTMLInputElement>(null)
+  const [bindKbBotId, setBindKbBotId] = useState('')
+  const [botKnowledgeBases, setBotKnowledgeBases] = useState<KnowledgeBaseInfo[]>([])
+  const [bindModal, setBindModal] = useState(false)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -225,6 +256,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   useEffect(() => {
     if (tab === 'list') loadBots()
+    if (tab === 'knowledge') loadKnowledgeBases()
   }, [tab])
 
   useEffect(() => {
@@ -309,6 +341,141 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
     setMcpModal('edit')
   }
 
+  const loadKnowledgeBases = async () => {
+    const res = await api('GET', '/api/knowledge/list')
+    if (res.code === 0) {
+      setKnowledgeBases(res.data?.knowledge_bases || [])
+    } else {
+      showToast(res.msg || '获取知识库列表失败')
+    }
+  }
+
+  const handleKbCreate = async () => {
+    if (!kbForm.name) {
+      showToast('请填写知识库名称')
+      return
+    }
+    const res = await api('POST', '/api/knowledge/create', {
+      name: kbForm.name,
+      description: kbForm.description,
+    })
+    if (res.code === 0) {
+      showToast('知识库创建成功')
+      setKbModal(null)
+      setKbForm({ kb_id: '', name: '', description: '' })
+      loadKnowledgeBases()
+    } else {
+      showToast(res.msg || '创建失败')
+    }
+  }
+
+  const handleKbUpdate = async () => {
+    const res = await api('POST', '/api/knowledge/update', {
+      kb_id: kbForm.kb_id,
+      name: kbForm.name,
+      description: kbForm.description,
+    })
+    if (res.code === 0) {
+      showToast('知识库已更新')
+      setKbModal(null)
+      setKbForm({ kb_id: '', name: '', description: '' })
+      loadKnowledgeBases()
+    } else {
+      showToast(res.msg || '更新失败')
+    }
+  }
+
+  const handleKbDelete = async (kbId: string) => {
+    const res = await api('POST', '/api/knowledge/delete', { kb_id: kbId })
+    showToast(res.code === 0 ? '知识库已删除' : res.msg || '删除失败')
+    if (res.code === 0) {
+      if (selectedKbId === kbId) {
+        setSelectedKbId('')
+        setDocuments([])
+      }
+      loadKnowledgeBases()
+    }
+  }
+
+  const loadDocuments = async (kbId: string) => {
+    const res = await api('GET', `/api/knowledge/document/list?kb_id=${kbId}`)
+    if (res.code === 0) {
+      setDocuments(res.data?.documents || [])
+    } else {
+      showToast(res.msg || '获取文档列表失败')
+    }
+  }
+
+  const handleDocUpload = async () => {
+    if (!selectedKbId || !docFile) {
+      showToast('请选择要上传的文件')
+      return
+    }
+    const uploadRes = await uploadFile(docFile)
+    if (uploadRes.code !== 0 || !uploadRes.data?.url) {
+      showToast(uploadRes.msg || '文件上传失败')
+      return
+    }
+    const ext = docFile.name.split('.').pop()?.toLowerCase() || ''
+    const fileType = ext === 'pdf' ? 'pdf' : ext === 'md' ? 'md' : ext === 'docx' || ext === 'doc' ? 'docx' : ext === 'pptx' || ext === 'ppt' ? 'pptx' : 'txt'
+    const res = await api('POST', '/api/knowledge/document/add', {
+      kb_id: selectedKbId,
+      file_name: docFile.name,
+      file_url: uploadRes.data.url,
+      file_type: fileType,
+      file_size: docFile.size,
+    })
+    if (res.code === 0) {
+      showToast('文档已提交，正在解析中...')
+      setDocFile(null)
+      if (docInputRef.current) docInputRef.current.value = ''
+      loadDocuments(selectedKbId)
+    } else {
+      showToast(res.msg || '添加文档失败')
+    }
+  }
+
+  const handleDocDelete = async (docId: string) => {
+    const res = await api('POST', '/api/knowledge/document/delete', { doc_id: docId })
+    showToast(res.code === 0 ? '文档已删除' : res.msg || '删除失败')
+    if (res.code === 0) loadDocuments(selectedKbId)
+  }
+
+  const handleDocRetry = async (docId: string) => {
+    const res = await api('POST', '/api/knowledge/document/retry', { doc_id: docId })
+    showToast(res.code === 0 ? '已重新提交解析' : res.msg || '重试失败')
+    if (res.code === 0) loadDocuments(selectedKbId)
+  }
+
+  const loadBotKnowledgeBases = async (botId: string) => {
+    const res = await api('GET', `/api/knowledge/bot_bases?bot_id=${botId}`)
+    if (res.code === 0) {
+      setBotKnowledgeBases(res.data?.knowledge_bases || [])
+    }
+  }
+
+  const handleBindKb = async (kbId: string) => {
+    if (!bindKbBotId) return
+    const res = await api('POST', '/api/knowledge/bind', { bot_id: bindKbBotId, kb_id: kbId })
+    if (res.code === 0) {
+      showToast('已绑定知识库')
+      loadBotKnowledgeBases(bindKbBotId)
+    } else {
+      showToast(res.msg || '绑定失败')
+    }
+  }
+
+  const handleUnbindKb = async (kbId: string) => {
+    if (!bindKbBotId) return
+    const res = await api('POST', '/api/knowledge/unbind', { bot_id: bindKbBotId, kb_id: kbId })
+    if (res.code === 0) {
+      showToast('已解绑知识库')
+      loadBotKnowledgeBases(bindKbBotId)
+    } else {
+      showToast(res.msg || '解绑失败')
+    }
+  }
+
   const groupConversations = conversations.filter(c => c.type === 2)
 
   return (
@@ -321,6 +488,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
         <button className={`ctab ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>我的 Bot</button>
         <button className={`ctab ${tab === 'create' ? 'active' : ''}`} onClick={() => setTab('create')}>创建 Bot</button>
         <button className={`ctab ${tab === 'mcp' ? 'active' : ''}`} onClick={() => setTab('mcp')}>MCP 工具</button>
+        <button className={`ctab ${tab === 'knowledge' ? 'active' : ''}`} onClick={() => setTab('knowledge')}>知识库</button>
       </div>
       <div className="bots-content">
         {tab === 'create' && (
@@ -446,6 +614,90 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
             )}
           </div>
         )}
+
+        {tab === 'knowledge' && (
+          <div className="knowledge-tab">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px' }}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>我的知识库</span>
+              <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => {
+                setKbForm({ kb_id: '', name: '', description: '' })
+                setKbModal('create')
+              }}>+ 创建知识库</button>
+            </div>
+
+            {knowledgeBases.length === 0 ? (
+              <div className="contacts-empty" style={{ padding: '20px 0' }}>暂无知识库，点击"创建知识库"开始</div>
+            ) : (
+              <div className="mcp-server-list">
+                {knowledgeBases.map(kb => (
+                  <div key={kb.kb_id} className="mcp-server-item" style={{ cursor: 'pointer' }} onClick={() => { setSelectedKbId(kb.kb_id); loadDocuments(kb.kb_id) }}>
+                    <div className="mcp-server-main">
+                      <div className="mcp-server-info">
+                        <div className="mcp-server-name">
+                          📚 {kb.name}
+                          <span className="mcp-badge enabled">{kb.doc_count} 文档</span>
+                        </div>
+                        {kb.description && <div className="mcp-server-desc">{kb.description}</div>}
+                      </div>
+                    </div>
+                    <div className="mcp-server-actions" onClick={e => e.stopPropagation()}>
+                      <button className="btn-icon" title="绑定到Bot" onClick={() => { setBindKbBotId(''); setBotKnowledgeBases([]); setBindModal(true); setSelectedKbId(kb.kb_id) }} style={{ flexShrink: 0 }}>🤖</button>
+                      <button className="btn-icon" title="编辑" onClick={() => { setKbForm({ kb_id: kb.kb_id, name: kb.name, description: kb.description }); setKbModal('edit') }} style={{ flexShrink: 0 }}>✎</button>
+                      <button className="btn-icon" title="删除" onClick={() => handleKbDelete(kb.kb_id)} style={{ flexShrink: 0, color: 'var(--danger)' }}>✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedKbId && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 8px' }}>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>文档管理</span>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input ref={docInputRef} type="file" accept=".pdf,.md,.docx,.doc,.pptx,.ppt,.txt" style={{ display: 'none' }} onChange={e => { setDocFile(e.target.files?.[0] || null) }} />
+                    <button className="btn-cancel" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => docInputRef.current?.click()}>选择文件</button>
+                    {docFile && (
+                      <>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{docFile.name}</span>
+                        <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px' }} onClick={handleDocUpload}>上传</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>支持 PDF、Markdown、Word、PowerPoint 格式</div>
+                {documents.length === 0 ? (
+                  <div className="contacts-empty" style={{ padding: '16px 0' }}>暂无文档，上传文件开始构建知识库</div>
+                ) : (
+                  <div className="mcp-server-list">
+                    {documents.map(doc => (
+                      <div key={doc.doc_id} className="mcp-server-item">
+                        <div className="mcp-server-main">
+                          <div className="mcp-server-info">
+                            <div className="mcp-server-name">
+                              {doc.file_type === 'pdf' ? '📄' : doc.file_type === 'md' ? '📝' : doc.file_type === 'docx' ? '📃' : doc.file_type === 'pptx' ? '📊' : '📄'} {doc.file_name}
+                              <span className={`mcp-badge ${doc.status === 'completed' ? 'enabled' : doc.status === 'failed' ? 'disabled' : 'sse'}`}>
+                                {doc.status === 'completed' ? '已完成' : doc.status === 'failed' ? '失败' : doc.status === 'processing' ? '解析中' : '待解析'}
+                              </span>
+                              {doc.chunk_count > 0 && <span className="mcp-badge sse">{doc.chunk_count} 分块</span>}
+                            </div>
+                            <div className="mcp-server-url">{(doc.file_size / 1024).toFixed(1)} KB</div>
+                          </div>
+                        </div>
+                        <div className="mcp-server-actions">
+                          {doc.status === 'failed' && (
+                            <button className="btn-icon" title="重试" onClick={() => handleDocRetry(doc.doc_id)} style={{ flexShrink: 0 }}>🔄</button>
+                          )}
+                          <button className="btn-icon" title="删除" onClick={() => handleDocDelete(doc.doc_id)} style={{ flexShrink: 0, color: 'var(--danger)' }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {addBotModal && (
@@ -568,6 +820,67 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
               <button className="btn-primary" onClick={mcpModal === 'create' ? handleMcpCreate : handleMcpUpdate}>
                 {mcpModal === 'create' ? '添加' : '保存'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {kbModal && (
+        <div className="modal-overlay" onClick={() => setKbModal(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3>{kbModal === 'create' ? '创建知识库' : '编辑知识库'}</h3>
+            <div className="form-field">
+              <label>知识库名称 *</label>
+              <input value={kbForm.name} onChange={e => setKbForm({ ...kbForm, name: e.target.value })} placeholder="如: 产品文档、公司制度" />
+            </div>
+            <div className="form-field">
+              <label>描述</label>
+              <textarea value={kbForm.description} onChange={e => setKbForm({ ...kbForm, description: e.target.value })} placeholder="知识库用途描述" rows={3} style={{ width: '100%', resize: 'vertical', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setKbModal(null)}>取消</button>
+              <button className="btn-primary" onClick={kbModal === 'create' ? handleKbCreate : handleKbUpdate}>
+                {kbModal === 'create' ? '创建' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bindModal && (
+        <div className="modal-overlay" onClick={() => setBindModal(false)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3>绑定知识库到 Bot</h3>
+            <div className="form-field">
+              <label>选择 Bot</label>
+              <select value={bindKbBotId} onChange={e => { setBindKbBotId(e.target.value); if (e.target.value) loadBotKnowledgeBases(e.target.value) }} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
+                <option value="">-- 请选择 Bot --</option>
+                {bots.map(b => (
+                  <option key={b.bot_id} value={b.bot_id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+            {bindKbBotId && (
+              <>
+                <div style={{ margin: '8px 0', fontSize: 13, fontWeight: 600 }}>已绑定的知识库</div>
+                {botKnowledgeBases.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 0' }}>暂无绑定</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                    {botKnowledgeBases.map(kb => (
+                      <div key={kb.kb_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
+                        <span style={{ fontSize: 13 }}>📚 {kb.name}</span>
+                        <button className="btn-icon" style={{ fontSize: 12, color: 'var(--danger)' }} onClick={() => handleUnbindKb(kb.kb_id)}>解绑</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ margin: '8px 0', fontSize: 13, fontWeight: 600 }}>点击绑定当前知识库</div>
+                <button className="btn-primary full" onClick={() => handleBindKb(selectedKbId)}>绑定此知识库</button>
+              </>
+            )}
+            <div className="modal-actions" style={{ marginTop: 12 }}>
+              <button className="btn-cancel" onClick={() => setBindModal(false)}>关闭</button>
             </div>
           </div>
         </div>

@@ -1,9 +1,12 @@
 package storage
 
-import "github.com/Airiseina/answer/pkg/logger"
+import (
+	"github.com/Airiseina/answer/pkg/logger"
+	"github.com/spf13/viper"
+)
 
-func Init() {
-	InitSeaweedFS()
+func Init(v *viper.Viper) {
+	InitSeaweedFS(v)
 	if !HealthCheck() {
 		logger.Fatal("SeaweedFS健康检查失败")
 	}

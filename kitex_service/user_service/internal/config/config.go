@@ -1,18 +1,19 @@
 package config
 
 import (
-	"github.com/Airiseina/answer/pkg/config"
-
+	pkgconfig "github.com/Airiseina/answer/pkg/config"
 	"github.com/spf13/viper"
 )
 
+var V *viper.Viper
+
 func GetConfig() {
-	viper.SetDefault("mysql.host", "localhost")
-	viper.SetDefault("mysql.port", "3306")
-	viper.SetDefault("mysql.user", "root")
-	viper.SetDefault("mysql.password", "123456")
-	viper.SetDefault("mysql.name", "answer")
-	viper.SetDefault("etcd.Addr", "127.0.0.1:2379")
-	viper.SetDefault("otel.Addr", "localhost:4317")
-	config.LoadConfig()
+	V = pkgconfig.LoadConfig()
+	V.SetDefault("mysql.host", "localhost")
+	V.SetDefault("mysql.port", "3306")
+	V.SetDefault("mysql.user", "root")
+	V.SetDefault("mysql.password", "123456")
+	V.SetDefault("mysql.name", "answer")
+	V.SetDefault("etcd.Addr", "127.0.0.1:2379")
+	V.SetDefault("otel.Addr", "localhost:4317")
 }

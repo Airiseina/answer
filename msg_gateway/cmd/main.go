@@ -17,7 +17,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
-	"github.com/spf13/viper"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
@@ -106,7 +105,8 @@ func main() {
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
-	otelAddr := viper.GetString("otel.Addr")
+	v := config.V
+	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("msg_gateway", otelAddr)
 	defer p.Shutdown(context.Background())
 	meter.InitMeter("msg_gateway")
@@ -117,17 +117,17 @@ func main() {
 		observer.Observe(int64(count))
 		return nil
 	})
-	jwtKey = []byte(viper.GetString("jwt.Key"))
-	core.InitPushSecret(viper.GetString("jwt.Key"))
-	gatewayAddr := viper.GetString("gateway.addr")
+	jwtKey = []byte(v.GetString("jwt.Key"))
+	core.InitPushSecret(v.GetString("jwt.Key"))
+	gatewayAddr := v.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)
-	kafkaWriter, err := connect.ConnectKafkaProducer()
+	kafkaWriter, err := connect.ConnectKafkaProducer(v)
 	if err != nil {
 		klog.Fatalf("连接Kafka失败: %v", err)
 	}
 	core.InitKafkaProducer(kafkaWriter)
-	rpc.Connect()
-	botReplyReader, err := connect.ConnectKafkaConsumerGroup("bot-reply-group", "bot-reply-topic")
+	rpc.Connect(v)
+	botReplyReader, err := connect.ConnectKafkaConsumerGroup(v, "bot-reply-group", "bot-reply-topic")
 	if err != nil {
 		klog.Fatalf("连接Bot回复Kafka ConsumerGroup失败: %v", err)
 	}

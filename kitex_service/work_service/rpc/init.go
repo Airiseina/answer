@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Connect() {
-	etcdAddr := viper.GetString("etcd.Addr")
+func Connect(v *viper.Viper) {
+	etcdAddr := v.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdResolver([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("连接etcd出错:%v", err)

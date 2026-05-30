@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func ConnectRedis() (*redis.Client, error) {
-	addr := viper.GetString("redis.addr")
+func ConnectRedis(v *viper.Viper) (*redis.Client, error) {
+	addr := v.GetString("redis.addr")
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
 	})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
@@ -150,6 +151,27 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, searchRunID, 3)
 	memoryCancel()
 	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
+	knowledgeCtx, knowledgeCancel := context.WithTimeout(ctx, mcpTimeout)
+	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, fmt.Sprintf("%d", botCfg.UserID))
+	knowledgeCancel()
+	if kbResult != "" {
+		var kbList struct {
+			Success        bool `json:"success"`
+			KnowledgeBases []struct {
+				KbId int64 `json:"kb_id"`
+			} `json:"knowledge_bases"`
+		}
+		if err := json.Unmarshal([]byte(kbResult), &kbList); err == nil && kbList.Success && len(kbList.KnowledgeBases) > 0 {
+			var kbIDs []string
+			for _, kb := range kbList.KnowledgeBases {
+				kbIDs = append(kbIDs, fmt.Sprintf("%d", kb.KbId))
+			}
+			searchCtx, searchCancel := context.WithTimeout(ctx, mcpTimeout)
+			knowledgeResult := mcp.SearchKnowledge(searchCtx, svc.mcpPool, content, strings.Join(kbIDs, ","), 5)
+			searchCancel()
+			enhancedPrompt += mcp.BuildKnowledgePrompt(knowledgeResult)
+		}
+	}
 	if botCfg.Name != "" {
 		enhancedPrompt += fmt.Sprintf("\n\n你的名字是「%s」，当用户用@提及你时（如@%s），他们就是在和你说话。请自然地回应。", botCfg.Name, botCfg.Name)
 	}

@@ -9,12 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func ConnectMysql() (*gorm.DB, error) {
-	username := viper.GetString("mysql.user")
-	password := viper.GetString("mysql.password")
-	host := viper.GetString("mysql.host")
-	port := viper.GetString("mysql.port")
-	database := viper.GetString("mysql.name")
+func ConnectMysql(v *viper.Viper) (*gorm.DB, error) {
+	username := v.GetString("mysql.user")
+	password := v.GetString("mysql.password")
+	host := v.GetString("mysql.host")
+	port := v.GetString("mysql.port")
+	database := v.GetString("mysql.name")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", username, password, host, port, database)
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -29,13 +29,13 @@ func ConnectMysql() (*gorm.DB, error) {
 	return db, nil
 }
 
-func ConnectPostgres() (*gorm.DB, error) {
-	host := viper.GetString("postgres.host")
-	port := viper.GetString("postgres.port")
-	user := viper.GetString("postgres.user")
-	password := viper.GetString("postgres.password")
-	dbname := viper.GetString("postgres.dbname")
-	sslmode := viper.GetString("postgres.sslmode")
+func ConnectPostgres(v *viper.Viper) (*gorm.DB, error) {
+	host := v.GetString("postgres.host")
+	port := v.GetString("postgres.port")
+	user := v.GetString("postgres.user")
+	password := v.GetString("postgres.password")
+	dbname := v.GetString("postgres.dbname")
+	sslmode := v.GetString("postgres.sslmode")
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

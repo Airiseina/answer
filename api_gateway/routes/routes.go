@@ -61,4 +61,17 @@ func Routes(h *server.Hertz) {
 	authGroup.GET("/bot/mcp/list", handle.GetBotMcpServers)
 	authGroup.POST("/bot/mcp/update", handle.UpdateMcpServer)
 	authGroup.POST("/bot/mcp/delete", handle.DeleteMcpServer)
+
+	authGroup.POST("/knowledge/create", handle.CreateKnowledgeBase)
+	authGroup.GET("/knowledge/get", handle.GetKnowledgeBase)
+	authGroup.GET("/knowledge/list", handle.GetUserKnowledgeBases)
+	authGroup.POST("/knowledge/update", handle.UpdateKnowledgeBase)
+	authGroup.POST("/knowledge/delete", handle.DeleteKnowledgeBase)
+	authGroup.POST("/knowledge/document/add", handle.AddDocument)
+	authGroup.GET("/knowledge/document/list", handle.GetDocuments)
+	authGroup.POST("/knowledge/document/delete", handle.DeleteDocument)
+	authGroup.POST("/knowledge/document/retry", handle.RetryDocument)
+	authGroup.POST("/knowledge/bind", handle.BindKnowledgeBase)
+	authGroup.POST("/knowledge/unbind", handle.UnbindKnowledgeBase)
+	authGroup.GET("/knowledge/bot_bases", handle.GetBotKnowledgeBases)
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Connect() {
-	etcdAddr := viper.GetString("etcd.Addr")
+func Connect(v *viper.Viper) {
+	etcdAddr := v.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdResolver([]string{etcdAddr})
 	if err != nil {
 		hlog.Fatalf("连接etcd出错:%v", err)
@@ -17,4 +17,5 @@ func Connect() {
 	ConnectChatService(r)
 	ConnectBotService(r)
 	ConnectWorkService(r)
+	ConnectKnowledgeService(r)
 }

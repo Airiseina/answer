@@ -8,17 +8,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-func getBrokers() []string {
-	brokers := viper.GetStringSlice("kafka.brokers")
+func getBrokers(v *viper.Viper) []string {
+	brokers := v.GetStringSlice("kafka.brokers")
 	if len(brokers) == 0 {
 		return nil
 	}
 	return brokers
 }
 
-func newSASLMechanism() *plain.Mechanism {
-	username := viper.GetString("kafka.username")
-	password := viper.GetString("kafka.password")
+func newSASLMechanism(v *viper.Viper) *plain.Mechanism {
+	username := v.GetString("kafka.username")
+	password := v.GetString("kafka.password")
 	if username == "" || password == "" {
 		return nil
 	}
@@ -28,8 +28,8 @@ func newSASLMechanism() *plain.Mechanism {
 	}
 }
 
-func ConnectKafkaProducer() (*kafka.Writer, error) {
-	brokers := getBrokers()
+func ConnectKafkaProducer(v *viper.Viper) (*kafka.Writer, error) {
+	brokers := getBrokers(v)
 	if len(brokers) == 0 {
 		return nil, fmt.Errorf("kafka brokers未配置")
 	}
@@ -41,7 +41,7 @@ func ConnectKafkaProducer() (*kafka.Writer, error) {
 		RequiredAcks: kafka.RequireAll,
 		MaxAttempts:  5,
 	}
-	mechanism := newSASLMechanism()
+	mechanism := newSASLMechanism(v)
 	if mechanism != nil {
 		writer.Transport = &kafka.Transport{
 			SASL: mechanism,
@@ -50,8 +50,8 @@ func ConnectKafkaProducer() (*kafka.Writer, error) {
 	return writer, nil
 }
 
-func ConnectKafkaConsumerGroup(groupID string, topic string) (*kafka.Reader, error) {
-	brokers := getBrokers()
+func ConnectKafkaConsumerGroup(v *viper.Viper, groupID string, topic string) (*kafka.Reader, error) {
+	brokers := getBrokers(v)
 	if len(brokers) == 0 {
 		return nil, fmt.Errorf("kafka brokers未配置")
 	}
@@ -62,7 +62,7 @@ func ConnectKafkaConsumerGroup(groupID string, topic string) (*kafka.Reader, err
 		MinBytes: 1,
 		MaxBytes: 10e6,
 	}
-	mechanism := newSASLMechanism()
+	mechanism := newSASLMechanism(v)
 	if mechanism != nil {
 		readerConfig.Dialer = &kafka.Dialer{
 			SASLMechanism: mechanism,

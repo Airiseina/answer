@@ -23,7 +23,6 @@ import (
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -40,21 +39,22 @@ func main() {
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
-	otelAddr := viper.GetString("otel.Addr")
+	v := config.V
+	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("work_service", otelAddr)
 	defer p.Shutdown(context.Background())
 	meter.InitMeter("work_service")
 	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
 		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
 	}
-	etcdAddr := viper.GetString("etcd.Addr")
+	etcdAddr := v.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdRegistry([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
 	}
-	rpc.Connect()
+	rpc.Connect(v)
 	llmClient := llm.NewClient()
-	kafkaWriter, err := connect.ConnectKafkaProducer()
+	kafkaWriter, err := connect.ConnectKafkaProducer(v)
 	if err != nil {
 		klog.Fatalf("连接Kafka Producer失败: %v", err)
 	}
@@ -62,7 +62,7 @@ func main() {
 	mcpPool.StartHealthCheck()
 	defer mcpPool.Close()
 	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool)
-	kafkaReader, err := connect.ConnectKafkaConsumerGroup("bot-worker-group", "bot-task-topic")
+	kafkaReader, err := connect.ConnectKafkaConsumerGroup(v, "bot-worker-group", "bot-task-topic")
 	if err != nil {
 		klog.Fatalf("连接Kafka ConsumerGroup失败: %v", err)
 	}

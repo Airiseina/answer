@@ -1,25 +1,27 @@
 package config
 
 import (
-	"github.com/Airiseina/answer/pkg/config"
+	pkgconfig "github.com/Airiseina/answer/pkg/config"
 	"github.com/Airiseina/answer/pkg/storage"
 
 	"github.com/spf13/viper"
 )
 
+var V *viper.Viper
+
 func GetConfig() {
-	viper.SetDefault("jwt.Key", "Airiseina")
-	viper.SetDefault("etcd.Addr", "127.0.0.1:2379")
-	viper.SetDefault("otel.Addr", "localhost:4317")
-	viper.SetDefault("gateway.addr", "localhost:8082")
-	viper.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
-	viper.SetDefault("seaweedfs.base_path", "/chat")
-	viper.SetDefault("seaweedfs.public_url", "/files")
-	viper.SetDefault("kafka.brokers", []string{"127.0.0.1:9094"})
-	config.LoadConfig()
-	storage.FilerURL = viper.GetString("seaweedfs.filer_url")
-	storage.BasePath = viper.GetString("seaweedfs.base_path")
-	storage.PublicURL = viper.GetString("seaweedfs.public_url")
+	V = pkgconfig.LoadConfig()
+	V.SetDefault("jwt.Key", "Airiseina")
+	V.SetDefault("etcd.Addr", "127.0.0.1:2379")
+	V.SetDefault("otel.Addr", "localhost:4317")
+	V.SetDefault("gateway.addr", "localhost:8082")
+	V.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
+	V.SetDefault("seaweedfs.base_path", "/chat")
+	V.SetDefault("seaweedfs.public_url", "/files")
+	V.SetDefault("kafka.brokers", []string{"127.0.0.1:9094"})
+	storage.FilerURL = V.GetString("seaweedfs.filer_url")
+	storage.BasePath = V.GetString("seaweedfs.base_path")
+	storage.PublicURL = V.GetString("seaweedfs.public_url")
 	if storage.FilerURL == "" {
 		storage.FilerURL = "http://127.0.0.1:8888"
 	}

@@ -31,10 +31,10 @@ type SeaweedFSClient struct {
 	basePath   string
 }
 
-func InitSeaweedFS() {
-	FilerURL = viper.GetString("seaweedfs.filer_url")
-	BasePath = viper.GetString("seaweedfs.base_path")
-	PublicURL = viper.GetString("seaweedfs.public_url")
+func InitSeaweedFS(v *viper.Viper) {
+	FilerURL = v.GetString("seaweedfs.filer_url")
+	BasePath = v.GetString("seaweedfs.base_path")
+	PublicURL = v.GetString("seaweedfs.public_url")
 	if FilerURL == "" {
 		FilerURL = "http://127.0.0.1:8888"
 	}

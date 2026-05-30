@@ -4,6 +4,7 @@ use (
 	./api_gateway
 	./kitex_service/bot_service
 	./kitex_service/chat_service
+	./kitex_service/knowledge_service
 	./kitex_service/user_service
 	./kitex_service/work_service
 	./msg_gateway

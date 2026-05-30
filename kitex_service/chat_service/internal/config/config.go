@@ -1,20 +1,21 @@
 package config
 
 import (
-	"github.com/Airiseina/answer/pkg/config"
-
+	pkgconfig "github.com/Airiseina/answer/pkg/config"
 	"github.com/spf13/viper"
 )
 
+var V *viper.Viper
+
 func GetConfig() {
-	viper.SetDefault("postgres.host", "localhost")
-	viper.SetDefault("postgres.port", "5432")
-	viper.SetDefault("postgres.user", "postgres")
-	viper.SetDefault("postgres.password", "123456")
-	viper.SetDefault("postgres.dbname", "answer_chat")
-	viper.SetDefault("postgres.sslmode", "disable")
-	viper.SetDefault("redis.addr", "127.0.0.1:6379")
-	viper.SetDefault("etcd.Addr", "127.0.0.1:2379")
-	viper.SetDefault("otel.Addr", "localhost:4317")
-	config.LoadConfig()
+	V = pkgconfig.LoadConfig()
+	V.SetDefault("postgres.host", "localhost")
+	V.SetDefault("postgres.port", "5432")
+	V.SetDefault("postgres.user", "postgres")
+	V.SetDefault("postgres.password", "123456")
+	V.SetDefault("postgres.dbname", "answer_chat")
+	V.SetDefault("postgres.sslmode", "disable")
+	V.SetDefault("redis.addr", "127.0.0.1:6379")
+	V.SetDefault("etcd.Addr", "127.0.0.1:2379")
+	V.SetDefault("otel.Addr", "localhost:4317")
 }

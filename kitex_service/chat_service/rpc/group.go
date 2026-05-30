@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Airiseina/answer/kitex_service/chat_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group/groupservice"
 
@@ -15,13 +16,12 @@ import (
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
-	"github.com/spf13/viper"
 )
 
 var groupCli groupservice.Client
 
 func ConnectGroupService() {
-	etcdAddr := viper.GetString("etcd.Addr")
+	etcdAddr := config.V.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdResolver([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("连接etcd出错:%v", err)

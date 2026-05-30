@@ -1,0 +1,31 @@
+server:
+  port: 4326
+
+mysql:
+  host: localhost
+  port: 3306
+  user: root
+  password: "123456"
+  name: answer
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+kafka:
+  brokers: "localhost:9094"
+  topic:
+    doc_parse: "doc-parse"
+  group:
+    knowledge: "knowledge-group"
+
+qdrant:
+  host: localhost
+  port: 6334
+
+seaweedfs:
+  filer_url: "http://127.0.0.1:8888"
+  base_path: "/chat"
+  public_url: "/files"

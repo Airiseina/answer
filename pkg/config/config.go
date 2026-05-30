@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LoadConfig() {
+func LoadConfig() *viper.Viper {
 	v := viper.New()
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
@@ -17,9 +17,5 @@ func LoadConfig() {
 	if err := v.ReadInConfig(); err != nil {
 		log.Println("未找到配置文件，先使用默认值")
 	}
+	return v
 }
-
-//func GetConfig() {
-//	viper.SetDefault("redis.host", "localhost")
-//	viper.SetDefault("redis.port", "6379")
-//}

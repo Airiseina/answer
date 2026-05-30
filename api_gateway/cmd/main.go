@@ -18,7 +18,6 @@ import (
 	"github.com/hertz-contrib/cors"
 	hertzzap "github.com/hertz-contrib/logger/zap"
 	hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -35,12 +34,13 @@ func main() {
 	)
 	hlog.SetLogger(hertzZapLogger)
 	config.GetConfig()
-	storage.Init()
-	otelAddr := viper.GetString("otel.Addr")
+	v := config.V
+	storage.Init(v)
+	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("api_gateway", otelAddr)
 	defer p.Shutdown(context.Background())
 	meter.InitMeter("api_gateway")
-	rpc.Connect()
+	rpc.Connect(v)
 	tracerOptions, cfg := hertztracing.NewServerTracer()
 	h := server.New(server.WithHostPorts("0.0.0.0:1234"), server.WithMaxRequestBodySize(50*1024*1024), tracerOptions)
 	h.Use(hertztracing.ServerMiddleware(cfg))

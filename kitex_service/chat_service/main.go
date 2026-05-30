@@ -22,7 +22,6 @@ import (
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 	etcd "github.com/kitex-contrib/registry-etcd"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -39,14 +38,15 @@ func main() {
 	)
 	klog.SetLogger(kitexZapLogger)
 	config.GetConfig()
-	otelAddr := viper.GetString("otel.Addr")
+	v := config.V
+	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("chat_service", otelAddr)
 	defer p.Shutdown(context.Background())
 	meter.InitMeter("chat_service")
 	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
 		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
 	}
-	etcdAddr := viper.GetString("etcd.Addr")
+	etcdAddr := v.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdRegistry([]string{etcdAddr})
 	if err != nil {
 		klog.Fatalf("注册中心出错: %v", err)
@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
 	}
-	db, err := connect.ConnectPostgres()
+	db, err := connect.ConnectPostgres(v)
 	if err != nil {
 		klog.Fatalf("连接PostgreSQL失败:%v", err)
 	}
@@ -65,7 +65,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
-	rdb, err := connect.ConnectRedis()
+	rdb, err := connect.ConnectRedis(v)
 	if err != nil {
 		klog.Fatalf("连接Redis失败:%v", err)
 	}

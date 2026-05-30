@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Airiseina/answer/kitex_service/bot_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
 	"github.com/Airiseina/answer/pkg/snowflake"
 
 	"github.com/cloudwego/kitex/pkg/klog"
-	"github.com/spf13/viper"
 )
 
 type BotService struct {
@@ -240,9 +240,10 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	botId := svc.snowNode.Generate()
-	name := viper.GetString("ai.system.bot_name")
-	systemPrompt := viper.GetString("ai.system.bot_prompt")
-	promptFile := viper.GetString("ai.system.bot_prompt_file")
+	v := config.V
+	name := v.GetString("ai.system.bot_name")
+	systemPrompt := v.GetString("ai.system.bot_prompt")
+	promptFile := v.GetString("ai.system.bot_prompt_file")
 	if promptFile != "" {
 		data, err := os.ReadFile(promptFile)
 		if err != nil {
@@ -255,9 +256,9 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 		ID:           botId,
 		CreatorID:    0,
 		SystemPrompt: systemPrompt,
-		ApiKey:       viper.GetString("ai.system.bot_api_key"),
-		Model:        viper.GetString("ai.system.bot_model"),
-		BaseURL:      viper.GetString("ai.system.bot_base_url"),
+		ApiKey:       v.GetString("ai.system.bot_api_key"),
+		Model:        v.GetString("ai.system.bot_model"),
+		BaseURL:      v.GetString("ai.system.bot_base_url"),
 		IsSystem:     true,
 	}
 	err = svc.dao.CreateBot(systemBot)

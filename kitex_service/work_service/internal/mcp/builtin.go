@@ -1,7 +1,7 @@
 package mcp
 
 import (
-	"github.com/spf13/viper"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
 )
 
 type BuiltinServer struct {
@@ -11,30 +11,36 @@ type BuiltinServer struct {
 }
 
 func GetBuiltinServers() []BuiltinServer {
+	v := config.V
 	return []BuiltinServer{
 		{
 			Name:      "mem0",
-			URL:       viper.GetString("mcp.mem0_url"),
+			URL:       v.GetString("mcp.mem0_url"),
+			Transport: "sse",
+		},
+		{
+			Name:      "knowledge",
+			URL:       v.GetString("mcp.knowledge_url"),
 			Transport: "sse",
 		},
 		{
 			Name:      "weather",
-			URL:       viper.GetString("mcp.weather_url"),
+			URL:       v.GetString("mcp.weather_url"),
 			Transport: "sse",
 		},
 		{
 			Name:      "brave-search",
-			URL:       viper.GetString("mcp.brave_search_url"),
+			URL:       v.GetString("mcp.brave_search_url"),
 			Transport: "http",
 		},
 		{
 			Name:      "translate",
-			URL:       viper.GetString("mcp.translate_url"),
+			URL:       v.GetString("mcp.translate_url"),
 			Transport: "sse",
 		},
 		{
 			Name:      "timeserver",
-			URL:       viper.GetString("mcp.timeserver_url"),
+			URL:       v.GetString("mcp.timeserver_url"),
 			Transport: "sse",
 		},
 	}

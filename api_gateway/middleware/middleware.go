@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"github.com/Airiseina/answer/api_gateway/config"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
@@ -11,7 +12,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/hertz-contrib/jwt"
-	"github.com/spf13/viper"
 )
 
 var Authmiddleware *jwt.HertzJWTMiddleware
@@ -28,7 +28,7 @@ type Resp struct {
 }
 
 func JwtMiddleware() {
-	key := viper.GetString("jwt.Key")
+	key := config.V.GetString("jwt.Key")
 	var err error
 	Authmiddleware, err = jwt.New(&jwt.HertzJWTMiddleware{
 		Key:         []byte(key),
