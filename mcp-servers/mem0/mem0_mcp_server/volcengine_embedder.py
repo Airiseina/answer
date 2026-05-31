@@ -1,6 +1,6 @@
-import os
 import logging
-from typing import Optional, Literal
+import os
+from typing import Literal, Optional
 
 from mem0.configs.embeddings.base import BaseEmbedderConfig
 from mem0.embeddings.base import EmbeddingBase

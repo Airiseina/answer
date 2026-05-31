@@ -28,6 +28,7 @@ jobs:
           version: v2.1
           working-directory: .
           args: --timeout=5m
+          install-mode: goinstall
 
       - name: go vet (all modules)
         run: |

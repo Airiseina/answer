@@ -1,15 +1,14 @@
-import os
 import json
 import logging
+import os
 from typing import Optional
 
+import httpx
+import pymysql
 from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
-
-import httpx
-import pymysql
 
 logger = logging.getLogger("knowledge_mcp_server")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
