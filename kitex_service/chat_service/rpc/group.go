@@ -78,16 +78,3 @@ func GetMemberRole(ctx context.Context, groupId int64, userId int64) (int64, err
 	}
 	return -1, fmt.Errorf("用户不在群中")
 }
-
-func GetGroupOwnerID(ctx context.Context, groupId int64) (int64, error) {
-	resp, err := groupCli.GetGroupInfo(ctx, &group.GetGroupInfoReq{
-		GroupId: groupId,
-	})
-	if err != nil {
-		return 0, err
-	}
-	if resp.Group == nil || resp.Group.GroupId == 0 {
-		return 0, fmt.Errorf("群不存在")
-	}
-	return resp.Group.OwnerId, nil
-}

@@ -71,13 +71,3 @@ func GetOrCreatePrivateConversation(ctx context.Context, userIDA, userIDB int64)
 	}
 	return resp.ConversationId, nil
 }
-
-func GetConversationMembers(ctx context.Context, conversationID int64) ([]int64, error) {
-	resp, err := chatCli.GetConversationMembers(ctx, &chat.GetConversationMembersReq{
-		ConversationId: conversationID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return resp.MemberIds, nil
-}

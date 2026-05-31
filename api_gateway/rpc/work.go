@@ -1,10 +1,8 @@
 package rpc
 
 import (
-	"context"
 	"time"
 
-	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 
 	"github.com/cloudwego/kitex/client"
@@ -41,8 +39,4 @@ func ConnectWorkService(r discovery.Resolver) {
 		klog.Fatalf("连接work_service失败: %v", err)
 	}
 	workCli = c
-}
-
-func HandleMessage(ctx context.Context, req *work.HandleMessageReq) (*work.HandleMessageRes, error) {
-	return workCli.HandleMessage(ctx, req)
 }

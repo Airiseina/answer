@@ -90,7 +90,3 @@ func UnbindKnowledgeBase(ctx context.Context, req *knowledge.UnbindKnowledgeBase
 func GetBotKnowledgeBases(ctx context.Context, req *knowledge.GetBotKnowledgeBasesReq) (*knowledge.GetBotKnowledgeBasesRes, error) {
 	return knowledgeCli.GetBotKnowledgeBases(ctx, req)
 }
-
-func SearchKnowledge(ctx context.Context, req *knowledge.SearchKnowledgeReq) (*knowledge.SearchKnowledgeRes, error) {
-	return knowledgeCli.SearchKnowledge(ctx, req)
-}

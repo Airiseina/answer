@@ -59,12 +59,3 @@ func (p *PDFParser) Parse(filePath string) (*ParsedDocument, error) {
 		Sections: sections,
 	}, nil
 }
-
-func ExtractPDFPageCount(filePath string) (int, error) {
-	f, r, err := pdf.Open(filePath)
-	if err != nil {
-		return 0, fmt.Errorf("打开PDF文件失败: %w", err)
-	}
-	f.Close()
-	return r.NumPage(), nil
-}

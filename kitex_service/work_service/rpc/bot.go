@@ -80,18 +80,6 @@ func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
 	return cfg, nil
 }
 
-func IsBot(ctx context.Context, userId int64) (bool, int64, error) {
-	resp, err := botCli.IsBot(ctx, &bot.IsBotReq{UserId: userId})
-	if err != nil {
-		return false, 0, err
-	}
-	botId := int64(0)
-	if resp.IsSetBotId() {
-		botId = resp.GetBotId()
-	}
-	return resp.IsBot, botId, nil
-}
-
 func GetBotMcpServers(ctx context.Context, botId int64) (*bot.GetBotMcpServersRes, error) {
 	return botCli.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: botId})
 }

@@ -121,16 +121,3 @@ func RemoveConversationMembers(ctx context.Context, conversationID int64, member
 	}
 	return nil
 }
-
-func DeleteConversation(ctx context.Context, conversationID int64) error {
-	resp, err := chatCli.DeleteConversation(ctx, &chat.DeleteConversationReq{
-		ConversationId: conversationID,
-	})
-	if err != nil {
-		return err
-	}
-	if !resp.Success {
-		return fmt.Errorf("删除会话失败: chat_service 返回 success=false")
-	}
-	return nil
-}

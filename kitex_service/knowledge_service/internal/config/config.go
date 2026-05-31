@@ -24,4 +24,6 @@ func GetConfig() {
 	V.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
 	V.SetDefault("seaweedfs.base_path", "/chat")
 	V.SetDefault("seaweedfs.public_url", "/files")
+	V.SetDefault("embedding.api_key", "")
+	V.SetDefault("embedding.model", "doubao-embedding-vision-251215")
 }

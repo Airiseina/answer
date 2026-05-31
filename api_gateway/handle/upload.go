@@ -2,12 +2,13 @@ package handle
 
 import (
 	"context"
-	"github.com/Airiseina/answer/api_gateway/middleware"
-	"github.com/Airiseina/answer/api_gateway/response"
-	"github.com/Airiseina/answer/pkg/storage"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/response"
+	"github.com/Airiseina/answer/pkg/storage"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"

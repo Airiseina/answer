@@ -342,7 +342,7 @@ services:
   mcp-mem0:
     build:
       context: ../mcp-servers/mem0
-      dockerfile: ../mcp-servers/mem0/Dockerfile
+      dockerfile: Dockerfile
     container_name: answer_mcp_mem0
     ports:
       - "9004:8000"

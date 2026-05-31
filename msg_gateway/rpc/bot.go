@@ -86,7 +86,3 @@ func IsBotCached(ctx context.Context, userId int64) (bool, int64, error) {
 	})
 	return isBot, botId, nil
 }
-
-func InvalidateBotCache(userId int64) {
-	botCache.Delete(userId)
-}

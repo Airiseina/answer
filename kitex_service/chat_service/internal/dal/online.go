@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -79,17 +78,4 @@ func (dao *onlineDao) IsOnline(ctx context.Context, userID int64) (bool, string,
 		return false, "", fmt.Errorf("查询在线状态失败: %w", err)
 	}
 	return true, val, nil
-}
-
-func ParseUserID(key string) (int64, error) {
-	prefix := "online:"
-	if len(key) <= len(prefix) {
-		return 0, fmt.Errorf("无效的key: %s", key)
-	}
-	idStr := key[len(prefix):]
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("解析用户ID失败: %w", err)
-	}
-	return id, nil
 }

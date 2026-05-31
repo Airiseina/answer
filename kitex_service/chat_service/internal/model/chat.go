@@ -80,14 +80,6 @@ func NormalizeContent(content string) string {
 	return string(b)
 }
 
-func ParseContentType(content string) string {
-	var base BaseContent
-	if json.Unmarshal([]byte(content), &base) == nil {
-		return base.Type
-	}
-	return MsgTypeText
-}
-
 const (
 	ConvTypePrivate int16 = 1
 	ConvTypeGroup   int16 = 2

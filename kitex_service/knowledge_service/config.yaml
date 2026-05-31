@@ -29,3 +29,7 @@ seaweedfs:
   filer_url: "http://127.0.0.1:8888"
   base_path: "/chat"
   public_url: "/files"
+
+embedding:
+  api_key: "f5d13525-ce49-47ef-a26f-d42cf7cc0127"
+  model: "doubao-embedding-vision-251215"

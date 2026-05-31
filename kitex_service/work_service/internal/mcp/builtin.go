@@ -61,3 +61,17 @@ func GetBuiltinServerConfigs() []ServerConfig {
 	}
 	return configs
 }
+
+func FilterAgentServers(servers []ServerConfig) []ServerConfig {
+	internalNames := map[string]bool{
+		"mem0":      true,
+		"knowledge": true,
+	}
+	filtered := make([]ServerConfig, 0, len(servers))
+	for _, s := range servers {
+		if !internalNames[s.Name] {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
+}

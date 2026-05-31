@@ -127,20 +127,3 @@ func (c *DocParseConsumer) Stop() {
 	c.mu.Unlock()
 	c.wg.Wait()
 }
-
-func ProduceDocParseMessage(brokers []string, topic string, docID int64) error {
-	writer := &kafka.Writer{
-		Addr:         kafka.TCP(brokers...),
-		Balancer:     &kafka.LeastBytes{},
-		BatchTimeout: 10 * time.Millisecond,
-	}
-	defer writer.Close()
-	msg := DocParseMessage{DocID: docID}
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("序列化文档解析消息失败: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	return writer.WriteMessages(ctx, kafka.Message{Value: data})
-}

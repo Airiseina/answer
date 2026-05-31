@@ -5,7 +5,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --timeout 300 -r requirements.txt
 
-COPY . .
+RUN mkdir -p knowledge
+COPY __init__.py __main__.py knowledge/
 
 EXPOSE 8001
 

@@ -80,28 +80,9 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		botCfg.Name = rpc.GetUserName(ctx, botCfg.UserID)
 	}
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
-	botMcpServers := mcpServers
-	allMcpServers := append(mcp.GetBuiltinServerConfigs(), botMcpServers...)
+	agentMcpServers := mcp.FilterAgentServers(append(mcp.GetBuiltinServerConfigs(), mcpServers...))
 	var result string
-	if len(allMcpServers) > 0 {
-		result = svc.handleWithAgent(ctx, botCfg, allMcpServers, conversationId, senderId, botId, content, history, isGroupChat)
-	} else {
-		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
-		defer llmCancel()
-		var chatHistory []llm.ChatMessage
-		for i, h := range history {
-			role := "assistant"
-			if i%2 == 0 {
-				role = "user"
-			}
-			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
-		}
-		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
-		if llmErr != nil {
-			return false, fmt.Errorf("Bot[%d]调用LLM失败: %w", botId, llmErr)
-		}
-		result = llmResult
-	}
+	result = svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, history, isGroupChat)
 	if ctx.Err() != nil {
 		return false, fmt.Errorf("Bot[%d]处理消息超时，跳过发送", botId)
 	}

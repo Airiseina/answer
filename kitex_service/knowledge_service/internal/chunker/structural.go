@@ -39,16 +39,6 @@ func (c *StructuralChunker) ChunkFromSections(sections []parser.Section, opts Ch
 	return chunks
 }
 
-func (c *StructuralChunker) Chunk(text string, opts ChunkOptions) []Chunk {
-	return []Chunk{{
-		Content:    text,
-		Index:      0,
-		Source:     opts.Source,
-		PageNumber: opts.PageNumber,
-		Heading:    opts.Heading,
-	}}
-}
-
 func (c *StructuralChunker) splitLongSection(sec parser.Section, opts ChunkOptions, startIndex int) []Chunk {
 	content := sec.Content
 	if sec.Heading != "" {

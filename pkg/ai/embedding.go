@@ -12,7 +12,7 @@ import (
 
 func GetEmbedding(ctx context.Context, sen string) ([]float32, error) {
 	req := model.MultiModalEmbeddingRequest{
-		Model: DouBaoModel,
+		Model: douBaoModel,
 		Input: []model.MultimodalEmbeddingInput{
 			{
 				Type: "text",
@@ -32,7 +32,7 @@ func GetEmbeddings(ctx context.Context, msg []string) ([][]float32, error) {
 	var ress [][]float32
 	for _, m := range msg {
 		req := model.MultiModalEmbeddingRequest{
-			Model: DouBaoModel,
+			Model: douBaoModel,
 			Input: []model.MultimodalEmbeddingInput{
 				{
 					Type: "text",

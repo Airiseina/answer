@@ -1,10 +1,8 @@
 package rpc
 
 import (
-	"context"
 	"time"
 
-	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group/groupservice"
 
 	"github.com/cloudwego/kitex/client"
@@ -41,15 +39,4 @@ func ConnectGroupService(r discovery.Resolver) {
 		klog.Fatalf("连接group_service失败: %v", err)
 	}
 	groupCli = c
-}
-
-func CheckMuted(ctx context.Context, groupId int64, userId int64) (bool, error) {
-	resp, err := groupCli.CheckMuted(ctx, &group.CheckMutedReq{
-		GroupId: groupId,
-		UserId:  userId,
-	})
-	if err != nil {
-		return false, err
-	}
-	return resp.IsMuted, nil
 }

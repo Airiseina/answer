@@ -47,10 +47,6 @@ func CreateBot(ctx context.Context, req *bot.CreateBotReq) (*bot.CreateBotRes, e
 	return botCli.CreateBot(ctx, req)
 }
 
-func GetBotConfig(ctx context.Context, req *bot.GetBotConfigReq) (*bot.GetBotConfigRes, error) {
-	return botCli.GetBotConfig(ctx, req)
-}
-
 func GetUserBots(ctx context.Context, req *bot.GetUserBotsReq) (*bot.GetUserBotsRes, error) {
 	return botCli.GetUserBots(ctx, req)
 }
@@ -61,10 +57,6 @@ func UpdateBot(ctx context.Context, req *bot.UpdateBotReq) (*bot.CommonRes, erro
 
 func DeleteBot(ctx context.Context, req *bot.DeleteBotReq) (*bot.CommonRes, error) {
 	return botCli.DeleteBot(ctx, req)
-}
-
-func IsBot(ctx context.Context, req *bot.IsBotReq) (*bot.IsBotRes, error) {
-	return botCli.IsBot(ctx, req)
 }
 
 func AddBotToConversation(ctx context.Context, req *bot.AddBotToConversationReq) (*bot.AddBotToConversationRes, error) {

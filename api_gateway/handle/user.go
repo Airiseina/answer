@@ -2,11 +2,12 @@ package handle
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
-	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -14,7 +15,7 @@ import (
 
 type registerParam struct {
 	Account  string `json:"account"`
-	Name     string `json:"username"`
+	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
@@ -36,7 +37,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	if res.IsExit {
-		hlog.CtxWarnf(ctx, "注册重复, account=%s", param.Account)
+		hlog.CtxWarnf(ctx, "注册失败,用户已存在或未完善信息， account=%s", param.Account)
 		response.Error(c, "操作失败", "用户已存在或完善你的信息")
 		return
 	}

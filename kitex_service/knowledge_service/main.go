@@ -63,7 +63,7 @@ func main() {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
 	storage.Init(v)
-	ai.AiInit()
+	ai.AiInit(v)
 	qdrantClient, err := initQdrant()
 	if err != nil {
 		klog.Fatalf("连接Qdrant失败:%v", err)
