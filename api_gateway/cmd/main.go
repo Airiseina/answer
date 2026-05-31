@@ -9,9 +9,9 @@ import (
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/routes"
 	"github.com/Airiseina/answer/api_gateway/rpc"
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/observability/tracer"
 	"github.com/Airiseina/answer/pkg/storage"
-	"github.com/Airiseina/answer/pkg/tracer"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/hlog"

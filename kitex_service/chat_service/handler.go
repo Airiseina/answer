@@ -9,7 +9,7 @@ import (
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	"time"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

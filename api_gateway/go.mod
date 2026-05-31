@@ -75,14 +75,14 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.68.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.43.0 // indirect
 	go.opentelemetry.io/contrib/propagators/ot v1.43.0 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.43.0 // indirect
-	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
@@ -103,6 +103,7 @@ require (
 	github.com/Airiseina/answer/kitex_service/bot_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/chat_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/group_service v0.0.0
+	github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0-20260530171222-2e72a465e6f3
 	github.com/Airiseina/answer/kitex_service/user_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/work_service v0.0.0
 	github.com/Airiseina/answer/pkg v0.0.0

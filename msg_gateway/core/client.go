@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/gorilla/websocket"

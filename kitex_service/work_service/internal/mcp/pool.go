@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 	mcptool "github.com/cloudwego/eino-ext/components/tool/mcp"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/kitex/pkg/klog"

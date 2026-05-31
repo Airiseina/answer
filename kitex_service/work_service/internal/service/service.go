@@ -12,7 +12,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 

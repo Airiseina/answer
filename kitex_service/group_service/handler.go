@@ -8,7 +8,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	"github.com/Airiseina/answer/kitex_service/group_service/rpc"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

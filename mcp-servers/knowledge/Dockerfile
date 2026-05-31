@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 8001
 
-CMD ["python", "-m", "knowledge_mcp_server", "--mode", "sse", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python", "-m", "knowledge", "--mode", "sse", "--host", "0.0.0.0", "--port", "8001"]

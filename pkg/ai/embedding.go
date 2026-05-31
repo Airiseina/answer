@@ -6,7 +6,7 @@ import (
 	"github.com/volcengine/volcengine-go-sdk/service/arkruntime/model"
 	"github.com/volcengine/volcengine-go-sdk/volcengine"
 
-	"github.com/Airiseina/answer/pkg/logger"
+	"github.com/Airiseina/answer/pkg/observability/logger"
 	"go.uber.org/zap"
 )
 

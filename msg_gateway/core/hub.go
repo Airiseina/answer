@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 	"github.com/Airiseina/answer/pkg/storage"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"

@@ -5,7 +5,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/user_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
 
-	"github.com/Airiseina/answer/pkg/meter"
+	"github.com/Airiseina/answer/pkg/observability/meter"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"go.opentelemetry.io/otel/attribute"

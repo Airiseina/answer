@@ -9,9 +9,9 @@ import (
 	"github.com/Airiseina/answer/msg_gateway/config"
 	"github.com/Airiseina/answer/msg_gateway/core"
 	"github.com/Airiseina/answer/msg_gateway/rpc"
-	"github.com/Airiseina/answer/pkg/connect"
-	"github.com/Airiseina/answer/pkg/meter"
-	"github.com/Airiseina/answer/pkg/tracer"
+	"github.com/Airiseina/answer/pkg/infra"
+	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/observability/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/golang-jwt/jwt/v4"
@@ -121,13 +121,13 @@ func main() {
 	core.InitPushSecret(v.GetString("jwt.Key"))
 	gatewayAddr := v.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)
-	kafkaWriter, err := connect.ConnectKafkaProducer(v)
+	kafkaWriter, err := infra.ConnectKafkaProducer(v)
 	if err != nil {
 		klog.Fatalf("连接Kafka失败: %v", err)
 	}
 	core.InitKafkaProducer(kafkaWriter)
 	rpc.Connect(v)
-	botReplyReader, err := connect.ConnectKafkaConsumerGroup(v, "bot-reply-group", "bot-reply-topic")
+	botReplyReader, err := infra.ConnectKafkaConsumerGroup(v, "bot-reply-group", "bot-reply-topic")
 	if err != nil {
 		klog.Fatalf("连接Bot回复Kafka ConsumerGroup失败: %v", err)
 	}

@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/Airiseina/answer/pkg/logger"
+	"github.com/Airiseina/answer/pkg/observability/logger"
 	"github.com/spf13/viper"
 )
 

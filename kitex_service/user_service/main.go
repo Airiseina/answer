@@ -10,9 +10,9 @@ import (
 	"github.com/Airiseina/answer/kitex_service/user_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/user_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user/loginservice"
-	"github.com/Airiseina/answer/pkg/connect"
-	"github.com/Airiseina/answer/pkg/meter"
-	"github.com/Airiseina/answer/pkg/tracer"
+	"github.com/Airiseina/answer/pkg/infra"
+	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/observability/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"
@@ -54,7 +54,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
 	}
-	db, err := connect.ConnectMysql(v)
+	db, err := infra.ConnectMysql(v)
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}

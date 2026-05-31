@@ -10,12 +10,12 @@ dist
 
 kitex_service/bot_service/config.yaml
 
-api_gateway/CHANGELOG.md
+docs/CHANGELOG.md
 
-api_gateway/Group_API_Docs.md
+docs/Group_API_Docs.md
 
-api_gateway/api_doc.md
+docs/api_doc.md
 
-question.md
+docs/question.md
 
-路线.md
+docs/路线.md

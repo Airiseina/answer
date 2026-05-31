@@ -11,9 +11,9 @@ import (
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/service"
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat/chatservice"
 	"github.com/Airiseina/answer/kitex_service/chat_service/rpc"
-	"github.com/Airiseina/answer/pkg/connect"
-	"github.com/Airiseina/answer/pkg/meter"
-	"github.com/Airiseina/answer/pkg/tracer"
+	"github.com/Airiseina/answer/pkg/infra"
+	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/observability/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"
@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
 	}
-	db, err := connect.ConnectPostgres(v)
+	db, err := infra.ConnectPostgres(v)
 	if err != nil {
 		klog.Fatalf("连接PostgreSQL失败:%v", err)
 	}
@@ -65,7 +65,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
-	rdb, err := connect.ConnectRedis(v)
+	rdb, err := infra.ConnectRedis(v)
 	if err != nil {
 		klog.Fatalf("连接Redis失败:%v", err)
 	}

@@ -12,9 +12,9 @@ import (
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
-	"github.com/Airiseina/answer/pkg/connect"
-	"github.com/Airiseina/answer/pkg/meter"
-	"github.com/Airiseina/answer/pkg/tracer"
+	"github.com/Airiseina/answer/pkg/infra"
+	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/observability/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"
@@ -54,7 +54,7 @@ func main() {
 	}
 	rpc.Connect(v)
 	llmClient := llm.NewClient()
-	kafkaWriter, err := connect.ConnectKafkaProducer(v)
+	kafkaWriter, err := infra.ConnectKafkaProducer(v)
 	if err != nil {
 		klog.Fatalf("连接Kafka Producer失败: %v", err)
 	}
@@ -62,7 +62,7 @@ func main() {
 	mcpPool.StartHealthCheck()
 	defer mcpPool.Close()
 	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool)
-	kafkaReader, err := connect.ConnectKafkaConsumerGroup(v, "bot-worker-group", "bot-task-topic")
+	kafkaReader, err := infra.ConnectKafkaConsumerGroup(v, "bot-worker-group", "bot-task-topic")
 	if err != nil {
 		klog.Fatalf("连接Kafka ConsumerGroup失败: %v", err)
 	}
