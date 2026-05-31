@@ -12,8 +12,20 @@ concurrency:
 
 jobs:
   go-lint:
-    name: Go Lint & Vet
+    name: Go Lint (${{ matrix.module }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module:
+          - api_gateway
+          - msg_gateway
+          - kitex_service/bot_service
+          - kitex_service/chat_service
+          - kitex_service/group_service
+          - kitex_service/knowledge_service
+          - kitex_service/user_service
+          - kitex_service/work_service
+          - pkg
     steps:
       - uses: actions/checkout@v4
 
@@ -26,18 +38,14 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1
-          working-directory: .
+          working-directory: ${{ matrix.module }}
           args: --timeout=5m
           install-mode: goinstall
 
-      - name: go vet (all modules)
+      - name: go vet
         run: |
-          for mod in $(find . -name "go.mod" -not -path "./.git/*"); do
-            dir=$(dirname "$mod")
-            echo "::group::go vet $dir"
-            (cd "$dir" && go vet ./...)
-            echo "::endgroup::"
-          done
+          cd ${{ matrix.module }}
+          go vet ./...
 
   go-build:
     name: Go Build

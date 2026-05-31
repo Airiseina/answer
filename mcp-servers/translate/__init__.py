@@ -36,7 +36,12 @@ def translate_text(
     if prov == "deepl_free":
         api_key = os.getenv("DEEPL_API_KEY", "")
         if not api_key:
-            return json.dumps({"error": "DEEPL_API_KEY environment variable is required for deepl_free provider"}, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": "DEEPL_API_KEY environment variable is required for deepl_free provider"
+                },
+                ensure_ascii=False,
+            )
         resp = httpx.post(
             DEEPL_FREE_API,
             data={
@@ -50,12 +55,15 @@ def translate_text(
         resp.raise_for_status()
         data = resp.json()
         translated = data["translations"][0]["text"]
-        return json.dumps({
-            "translated_text": translated,
-            "source_lang": source_lang,
-            "target_lang": target_lang,
-            "provider": "deepl_free",
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "translated_text": translated,
+                "source_lang": source_lang,
+                "target_lang": target_lang,
+                "provider": "deepl_free",
+            },
+            ensure_ascii=False,
+        )
 
     resp = httpx.get(
         MYMEMORY_API,
@@ -74,12 +82,15 @@ def translate_text(
             translated = matches[0].get("translation", text)
         else:
             translated = text
-    return json.dumps({
-        "translated_text": translated,
-        "source_lang": source_lang,
-        "target_lang": target_lang,
-        "provider": "mymemory",
-    }, ensure_ascii=False)
+    return json.dumps(
+        {
+            "translated_text": translated,
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "provider": "mymemory",
+        },
+        ensure_ascii=False,
+    )
 
 
 @mcp.tool()
@@ -90,13 +101,14 @@ def detect_language(text: str) -> str:
         text: The text to detect the language of
     """
     import re
-    cjk = len(re.findall(r'[\u4e00-\u9fff]', text))
-    hiragana = len(re.findall(r'[\u3040-\u309f]', text))
-    katakana = len(re.findall(r'[\u30a0-\u30ff]', text))
-    hangul = len(re.findall(r'[\uac00-\ud7af]', text))
-    cyrillic = len(re.findall(r'[\u0400-\u04ff]', text))
-    arabic = len(re.findall(r'[\u0600-\u06ff]', text))
-    latin = len(re.findall(r'[a-zA-Z]', text))
+
+    cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+    hiragana = len(re.findall(r"[\u3040-\u309f]", text))
+    katakana = len(re.findall(r"[\u30a0-\u30ff]", text))
+    hangul = len(re.findall(r"[\uac00-\ud7af]", text))
+    cyrillic = len(re.findall(r"[\u0400-\u04ff]", text))
+    arabic = len(re.findall(r"[\u0600-\u06ff]", text))
+    latin = len(re.findall(r"[a-zA-Z]", text))
     scores = {
         "zh": cjk,
         "ja": hiragana + katakana,
@@ -108,7 +120,9 @@ def detect_language(text: str) -> str:
     detected = max(scores, key=scores.get)
     if scores[detected] == 0:
         detected = "unknown"
-    return json.dumps({"detected_lang": detected, "text_sample": text[:100]}, ensure_ascii=False)
+    return json.dumps(
+        {"detected_lang": detected, "text_sample": text[:100]}, ensure_ascii=False
+    )
 
 
 @mcp.tool()

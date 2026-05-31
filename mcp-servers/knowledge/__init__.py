@@ -11,7 +11,9 @@ from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 
 logger = logging.getLogger("knowledge_mcp_server")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s"
+)
 
 mcp = FastMCP("knowledge")
 
@@ -20,7 +22,9 @@ _qdrant_host = os.getenv("QDRANT_HOST", "answer_qdrant")
 _qdrant_port = int(os.getenv("QDRANT_PORT", "6334"))
 _qdrant_http_port = int(os.getenv("QDRANT_HTTP_PORT", "6333"))
 _embedding_api_key = os.getenv("EMBEDDING_API_KEY", "")
-_embedding_base_url = os.getenv("EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
+_embedding_base_url = os.getenv(
+    "EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"
+)
 _embedding_model = os.getenv("EMBEDDING_MODEL", "doubao-embedding-vision-251215")
 _embedding_dims = int(os.getenv("EMBEDDING_DIMS", "2048"))
 
@@ -33,8 +37,19 @@ _mysql_db = os.getenv("MYSQL_DB", "answer")
 logger.info("knowledge MCP Server 配置:")
 logger.info("  KnowledgeService: %s", _knowledge_service_addr)
 logger.info("  MySQL: %s:%d/%s", _mysql_host, _mysql_port, _mysql_db)
-logger.info("  Qdrant: %s:%d (gRPC), %s:%d (HTTP)", _qdrant_host, _qdrant_port, _qdrant_host, _qdrant_http_port)
-logger.info("  Embedding: model=%s, base_url=%s, dims=%d", _embedding_model, _embedding_base_url, _embedding_dims)
+logger.info(
+    "  Qdrant: %s:%d (gRPC), %s:%d (HTTP)",
+    _qdrant_host,
+    _qdrant_port,
+    _qdrant_host,
+    _qdrant_http_port,
+)
+logger.info(
+    "  Embedding: model=%s, base_url=%s, dims=%d",
+    _embedding_model,
+    _embedding_base_url,
+    _embedding_dims,
+)
 
 _http_client: Optional[httpx.Client] = None
 
@@ -80,6 +95,7 @@ def _get_ark_client():
     global _ark_client
     if _ark_client is None:
         from volcenginesdkarkruntime import AsyncArk
+
         _ark_client = AsyncArk(
             api_key=_embedding_api_key,
             base_url=_embedding_base_url,
@@ -107,7 +123,9 @@ async def _get_embedding(text: str) -> list:
     elif isinstance(resp.data, list) and len(resp.data) > 0:
         return resp.data[0].embedding
     else:
-        raise ValueError(f"Unexpected response format from Volcengine multimodal API: type={type(resp.data).__name__}")
+        raise ValueError(
+            f"Unexpected response format from Volcengine multimodal API: type={type(resp.data).__name__}"
+        )
 
 
 async def _search_qdrant(kb_ids: list, query_vector: list, top_k: int = 5) -> list:
@@ -168,6 +186,7 @@ def search_knowledge(
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 results = pool.submit(asyncio.run, _do_search()).result()
         else:
@@ -197,7 +216,9 @@ def list_knowledge_bases(
                     (int(owner_id),),
                 )
                 rows = cursor.fetchall()
-            return json.dumps({"knowledge_bases": rows}, ensure_ascii=False, default=str)
+            return json.dumps(
+                {"knowledge_bases": rows}, ensure_ascii=False, default=str
+            )
         finally:
             conn.close()
     except Exception as e:
@@ -226,7 +247,9 @@ def get_bot_knowledge_bases(
                     (int(bot_id),),
                 )
                 rows = cursor.fetchall()
-            return json.dumps({"knowledge_bases": rows}, ensure_ascii=False, default=str)
+            return json.dumps(
+                {"knowledge_bases": rows}, ensure_ascii=False, default=str
+            )
         finally:
             conn.close()
     except Exception as e:

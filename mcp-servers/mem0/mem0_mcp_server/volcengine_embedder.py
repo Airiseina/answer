@@ -21,8 +21,7 @@ class VolcengineEmbedding(EmbeddingBase):
             or os.getenv("ARK_API_KEY")
         )
         self.base_url = (
-            self.config.openai_base_url
-            or "https://ark.cn-beijing.volces.com/api/v3"
+            self.config.openai_base_url or "https://ark.cn-beijing.volces.com/api/v3"
         ).rstrip("/")
 
         if not self.api_key:
@@ -32,6 +31,7 @@ class VolcengineEmbedding(EmbeddingBase):
             )
 
         from volcenginesdkarkruntime import Ark
+
         self._ark_client = Ark(
             api_key=self.api_key,
             base_url=self.base_url,
