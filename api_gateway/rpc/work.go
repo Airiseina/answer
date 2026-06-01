@@ -1,8 +1,10 @@
 package rpc
 
 import (
+	"context"
 	"time"
 
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 
 	"github.com/cloudwego/kitex/client"
@@ -39,4 +41,12 @@ func ConnectWorkService(r discovery.Resolver) {
 		klog.Fatalf("连接work_service失败: %v", err)
 	}
 	workCli = c
+}
+
+func SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq) (*work.SummarizeConversationRes, error) {
+	return workCli.SummarizeConversation(ctx, req)
+}
+
+func SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq) (*work.SuggestRepliesRes, error) {
+	return workCli.SuggestReplies(ctx, req)
 }

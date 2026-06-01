@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -157,12 +158,43 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		enhancedPrompt += fmt.Sprintf("\n\n你的名字是「%s」，当用户用@提及你时（如@%s），他们就是在和你说话。请自然地回应。", botCfg.Name, botCfg.Name)
 	}
 	var einoHistory []*schema.Message
-	for i, h := range history {
-		role := schema.Assistant
-		if i%2 == 0 {
-			role = schema.User
+	historyLimit := int16(10)
+	historyMsgs, histErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, historyLimit)
+	if histErr != nil {
+		klog.CtxWarnf(ctx, "获取会话[%d]历史消息失败，继续无上下文处理: %v", conversationId, histErr)
+	} else {
+		senderIDs := make([]int64, 0, len(historyMsgs))
+		for _, m := range historyMsgs {
+			senderIDs = append(senderIDs, m.SenderId)
 		}
-		einoHistory = append(einoHistory, &schema.Message{Role: role, Content: h})
+		senderNameMap := make(map[int64]string)
+		if len(senderIDs) > 0 {
+			nameResp, nameErr := rpc.GetUserNames(ctx, senderIDs)
+			if nameErr == nil && nameResp != nil {
+				for _, u := range nameResp {
+					senderNameMap[u.Id] = u.Name
+				}
+			}
+		}
+		for _, m := range historyMsgs {
+			content := m.Content
+			if isGroupChat {
+				senderName := senderNameMap[m.SenderId]
+				if senderName == "" {
+					senderName = fmt.Sprintf("用户%d", m.SenderId)
+				}
+				if m.SenderId == botCfg.UserID {
+					content = fmt.Sprintf("%s: %s", botCfg.Name, content)
+				} else {
+					content = fmt.Sprintf("%s: %s", senderName, content)
+				}
+			}
+			role := schema.User
+			if m.SenderId == botCfg.UserID {
+				role = schema.Assistant
+			}
+			einoHistory = append(einoHistory, &schema.Message{Role: role, Content: content})
+		}
 	}
 	agentCtx, agentCancel := context.WithTimeout(ctx, llmTimeout)
 	defer agentCancel()
@@ -180,12 +212,8 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
 		var chatHistory []llm.ChatMessage
-		for i, h := range history {
-			role := "assistant"
-			if i%2 == 0 {
-				role = "user"
-			}
-			chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: h})
+		for _, m := range einoHistory {
+			chatHistory = append(chatHistory, llm.ChatMessage{Role: string(m.Role), Content: m.Content})
 		}
 		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
 		if llmErr != nil {
@@ -215,4 +243,155 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
 	}()
 	return agentResult
+}
+
+func (svc *WorkService) getSystemBotLLMConfig(ctx context.Context) (apiKey, baseURL, model string, err error) {
+	botId, err := rpc.GetSystemBot(ctx)
+	if err != nil {
+		return "", "", "", fmt.Errorf("获取系统Bot失败: %w", err)
+	}
+	botCfg, err := rpc.GetBotConfig(ctx, botId)
+	if err != nil {
+		return "", "", "", fmt.Errorf("获取系统Bot[%d]配置失败: %w", botId, err)
+	}
+	if botCfg.ApiKey == "" {
+		return "", "", "", fmt.Errorf("系统Bot未配置API Key")
+	}
+	return botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, nil
+}
+
+func (svc *WorkService) formatHistoryMessages(ctx context.Context, userId, conversationId int64, limit int16) (string, error) {
+	historyMsgs, err := rpc.GetHistory(ctx, userId, conversationId, limit)
+	if err != nil {
+		return "", fmt.Errorf("获取会话[%d]历史消息失败: %w", conversationId, err)
+	}
+	if len(historyMsgs) == 0 {
+		return "", nil
+	}
+	senderIDs := make([]int64, 0, len(historyMsgs))
+	for _, m := range historyMsgs {
+		senderIDs = append(senderIDs, m.SenderId)
+	}
+	senderNameMap := make(map[int64]string)
+	if len(senderIDs) > 0 {
+		nameResp, nameErr := rpc.GetUserNames(ctx, senderIDs)
+		if nameErr == nil && nameResp != nil {
+			for _, u := range nameResp {
+				senderNameMap[u.Id] = u.Name
+			}
+		}
+	}
+	var sb strings.Builder
+	for i, m := range historyMsgs {
+		senderName := senderNameMap[m.SenderId]
+		if senderName == "" {
+			senderName = fmt.Sprintf("用户%d", m.SenderId)
+		}
+		t := time.Unix(m.Timestamp, 0).Format("15:04:05")
+		sb.WriteString(fmt.Sprintf("[%d| %s] %s: %s\n", i+1, t, senderName, m.Content))
+	}
+	return sb.String(), nil
+}
+
+func (svc *WorkService) SummarizeConversation(ctx context.Context, conversationId, userId int64) (string, error) {
+	apiKey, baseURL, model, err := svc.getSystemBotLLMConfig(ctx)
+	if err != nil {
+		return "", err
+	}
+	members, memberErr := rpc.GetConversationMembers(ctx, conversationId)
+	if memberErr != nil {
+		return "", fmt.Errorf("查询会话[%d]成员失败: %w", conversationId, memberErr)
+	}
+	isMember := false
+	for _, m := range members {
+		if m == userId {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		return "", fmt.Errorf("用户不在会话[%d]中，无权查看", conversationId)
+	}
+	formattedHistory, err := svc.formatHistoryMessages(ctx, userId, conversationId, 20)
+	if err != nil {
+		return "", err
+	}
+	if formattedHistory == "" {
+		return "暂无消息记录", nil
+	}
+	systemPrompt := "你是一个聊天记录总结助手。请根据提供的聊天记录，生成一段简洁的中文总结，概括讨论的主要话题、关键信息和结论。总结应该条理清晰、重点突出，不超过200字。"
+	userContent := fmt.Sprintf("请总结以下聊天记录：\n\n%s", formattedHistory)
+	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
+	defer cancel()
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent)
+	if llmErr != nil {
+		return "", fmt.Errorf("生成总结失败: %w", llmErr)
+	}
+	return result, nil
+}
+
+func (svc *WorkService) SuggestReplies(ctx context.Context, conversationId, userId int64) ([]string, error) {
+	apiKey, baseURL, model, err := svc.getSystemBotLLMConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	members, memberErr := rpc.GetConversationMembers(ctx, conversationId)
+	if memberErr != nil {
+		return nil, fmt.Errorf("查询会话[%d]成员失败: %w", conversationId, memberErr)
+	}
+	isMember := false
+	for _, m := range members {
+		if m == userId {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		return nil, fmt.Errorf("用户不在会话[%d]中，无权查看", conversationId)
+	}
+	formattedHistory, err := svc.formatHistoryMessages(ctx, userId, conversationId, 5)
+	if err != nil {
+		return nil, err
+	}
+	if formattedHistory == "" {
+		return []string{"你好！", "大家好！", "最近怎么样？"}, nil
+	}
+	userNames, _ := rpc.GetUserNames(ctx, []int64{userId})
+	userName := fmt.Sprintf("用户%d", userId)
+	if userNames != nil && len(userNames) > 0 && userNames[0].Name != "" {
+		userName = userNames[0].Name
+	}
+	systemPrompt := fmt.Sprintf(`你是一个聊天助手。根据以下对话上下文，为「%s」生成3条可能的回复。
+要求：
+1. 回复必须从「%s」的视角出发，是「%s」要说的话
+2. 优先回复最新（序号最大）的消息，结合上下文理解对话意图
+3. 每条回复自然、简洁，符合对话语境
+4. 回复风格多样化：一条正式、一条轻松、一条幽默
+5. 只返回3条回复，每条一行，用数字编号（1. 2. 3.）
+6. 不要添加任何其他解释或说明`, userName, userName, userName)
+	userContent := fmt.Sprintf("对话上下文（按时间顺序排列，序号越大越新）：\n%s\n\n请为「%s」针对最新消息生成3条回复候选：", formattedHistory, userName)
+	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
+	defer cancel()
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent)
+	if llmErr != nil {
+		return nil, fmt.Errorf("生成回复候选失败: %w", llmErr)
+	}
+	var replies []string
+	for _, line := range strings.Split(result, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		line = regexp.MustCompile(`^\d+[\.、)]\s*`).ReplaceAllString(line, "")
+		if line != "" {
+			replies = append(replies, line)
+		}
+	}
+	if len(replies) == 0 {
+		replies = []string{"好的", "了解了", "谢谢"}
+	}
+	if len(replies) > 3 {
+		replies = replies[:3]
+	}
+	return replies, nil
 }

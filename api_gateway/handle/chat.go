@@ -2,15 +2,17 @@ package handle
 
 import (
 	"context"
+	"strconv"
+
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/pkg/storage"
-	"strconv"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	group "github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group"
 	user "github.com/Airiseina/answer/kitex_service/user_service/kitex_gen/user"
+	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -714,5 +716,77 @@ func GetConversationMembers(ctx context.Context, c *app.RequestContext) {
 	}
 	response.Success(c, map[string]interface{}{
 		"members": members,
+	})
+}
+
+func SummarizeConversation(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userID := userInfo.Id
+
+	var reqBody struct {
+		ConversationID string `json:"conversation_id"`
+	}
+	if err := c.BindJSON(&reqBody); err != nil {
+		response.Error(c, "参数错误", "请求格式不正确")
+		return
+	}
+	conversationID, err := strconv.ParseInt(reqBody.ConversationID, 10, 64)
+	if err != nil || conversationID == 0 {
+		response.Error(c, "参数错误", "conversation_id格式不正确")
+		return
+	}
+
+	resp, err := rpc.SummarizeConversation(ctx, &work.SummarizeConversationReq{
+		ConversationId: conversationID,
+		UserId:         userID,
+	})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC SummarizeConversation失败: %v", err)
+		response.Error(c, "系统繁忙", "生成总结失败，请稍后重试")
+		return
+	}
+	if !resp.Success {
+		response.Error(c, "总结失败", "无法生成该会话的总结")
+		return
+	}
+	response.Success(c, map[string]interface{}{
+		"summary": resp.Summary,
+	})
+}
+
+func SuggestReplies(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userID := userInfo.Id
+
+	var reqBody struct {
+		ConversationID string `json:"conversation_id"`
+	}
+	if err := c.BindJSON(&reqBody); err != nil {
+		response.Error(c, "参数错误", "请求格式不正确")
+		return
+	}
+	conversationID, err := strconv.ParseInt(reqBody.ConversationID, 10, 64)
+	if err != nil || conversationID == 0 {
+		response.Error(c, "参数错误", "conversation_id格式不正确")
+		return
+	}
+
+	resp, err := rpc.SuggestReplies(ctx, &work.SuggestRepliesReq{
+		ConversationId: conversationID,
+		UserId:         userID,
+	})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC SuggestReplies失败: %v", err)
+		response.Error(c, "系统繁忙", "生成回复候选失败，请稍后重试")
+		return
+	}
+	if !resp.Success {
+		response.Error(c, "生成失败", "无法生成回复候选")
+		return
+	}
+	response.Success(c, map[string]interface{}{
+		"replies": resp.Replies,
 	})
 }

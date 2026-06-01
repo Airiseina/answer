@@ -12,6 +12,8 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	HandleMessage(ctx context.Context, req *work.HandleMessageReq, callOptions ...callopt.Option) (r *work.HandleMessageRes, err error)
+	SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq, callOptions ...callopt.Option) (r *work.SummarizeConversationRes, err error)
+	SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq, callOptions ...callopt.Option) (r *work.SuggestRepliesRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -46,4 +48,14 @@ type kWorkServiceClient struct {
 func (p *kWorkServiceClient) HandleMessage(ctx context.Context, req *work.HandleMessageReq, callOptions ...callopt.Option) (r *work.HandleMessageRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.HandleMessage(ctx, req)
+}
+
+func (p *kWorkServiceClient) SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq, callOptions ...callopt.Option) (r *work.SummarizeConversationRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SummarizeConversation(ctx, req)
+}
+
+func (p *kWorkServiceClient) SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq, callOptions ...callopt.Option) (r *work.SuggestRepliesRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SuggestReplies(ctx, req)
 }

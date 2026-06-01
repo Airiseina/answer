@@ -48,6 +48,8 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/chat/edit_history/:msg_id", handle.GetEditHistory)
 	authGroup.POST("/chat/sync", handle.SyncMessages)
 	authGroup.POST("/chat/conversation_members", handle.GetConversationMembers)
+	authGroup.POST("/chat/summarize", handle.SummarizeConversation)
+	authGroup.POST("/chat/suggest_replies", handle.SuggestReplies)
 	authGroup.POST("/update_avatar", handle.UpdateAvatar)
 	authGroup.POST("/files", handle.Upload)
 

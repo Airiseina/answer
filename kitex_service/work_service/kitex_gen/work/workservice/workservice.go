@@ -20,6 +20,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"SummarizeConversation": kitex.NewMethodInfo(
+		summarizeConversationHandler,
+		newWorkServiceSummarizeConversationArgs,
+		newWorkServiceSummarizeConversationResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SuggestReplies": kitex.NewMethodInfo(
+		suggestRepliesHandler,
+		newWorkServiceSuggestRepliesArgs,
+		newWorkServiceSuggestRepliesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -104,6 +118,42 @@ func newWorkServiceHandleMessageResult() interface{} {
 	return work.NewWorkServiceHandleMessageResult()
 }
 
+func summarizeConversationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceSummarizeConversationArgs)
+	realResult := result.(*work.WorkServiceSummarizeConversationResult)
+	success, err := handler.(work.WorkService).SummarizeConversation(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceSummarizeConversationArgs() interface{} {
+	return work.NewWorkServiceSummarizeConversationArgs()
+}
+
+func newWorkServiceSummarizeConversationResult() interface{} {
+	return work.NewWorkServiceSummarizeConversationResult()
+}
+
+func suggestRepliesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceSuggestRepliesArgs)
+	realResult := result.(*work.WorkServiceSuggestRepliesResult)
+	success, err := handler.(work.WorkService).SuggestReplies(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceSuggestRepliesArgs() interface{} {
+	return work.NewWorkServiceSuggestRepliesArgs()
+}
+
+func newWorkServiceSuggestRepliesResult() interface{} {
+	return work.NewWorkServiceSuggestRepliesResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -119,6 +169,26 @@ func (p *kClient) HandleMessage(ctx context.Context, req *work.HandleMessageReq)
 	_args.Req = req
 	var _result work.WorkServiceHandleMessageResult
 	if err = p.c.Call(ctx, "HandleMessage", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq) (r *work.SummarizeConversationRes, err error) {
+	var _args work.WorkServiceSummarizeConversationArgs
+	_args.Req = req
+	var _result work.WorkServiceSummarizeConversationResult
+	if err = p.c.Call(ctx, "SummarizeConversation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq) (r *work.SuggestRepliesRes, err error) {
+	var _args work.WorkServiceSuggestRepliesArgs
+	_args.Req = req
+	var _result work.WorkServiceSuggestRepliesResult
+	if err = p.c.Call(ctx, "SuggestReplies", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

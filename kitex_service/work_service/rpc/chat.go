@@ -63,6 +63,19 @@ const (
 	ConvTypeGroup   int16 = 2
 )
 
+func GetHistory(ctx context.Context, userId, conversationId int64, limit int16) ([]*chat.Message, error) {
+	resp, err := chatCli.GetHistory(ctx, &chat.GetHistoryReq{
+		UserId:         userId,
+		ConversationId: conversationId,
+		BeforeMsgId:    0,
+		Limit:          limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Messages, nil
+}
+
 func GetConversationType(ctx context.Context, conversationId, userId int64) (int16, error) {
 	resp, err := chatCli.GetConversations(ctx, &chat.GetConversationsReq{
 		UserId: userId,

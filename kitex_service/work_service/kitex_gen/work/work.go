@@ -110,8 +110,164 @@ var fieldIDToName_HandleMessageRes = map[int16]string{
 	2: "msg_id",
 }
 
+type SummarizeConversationReq struct {
+	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	UserId         int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+}
+
+func NewSummarizeConversationReq() *SummarizeConversationReq {
+	return &SummarizeConversationReq{}
+}
+
+func (p *SummarizeConversationReq) InitDefault() {
+}
+
+func (p *SummarizeConversationReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *SummarizeConversationReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *SummarizeConversationReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *SummarizeConversationReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *SummarizeConversationReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SummarizeConversationReq(%+v)", *p)
+}
+
+var fieldIDToName_SummarizeConversationReq = map[int16]string{
+	1: "conversation_id",
+	2: "user_id",
+}
+
+type SummarizeConversationRes struct {
+	Success bool   `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Summary string `thrift:"summary,2" frugal:"2,default,string" json:"summary"`
+}
+
+func NewSummarizeConversationRes() *SummarizeConversationRes {
+	return &SummarizeConversationRes{}
+}
+
+func (p *SummarizeConversationRes) InitDefault() {
+}
+
+func (p *SummarizeConversationRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SummarizeConversationRes) GetSummary() (v string) {
+	return p.Summary
+}
+func (p *SummarizeConversationRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SummarizeConversationRes) SetSummary(val string) {
+	p.Summary = val
+}
+
+func (p *SummarizeConversationRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SummarizeConversationRes(%+v)", *p)
+}
+
+var fieldIDToName_SummarizeConversationRes = map[int16]string{
+	1: "success",
+	2: "summary",
+}
+
+type SuggestRepliesReq struct {
+	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	UserId         int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+}
+
+func NewSuggestRepliesReq() *SuggestRepliesReq {
+	return &SuggestRepliesReq{}
+}
+
+func (p *SuggestRepliesReq) InitDefault() {
+}
+
+func (p *SuggestRepliesReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *SuggestRepliesReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *SuggestRepliesReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *SuggestRepliesReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *SuggestRepliesReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SuggestRepliesReq(%+v)", *p)
+}
+
+var fieldIDToName_SuggestRepliesReq = map[int16]string{
+	1: "conversation_id",
+	2: "user_id",
+}
+
+type SuggestRepliesRes struct {
+	Success bool     `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Replies []string `thrift:"replies,2" frugal:"2,default,list<string>" json:"replies"`
+}
+
+func NewSuggestRepliesRes() *SuggestRepliesRes {
+	return &SuggestRepliesRes{}
+}
+
+func (p *SuggestRepliesRes) InitDefault() {
+}
+
+func (p *SuggestRepliesRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SuggestRepliesRes) GetReplies() (v []string) {
+	return p.Replies
+}
+func (p *SuggestRepliesRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SuggestRepliesRes) SetReplies(val []string) {
+	p.Replies = val
+}
+
+func (p *SuggestRepliesRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SuggestRepliesRes(%+v)", *p)
+}
+
+var fieldIDToName_SuggestRepliesRes = map[int16]string{
+	1: "success",
+	2: "replies",
+}
+
 type WorkService interface {
 	HandleMessage(ctx context.Context, req *HandleMessageReq) (r *HandleMessageRes, err error)
+
+	SummarizeConversation(ctx context.Context, req *SummarizeConversationReq) (r *SummarizeConversationRes, err error)
+
+	SuggestReplies(ctx context.Context, req *SuggestRepliesReq) (r *SuggestRepliesRes, err error)
 }
 
 type WorkServiceHandleMessageArgs struct {
@@ -187,5 +343,157 @@ func (p *WorkServiceHandleMessageResult) String() string {
 }
 
 var fieldIDToName_WorkServiceHandleMessageResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceSummarizeConversationArgs struct {
+	Req *SummarizeConversationReq `thrift:"req,1" frugal:"1,default,SummarizeConversationReq" json:"req"`
+}
+
+func NewWorkServiceSummarizeConversationArgs() *WorkServiceSummarizeConversationArgs {
+	return &WorkServiceSummarizeConversationArgs{}
+}
+
+func (p *WorkServiceSummarizeConversationArgs) InitDefault() {
+}
+
+var WorkServiceSummarizeConversationArgs_Req_DEFAULT *SummarizeConversationReq
+
+func (p *WorkServiceSummarizeConversationArgs) GetReq() (v *SummarizeConversationReq) {
+	if !p.IsSetReq() {
+		return WorkServiceSummarizeConversationArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceSummarizeConversationArgs) SetReq(val *SummarizeConversationReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceSummarizeConversationArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceSummarizeConversationArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSummarizeConversationArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSummarizeConversationArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceSummarizeConversationResult struct {
+	Success *SummarizeConversationRes `thrift:"success,0,optional" frugal:"0,optional,SummarizeConversationRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceSummarizeConversationResult() *WorkServiceSummarizeConversationResult {
+	return &WorkServiceSummarizeConversationResult{}
+}
+
+func (p *WorkServiceSummarizeConversationResult) InitDefault() {
+}
+
+var WorkServiceSummarizeConversationResult_Success_DEFAULT *SummarizeConversationRes
+
+func (p *WorkServiceSummarizeConversationResult) GetSuccess() (v *SummarizeConversationRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceSummarizeConversationResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceSummarizeConversationResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SummarizeConversationRes)
+}
+
+func (p *WorkServiceSummarizeConversationResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceSummarizeConversationResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSummarizeConversationResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSummarizeConversationResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceSuggestRepliesArgs struct {
+	Req *SuggestRepliesReq `thrift:"req,1" frugal:"1,default,SuggestRepliesReq" json:"req"`
+}
+
+func NewWorkServiceSuggestRepliesArgs() *WorkServiceSuggestRepliesArgs {
+	return &WorkServiceSuggestRepliesArgs{}
+}
+
+func (p *WorkServiceSuggestRepliesArgs) InitDefault() {
+}
+
+var WorkServiceSuggestRepliesArgs_Req_DEFAULT *SuggestRepliesReq
+
+func (p *WorkServiceSuggestRepliesArgs) GetReq() (v *SuggestRepliesReq) {
+	if !p.IsSetReq() {
+		return WorkServiceSuggestRepliesArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceSuggestRepliesArgs) SetReq(val *SuggestRepliesReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceSuggestRepliesArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceSuggestRepliesArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSuggestRepliesArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSuggestRepliesArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceSuggestRepliesResult struct {
+	Success *SuggestRepliesRes `thrift:"success,0,optional" frugal:"0,optional,SuggestRepliesRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceSuggestRepliesResult() *WorkServiceSuggestRepliesResult {
+	return &WorkServiceSuggestRepliesResult{}
+}
+
+func (p *WorkServiceSuggestRepliesResult) InitDefault() {
+}
+
+var WorkServiceSuggestRepliesResult_Success_DEFAULT *SuggestRepliesRes
+
+func (p *WorkServiceSuggestRepliesResult) GetSuccess() (v *SuggestRepliesRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceSuggestRepliesResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceSuggestRepliesResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SuggestRepliesRes)
+}
+
+func (p *WorkServiceSuggestRepliesResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceSuggestRepliesResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSuggestRepliesResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSuggestRepliesResult = map[int16]string{
 	0: "success",
 }

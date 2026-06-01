@@ -29,6 +29,10 @@ export default function ChatPanel() {
   const [mentionSearch, setMentionSearch] = useState('')
   const [mentionStartPos, setMentionStartPos] = useState(-1)
   const [pendingMentions, setPendingMentions] = useState<MentionItem[]>([])
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryModal, setSummaryModal] = useState<string | null>(null)
+  const [repliesLoading, setRepliesLoading] = useState(false)
+  const [suggestedReplies, setSuggestedReplies] = useState<string[] | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -218,6 +222,46 @@ export default function ChatPanel() {
     if (res.code === 0 && res.data?.histories) {
       setEditHistoryModal({ msgId, histories: res.data.histories })
     }
+  }
+
+  const handleSummarize = async () => {
+    if (activeConvId === null) return
+    setSummaryLoading(true)
+    try {
+      const res = await api('POST', '/api/chat/summarize', { conversation_id: activeConvId })
+      if (res.code === 0 && res.data?.summary) {
+        setSummaryModal(res.data.summary)
+      } else {
+        alert(res.msg || '生成总结失败')
+      }
+    } catch {
+      alert('生成总结失败')
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
+
+  const handleSuggestReplies = async () => {
+    if (activeConvId === null) return
+    setRepliesLoading(true)
+    try {
+      const res = await api('POST', '/api/chat/suggest_replies', { conversation_id: activeConvId })
+      if (res.code === 0 && res.data?.replies) {
+        setSuggestedReplies(res.data.replies)
+      } else {
+        alert(res.msg || '生成回复候选失败')
+      }
+    } catch {
+      alert('生成回复候选失败')
+    } finally {
+      setRepliesLoading(false)
+    }
+  }
+
+  const handleSelectReply = (reply: string) => {
+    setInput(reply)
+    setSuggestedReplies(null)
+    setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
   const renderTextWithMentions = (text: string, mentions?: MentionItem[]) => {
@@ -524,9 +568,17 @@ export default function ChatPanel() {
             </span>
           )}
         </div>
-        <button className="chat-new-btn" onClick={() => setShowNewChat(true)} title="新会话">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
+        <div className="chat-header-actions">
+          <button className="chat-header-action-btn" onClick={handleSummarize} disabled={summaryLoading} title="总结聊天">
+            {summaryLoading ? '⏳' : '📋'}
+          </button>
+          <button className="chat-header-action-btn" onClick={handleSuggestReplies} disabled={repliesLoading} title="回复候选">
+            {repliesLoading ? '⏳' : '💬'}
+          </button>
+          <button className="chat-new-btn" onClick={() => setShowNewChat(true)} title="新会话">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
       </div>
       <div className="chat-messages" onClick={() => setContextMenu(null)}>
         {msgs.map(msg => (
@@ -657,6 +709,19 @@ export default function ChatPanel() {
         </div>
       )}
       <div className="chat-input-area">
+        {suggestedReplies && (
+          <div className="suggest-replies-bar">
+            <span className="suggest-replies-label">回复候选：</span>
+            <div className="suggest-replies-list">
+              {suggestedReplies.map((reply, idx) => (
+                <button key={idx} className="suggest-reply-item" onClick={() => handleSelectReply(reply)}>
+                  {reply}
+                </button>
+              ))}
+            </div>
+            <button className="suggest-replies-close" onClick={() => setSuggestedReplies(null)}>✕</button>
+          </div>
+        )}
         <div className="chat-toolbar">
           <button
             className="toolbar-btn"
@@ -690,6 +755,17 @@ export default function ChatPanel() {
           </button>
         </div>
       </div>
+      {summaryModal && (
+        <div className="modal-overlay" onClick={() => setSummaryModal(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ width: 460 }}>
+            <div className="modal-card-header">
+              <h3>聊天总结</h3>
+              <button className="modal-card-close" onClick={() => setSummaryModal(null)}>✕</button>
+            </div>
+            <div className="summary-content">{summaryModal}</div>
+          </div>
+        </div>
+      )}
       {showNewChat && renderNewChatModal()}
     </div>
   )

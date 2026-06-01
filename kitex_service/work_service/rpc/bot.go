@@ -83,3 +83,14 @@ func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
 func GetBotMcpServers(ctx context.Context, botId int64) (*bot.GetBotMcpServersRes, error) {
 	return botCli.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: botId})
 }
+
+func GetSystemBot(ctx context.Context) (int64, error) {
+	resp, err := botCli.GetSystemBot(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if !resp.Success {
+		return 0, fmt.Errorf("系统Bot不存在")
+	}
+	return resp.BotId, nil
+}

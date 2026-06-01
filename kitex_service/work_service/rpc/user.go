@@ -56,3 +56,13 @@ func GetUserName(ctx context.Context, userId int64) string {
 	}
 	return resp.Users[0].Name
 }
+
+func GetUserNames(ctx context.Context, userIds []int64) ([]*user.UserNameInfo, error) {
+	resp, err := userCli.GetUserNames(ctx, &user.GetUserNamesReq{
+		UserIds: userIds,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Users, nil
+}

@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -170,7 +171,7 @@ func (c *BotTaskConsumer) processMessage(msg kafka.Message) {
 
 	_, err := c.workService.HandleMessage(handleCtx, int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, nil)
 	if err != nil {
-		if handleCtx.Err() == context.DeadlineExceeded {
+		if errors.Is(handleCtx.Err(), context.DeadlineExceeded) {
 			klog.Errorf("Bot[%d]处理消息超时(>%v): convId=%d, senderId=%d", task.BotID, handleTimeout, task.ConversationID, task.SenderID)
 		} else {
 			klog.Errorf("Bot[%d]处理消息失败: %v", task.BotID, err)
