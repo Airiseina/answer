@@ -7,109 +7,6 @@ import (
 	"fmt"
 )
 
-type HandleMessageReq struct {
-	BotId          int64    `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
-	ConversationId int64    `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
-	SenderId       int64    `thrift:"sender_id,3" frugal:"3,default,i64" json:"sender_id"`
-	Content        string   `thrift:"content,4" frugal:"4,default,string" json:"content"`
-	History        []string `thrift:"history,5" frugal:"5,default,list<string>" json:"history"`
-}
-
-func NewHandleMessageReq() *HandleMessageReq {
-	return &HandleMessageReq{}
-}
-
-func (p *HandleMessageReq) InitDefault() {
-}
-
-func (p *HandleMessageReq) GetBotId() (v int64) {
-	return p.BotId
-}
-
-func (p *HandleMessageReq) GetConversationId() (v int64) {
-	return p.ConversationId
-}
-
-func (p *HandleMessageReq) GetSenderId() (v int64) {
-	return p.SenderId
-}
-
-func (p *HandleMessageReq) GetContent() (v string) {
-	return p.Content
-}
-
-func (p *HandleMessageReq) GetHistory() (v []string) {
-	return p.History
-}
-func (p *HandleMessageReq) SetBotId(val int64) {
-	p.BotId = val
-}
-func (p *HandleMessageReq) SetConversationId(val int64) {
-	p.ConversationId = val
-}
-func (p *HandleMessageReq) SetSenderId(val int64) {
-	p.SenderId = val
-}
-func (p *HandleMessageReq) SetContent(val string) {
-	p.Content = val
-}
-func (p *HandleMessageReq) SetHistory(val []string) {
-	p.History = val
-}
-
-func (p *HandleMessageReq) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("HandleMessageReq(%+v)", *p)
-}
-
-var fieldIDToName_HandleMessageReq = map[int16]string{
-	1: "bot_id",
-	2: "conversation_id",
-	3: "sender_id",
-	4: "content",
-	5: "history",
-}
-
-type HandleMessageRes struct {
-	Success bool   `thrift:"success,1" frugal:"1,default,bool" json:"success"`
-	MsgId   string `thrift:"msg_id,2" frugal:"2,default,string" json:"msg_id"`
-}
-
-func NewHandleMessageRes() *HandleMessageRes {
-	return &HandleMessageRes{}
-}
-
-func (p *HandleMessageRes) InitDefault() {
-}
-
-func (p *HandleMessageRes) GetSuccess() (v bool) {
-	return p.Success
-}
-
-func (p *HandleMessageRes) GetMsgId() (v string) {
-	return p.MsgId
-}
-func (p *HandleMessageRes) SetSuccess(val bool) {
-	p.Success = val
-}
-func (p *HandleMessageRes) SetMsgId(val string) {
-	p.MsgId = val
-}
-
-func (p *HandleMessageRes) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("HandleMessageRes(%+v)", *p)
-}
-
-var fieldIDToName_HandleMessageRes = map[int16]string{
-	1: "success",
-	2: "msg_id",
-}
-
 type SummarizeConversationReq struct {
 	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
 	UserId         int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
@@ -262,88 +159,88 @@ var fieldIDToName_SuggestRepliesRes = map[int16]string{
 	2: "replies",
 }
 
-type WorkService interface {
-	HandleMessage(ctx context.Context, req *HandleMessageReq) (r *HandleMessageRes, err error)
+type TranslateMessageReq struct {
+	Content    string `thrift:"content,1" frugal:"1,default,string" json:"content"`
+	TargetLang string `thrift:"target_lang,2" frugal:"2,default,string" json:"target_lang"`
+}
 
+func NewTranslateMessageReq() *TranslateMessageReq {
+	return &TranslateMessageReq{}
+}
+
+func (p *TranslateMessageReq) InitDefault() {
+}
+
+func (p *TranslateMessageReq) GetContent() (v string) {
+	return p.Content
+}
+
+func (p *TranslateMessageReq) GetTargetLang() (v string) {
+	return p.TargetLang
+}
+func (p *TranslateMessageReq) SetContent(val string) {
+	p.Content = val
+}
+func (p *TranslateMessageReq) SetTargetLang(val string) {
+	p.TargetLang = val
+}
+
+func (p *TranslateMessageReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TranslateMessageReq(%+v)", *p)
+}
+
+var fieldIDToName_TranslateMessageReq = map[int16]string{
+	1: "content",
+	2: "target_lang",
+}
+
+type TranslateMessageRes struct {
+	Success           bool   `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	TranslatedContent string `thrift:"translated_content,2" frugal:"2,default,string" json:"translated_content"`
+}
+
+func NewTranslateMessageRes() *TranslateMessageRes {
+	return &TranslateMessageRes{}
+}
+
+func (p *TranslateMessageRes) InitDefault() {
+}
+
+func (p *TranslateMessageRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *TranslateMessageRes) GetTranslatedContent() (v string) {
+	return p.TranslatedContent
+}
+func (p *TranslateMessageRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *TranslateMessageRes) SetTranslatedContent(val string) {
+	p.TranslatedContent = val
+}
+
+func (p *TranslateMessageRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TranslateMessageRes(%+v)", *p)
+}
+
+var fieldIDToName_TranslateMessageRes = map[int16]string{
+	1: "success",
+	2: "translated_content",
+}
+
+type WorkService interface {
 	SummarizeConversation(ctx context.Context, req *SummarizeConversationReq) (r *SummarizeConversationRes, err error)
 
 	SuggestReplies(ctx context.Context, req *SuggestRepliesReq) (r *SuggestRepliesRes, err error)
-}
 
-type WorkServiceHandleMessageArgs struct {
-	Req *HandleMessageReq `thrift:"req,1" frugal:"1,default,HandleMessageReq" json:"req"`
-}
-
-func NewWorkServiceHandleMessageArgs() *WorkServiceHandleMessageArgs {
-	return &WorkServiceHandleMessageArgs{}
-}
-
-func (p *WorkServiceHandleMessageArgs) InitDefault() {
-}
-
-var WorkServiceHandleMessageArgs_Req_DEFAULT *HandleMessageReq
-
-func (p *WorkServiceHandleMessageArgs) GetReq() (v *HandleMessageReq) {
-	if !p.IsSetReq() {
-		return WorkServiceHandleMessageArgs_Req_DEFAULT
-	}
-	return p.Req
-}
-func (p *WorkServiceHandleMessageArgs) SetReq(val *HandleMessageReq) {
-	p.Req = val
-}
-
-func (p *WorkServiceHandleMessageArgs) IsSetReq() bool {
-	return p.Req != nil
-}
-
-func (p *WorkServiceHandleMessageArgs) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("WorkServiceHandleMessageArgs(%+v)", *p)
-}
-
-var fieldIDToName_WorkServiceHandleMessageArgs = map[int16]string{
-	1: "req",
-}
-
-type WorkServiceHandleMessageResult struct {
-	Success *HandleMessageRes `thrift:"success,0,optional" frugal:"0,optional,HandleMessageRes" json:"success,omitempty"`
-}
-
-func NewWorkServiceHandleMessageResult() *WorkServiceHandleMessageResult {
-	return &WorkServiceHandleMessageResult{}
-}
-
-func (p *WorkServiceHandleMessageResult) InitDefault() {
-}
-
-var WorkServiceHandleMessageResult_Success_DEFAULT *HandleMessageRes
-
-func (p *WorkServiceHandleMessageResult) GetSuccess() (v *HandleMessageRes) {
-	if !p.IsSetSuccess() {
-		return WorkServiceHandleMessageResult_Success_DEFAULT
-	}
-	return p.Success
-}
-func (p *WorkServiceHandleMessageResult) SetSuccess(x interface{}) {
-	p.Success = x.(*HandleMessageRes)
-}
-
-func (p *WorkServiceHandleMessageResult) IsSetSuccess() bool {
-	return p.Success != nil
-}
-
-func (p *WorkServiceHandleMessageResult) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("WorkServiceHandleMessageResult(%+v)", *p)
-}
-
-var fieldIDToName_WorkServiceHandleMessageResult = map[int16]string{
-	0: "success",
+	TranslateMessage(ctx context.Context, req *TranslateMessageReq) (r *TranslateMessageRes, err error)
 }
 
 type WorkServiceSummarizeConversationArgs struct {
@@ -495,5 +392,81 @@ func (p *WorkServiceSuggestRepliesResult) String() string {
 }
 
 var fieldIDToName_WorkServiceSuggestRepliesResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceTranslateMessageArgs struct {
+	Req *TranslateMessageReq `thrift:"req,1" frugal:"1,default,TranslateMessageReq" json:"req"`
+}
+
+func NewWorkServiceTranslateMessageArgs() *WorkServiceTranslateMessageArgs {
+	return &WorkServiceTranslateMessageArgs{}
+}
+
+func (p *WorkServiceTranslateMessageArgs) InitDefault() {
+}
+
+var WorkServiceTranslateMessageArgs_Req_DEFAULT *TranslateMessageReq
+
+func (p *WorkServiceTranslateMessageArgs) GetReq() (v *TranslateMessageReq) {
+	if !p.IsSetReq() {
+		return WorkServiceTranslateMessageArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceTranslateMessageArgs) SetReq(val *TranslateMessageReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceTranslateMessageArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceTranslateMessageArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceTranslateMessageArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceTranslateMessageArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceTranslateMessageResult struct {
+	Success *TranslateMessageRes `thrift:"success,0,optional" frugal:"0,optional,TranslateMessageRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceTranslateMessageResult() *WorkServiceTranslateMessageResult {
+	return &WorkServiceTranslateMessageResult{}
+}
+
+func (p *WorkServiceTranslateMessageResult) InitDefault() {
+}
+
+var WorkServiceTranslateMessageResult_Success_DEFAULT *TranslateMessageRes
+
+func (p *WorkServiceTranslateMessageResult) GetSuccess() (v *TranslateMessageRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceTranslateMessageResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceTranslateMessageResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TranslateMessageRes)
+}
+
+func (p *WorkServiceTranslateMessageResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceTranslateMessageResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceTranslateMessageResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceTranslateMessageResult = map[int16]string{
 	0: "success",
 }

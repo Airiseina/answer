@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/service"
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
-	"time"
 
 	"github.com/Airiseina/answer/pkg/observability/meter"
 
@@ -22,7 +23,7 @@ type ChatServiceImpl struct {
 
 func (s *ChatServiceImpl) SendMessage(ctx context.Context, req *chat.SendMessageReq) (resp *chat.SendMessageRes, err error) {
 	start := time.Now()
-	result, err := s.chatService.SendMessage(ctx, req.SenderId, req.ConversationId, req.PeerId, req.Content, req.ClientSeq)
+	result, err := s.chatService.SendMessage(ctx, req.SenderId, req.ConversationId, req.PeerId, req.Content, req.ClientSeq, req.GetQuoteMsgId())
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]发送消息失败: %v", req.SenderId, err)
 		meter.M.MessageSentTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "error")))
@@ -50,7 +51,7 @@ func (s *ChatServiceImpl) GetHistory(ctx context.Context, req *chat.GetHistoryRe
 	}
 	var list []*chat.Message
 	for _, m := range messages {
-		list = append(list, &chat.Message{
+		msg := &chat.Message{
 			MsgId:          m.MsgID,
 			ClientSeq:      m.ClientSeq,
 			SenderId:       m.SenderID,
@@ -60,7 +61,11 @@ func (s *ChatServiceImpl) GetHistory(ctx context.Context, req *chat.GetHistoryRe
 			Seq:            &m.Seq,
 			Status:         &m.Status,
 			IsEdited:       &m.IsEdited,
-		})
+		}
+		if m.QuoteMsgID != 0 {
+			msg.QuoteMsgId = &m.QuoteMsgID
+		}
+		list = append(list, msg)
 	}
 
 	return &chat.GetHistoryRes{

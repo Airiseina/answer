@@ -80,7 +80,7 @@ type SendMessageResult struct {
 //   - clientSeq: 客户端序列号，用于去重
 //
 // 返回值: 发送结果（含消息ID、时间戳、会话ID、成员列表），或错误信息
-func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, conversationID int64, peerID int64, content string, clientSeq int64) (*SendMessageResult, error) {
+func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, conversationID int64, peerID int64, content string, clientSeq int64, quoteMsgID int64) (*SendMessageResult, error) {
 	if strings.TrimSpace(content) == "" {
 		return nil, fmt.Errorf("消息内容不能为空")
 	}
@@ -190,6 +190,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		Seq:            seq,
 		Content:        normalizedContent,
 		Timestamp:      now,
+		QuoteMsgID:     quoteMsgID,
 	}
 	err = svc.dao.CreateMessage(msg)
 	if err != nil {
@@ -223,6 +224,7 @@ type MessageDTO struct {
 	Timestamp      int64  // 发送时间戳（毫秒）
 	Status         int16  // 消息状态：0=正常，1=已撤回
 	IsEdited       bool   // 是否已编辑
+	QuoteMsgID     int64  // 引用消息ID
 }
 
 // GetHistory 拉取会话历史消息
@@ -284,6 +286,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 			Timestamp:      msg.Timestamp,
 			Status:         msg.Status,
 			IsEdited:       msg.IsEdited,
+			QuoteMsgID:     msg.QuoteMsgID,
 		})
 	}
 	return msgs, nil
@@ -803,6 +806,7 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 				Timestamp:      msg.Timestamp,
 				Status:         msg.Status,
 				IsEdited:       msg.IsEdited,
+				QuoteMsgID:     msg.QuoteMsgID,
 			})
 		}
 		results = append(results, ConvSyncResult{

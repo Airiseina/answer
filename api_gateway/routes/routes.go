@@ -50,6 +50,7 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/chat/conversation_members", handle.GetConversationMembers)
 	authGroup.POST("/chat/summarize", handle.SummarizeConversation)
 	authGroup.POST("/chat/suggest_replies", handle.SuggestReplies)
+	authGroup.POST("/chat/translate", handle.TranslateMessage)
 	authGroup.POST("/update_avatar", handle.UpdateAvatar)
 	authGroup.POST("/files", handle.Upload)
 

@@ -790,3 +790,39 @@ func SuggestReplies(ctx context.Context, c *app.RequestContext) {
 		"replies": resp.Replies,
 	})
 }
+
+func TranslateMessage(ctx context.Context, c *app.RequestContext) {
+	var reqBody struct {
+		Content    string `json:"content"`
+		TargetLang string `json:"target_lang"`
+	}
+	if err := c.BindJSON(&reqBody); err != nil {
+		response.Error(c, "参数错误", "请求格式不正确")
+		return
+	}
+	if reqBody.Content == "" {
+		response.Error(c, "参数错误", "消息内容不能为空")
+		return
+	}
+	if reqBody.TargetLang == "" {
+		response.Error(c, "参数错误", "目标语言不能为空")
+		return
+	}
+
+	resp, err := rpc.TranslateMessage(ctx, &work.TranslateMessageReq{
+		Content:    reqBody.Content,
+		TargetLang: reqBody.TargetLang,
+	})
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC TranslateMessage失败: %v", err)
+		response.Error(c, "系统繁忙", "翻译失败，请稍后重试")
+		return
+	}
+	if !resp.Success {
+		response.Error(c, "翻译失败", "无法翻译该消息")
+		return
+	}
+	response.Success(c, map[string]interface{}{
+		"translated_content": resp.TranslatedContent,
+	})
+}

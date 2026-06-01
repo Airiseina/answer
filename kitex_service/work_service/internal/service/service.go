@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/segmentio/kafka-go"
 )
@@ -46,7 +45,7 @@ func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer, mcpPool *m
 	}
 }
 
-func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId, senderId int64, content string, history []string) (bool, error) {
+func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId, senderId int64, content string, quoteMsgID int64) (bool, error) {
 	start := time.Now()
 	botCfg, err := rpc.GetBotConfig(ctx, botId)
 	if err != nil {
@@ -83,7 +82,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
 	agentMcpServers := mcp.FilterAgentServers(append(mcp.GetBuiltinServerConfigs(), mcpServers...))
 	var result string
-	result = svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, history, isGroupChat)
+	result = svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, isGroupChat, quoteMsgID)
 	if ctx.Err() != nil {
 		return false, fmt.Errorf("bot[%d]处理消息超时，跳过发送", botId)
 	}
@@ -122,7 +121,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	return true, nil
 }
 
-func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId, botId int64, content string, history []string, isGroupChat bool) string {
+func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId, botId int64, content string, isGroupChat bool, quoteMsgID int64) string {
 	userID := fmt.Sprintf("%d", senderId)
 	botID := fmt.Sprintf("%d", botId)
 	runID := fmt.Sprintf("%d", conversationId)
@@ -157,43 +156,31 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	if botCfg.Name != "" {
 		enhancedPrompt += fmt.Sprintf("\n\n你的名字是「%s」，当用户用@提及你时（如@%s），他们就是在和你说话。请自然地回应。", botCfg.Name, botCfg.Name)
 	}
-	var einoHistory []*schema.Message
-	historyLimit := int16(10)
-	historyMsgs, histErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, historyLimit)
-	if histErr != nil {
-		klog.CtxWarnf(ctx, "获取会话[%d]历史消息失败，继续无上下文处理: %v", conversationId, histErr)
-	} else {
-		senderIDs := make([]int64, 0, len(historyMsgs))
-		for _, m := range historyMsgs {
-			senderIDs = append(senderIDs, m.SenderId)
-		}
-		senderNameMap := make(map[int64]string)
-		if len(senderIDs) > 0 {
-			nameResp, nameErr := rpc.GetUserNames(ctx, senderIDs)
-			if nameErr == nil && nameResp != nil {
-				for _, u := range nameResp {
-					senderNameMap[u.Id] = u.Name
+	userContent := content
+	if quoteMsgID > 0 {
+		quoteMsgs, quoteErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, 50)
+		if quoteErr != nil {
+			klog.CtxWarnf(ctx, "获取引用消息[%d]失败: %v", quoteMsgID, quoteErr)
+		} else {
+			var quoteMsg *chat.Message
+			for _, m := range quoteMsgs {
+				if m.MsgId == quoteMsgID {
+					quoteMsg = m
+					break
 				}
 			}
-		}
-		for _, m := range historyMsgs {
-			content := m.Content
-			if isGroupChat {
-				senderName := senderNameMap[m.SenderId]
-				if senderName == "" {
-					senderName = fmt.Sprintf("用户%d", m.SenderId)
-				}
-				if m.SenderId == botCfg.UserID {
-					content = fmt.Sprintf("%s: %s", botCfg.Name, content)
+			if quoteMsg != nil {
+				quoteSenderName := fmt.Sprintf("用户%d", quoteMsg.SenderId)
+				if quoteMsg.SenderId == botCfg.UserID {
+					quoteSenderName = botCfg.Name
 				} else {
-					content = fmt.Sprintf("%s: %s", senderName, content)
+					names, nameErr := rpc.GetUserNames(ctx, []int64{quoteMsg.SenderId})
+					if nameErr == nil && names != nil && len(names) > 0 && names[0].Name != "" {
+						quoteSenderName = names[0].Name
+					}
 				}
+				userContent = fmt.Sprintf("[引用 %s 的消息]: %s\n\n%s", quoteSenderName, quoteMsg.Content, content)
 			}
-			role := schema.User
-			if m.SenderId == botCfg.UserID {
-				role = schema.Assistant
-			}
-			einoHistory = append(einoHistory, &schema.Message{Role: role, Content: content})
 		}
 	}
 	agentCtx, agentCancel := context.WithTimeout(ctx, llmTimeout)
@@ -204,18 +191,51 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		Model:        botCfg.Model,
 		SystemPrompt: enhancedPrompt,
 		McpServers:   mcpServers,
-		History:      einoHistory,
-		UserContent:  content,
+		UserContent:  userContent,
 	})
 	if err != nil {
 		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)
 		llmCtx, llmCancel := context.WithTimeout(ctx, llmTimeout)
 		defer llmCancel()
 		var chatHistory []llm.ChatMessage
-		for _, m := range einoHistory {
-			chatHistory = append(chatHistory, llm.ChatMessage{Role: string(m.Role), Content: m.Content})
+		historyMsgs, histErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, 10)
+		if histErr != nil {
+			klog.CtxWarnf(ctx, "降级LLM获取会话[%d]历史消息失败: %v", conversationId, histErr)
+		} else {
+			senderIDs := make([]int64, 0, len(historyMsgs))
+			for _, m := range historyMsgs {
+				senderIDs = append(senderIDs, m.SenderId)
+			}
+			senderNameMap := make(map[int64]string)
+			if len(senderIDs) > 0 {
+				nameResp, nameErr := rpc.GetUserNames(ctx, senderIDs)
+				if nameErr == nil && nameResp != nil {
+					for _, u := range nameResp {
+						senderNameMap[u.Id] = u.Name
+					}
+				}
+			}
+			for _, m := range historyMsgs {
+				msgContent := m.Content
+				if isGroupChat {
+					senderName := senderNameMap[m.SenderId]
+					if senderName == "" {
+						senderName = fmt.Sprintf("用户%d", m.SenderId)
+					}
+					if m.SenderId == botCfg.UserID {
+						msgContent = fmt.Sprintf("%s: %s", botCfg.Name, msgContent)
+					} else {
+						msgContent = fmt.Sprintf("%s: %s", senderName, msgContent)
+					}
+				}
+				role := "user"
+				if m.SenderId == botCfg.UserID {
+					role = "assistant"
+				}
+				chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: msgContent})
+			}
 		}
-		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
+		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent)
 		if llmErr != nil {
 			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
 			return fmt.Sprint("抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?")
@@ -394,4 +414,24 @@ func (svc *WorkService) SuggestReplies(ctx context.Context, conversationId, user
 		replies = replies[:3]
 	}
 	return replies, nil
+}
+
+func (svc *WorkService) TranslateMessage(ctx context.Context, content, targetLang string) (string, error) {
+	apiKey, baseURL, model, err := svc.getSystemBotLLMConfig(ctx)
+	if err != nil {
+		return "", fmt.Errorf("获取翻译服务配置失败: %w", err)
+	}
+	systemPrompt := fmt.Sprintf(`你是一个专业翻译助手。请将用户提供的文本翻译为%s。
+要求：
+1. 只返回翻译结果，不要添加任何解释或说明
+2. 保持原文的语气和风格
+3. 如果原文已经是目标语言，直接返回原文
+4. 如果原文包含多种语言，将所有内容统一翻译为目标语言`, targetLang)
+	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
+	defer cancel()
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, content)
+	if llmErr != nil {
+		return "", fmt.Errorf("翻译失败: %w", llmErr)
+	}
+	return result, nil
 }

@@ -42,6 +42,7 @@ type SendMessageReq struct {
 	PeerId         int64  `thrift:"peer_id,3" frugal:"3,default,i64" json:"peer_id"`
 	Content        string `thrift:"content,4" frugal:"4,default,string" json:"content"`
 	ClientSeq      int64  `thrift:"client_seq,5" frugal:"5,default,i64" json:"client_seq"`
+	QuoteMsgId     *int64 `thrift:"quote_msg_id,6,optional" frugal:"6,optional,i64" json:"quote_msg_id,omitempty"`
 }
 
 func NewSendMessageReq() *SendMessageReq {
@@ -70,6 +71,15 @@ func (p *SendMessageReq) GetContent() (v string) {
 func (p *SendMessageReq) GetClientSeq() (v int64) {
 	return p.ClientSeq
 }
+
+var SendMessageReq_QuoteMsgId_DEFAULT int64
+
+func (p *SendMessageReq) GetQuoteMsgId() (v int64) {
+	if !p.IsSetQuoteMsgId() {
+		return SendMessageReq_QuoteMsgId_DEFAULT
+	}
+	return *p.QuoteMsgId
+}
 func (p *SendMessageReq) SetSenderId(val int64) {
 	p.SenderId = val
 }
@@ -85,6 +95,13 @@ func (p *SendMessageReq) SetContent(val string) {
 func (p *SendMessageReq) SetClientSeq(val int64) {
 	p.ClientSeq = val
 }
+func (p *SendMessageReq) SetQuoteMsgId(val *int64) {
+	p.QuoteMsgId = val
+}
+
+func (p *SendMessageReq) IsSetQuoteMsgId() bool {
+	return p.QuoteMsgId != nil
+}
 
 func (p *SendMessageReq) String() string {
 	if p == nil {
@@ -99,6 +116,7 @@ var fieldIDToName_SendMessageReq = map[int16]string{
 	3: "peer_id",
 	4: "content",
 	5: "client_seq",
+	6: "quote_msg_id",
 }
 
 type SendMessageRes struct {
@@ -231,6 +249,7 @@ type Message struct {
 	Seq            *int64  `thrift:"seq,8,optional" frugal:"8,optional,i64" json:"seq,omitempty"`
 	Status         *int16  `thrift:"status,9,optional" frugal:"9,optional,i16" json:"status,omitempty"`
 	IsEdited       *bool   `thrift:"is_edited,10,optional" frugal:"10,optional,bool" json:"is_edited,omitempty"`
+	QuoteMsgId     *int64  `thrift:"quote_msg_id,11,optional" frugal:"11,optional,i64" json:"quote_msg_id,omitempty"`
 }
 
 func NewMessage() *Message {
@@ -299,6 +318,15 @@ func (p *Message) GetIsEdited() (v bool) {
 	}
 	return *p.IsEdited
 }
+
+var Message_QuoteMsgId_DEFAULT int64
+
+func (p *Message) GetQuoteMsgId() (v int64) {
+	if !p.IsSetQuoteMsgId() {
+		return Message_QuoteMsgId_DEFAULT
+	}
+	return *p.QuoteMsgId
+}
 func (p *Message) SetMsgId(val int64) {
 	p.MsgId = val
 }
@@ -329,6 +357,9 @@ func (p *Message) SetStatus(val *int16) {
 func (p *Message) SetIsEdited(val *bool) {
 	p.IsEdited = val
 }
+func (p *Message) SetQuoteMsgId(val *int64) {
+	p.QuoteMsgId = val
+}
 
 func (p *Message) IsSetSenderName() bool {
 	return p.SenderName != nil
@@ -344,6 +375,10 @@ func (p *Message) IsSetStatus() bool {
 
 func (p *Message) IsSetIsEdited() bool {
 	return p.IsEdited != nil
+}
+
+func (p *Message) IsSetQuoteMsgId() bool {
+	return p.QuoteMsgId != nil
 }
 
 func (p *Message) String() string {
@@ -364,6 +399,7 @@ var fieldIDToName_Message = map[int16]string{
 	8:  "seq",
 	9:  "status",
 	10: "is_edited",
+	11: "quote_msg_id",
 }
 
 type GetHistoryReq struct {

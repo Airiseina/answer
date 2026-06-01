@@ -211,6 +211,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		PeerId:         peerID,
 		Content:        wsMsg.Content,
 		ClientSeq:      wsMsg.ClientSeq,
+		QuoteMsgId:     wsMsg.QuoteMsgId,
 	})
 	if err != nil {
 		klog.Errorf("RPC SendMessage失败: %v", err)
@@ -251,6 +252,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		MsgID:            resp.MsgId,
 		Seq:              resp.GetSeq(),
 		Timestamp:        resp.Timestamp,
+		QuoteMsgId:       wsMsg.QuoteMsgId,
 	}
 	sender.Send(chatMsg)
 	meter.M.MessageSentTotal.Add(context.Background(), 1)
@@ -264,7 +266,12 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 			}
 		}
 	}
-	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, mentionedUserIDs, pushContent)
+	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, mentionedUserIDs, pushContent, func() int64 {
+		if wsMsg.QuoteMsgId != nil {
+			return *wsMsg.QuoteMsgId
+		}
+		return 0
+	}())
 }
 
 func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg *WsMessage) {
@@ -775,7 +782,7 @@ const (
 	botTaskTopic          = "bot-task-topic"
 )
 
-func (manager *Manager) triggerBots(senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string) {
+func (manager *Manager) triggerBots(senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string, quoteMsgID int64) {
 	if len(memberIDs) == 0 {
 		return
 	}
@@ -823,6 +830,7 @@ func (manager *Manager) triggerBots(senderID, conversationID int64, convType int
 			"conversation_id": conversationID,
 			"sender_id":       senderID,
 			"content":         content,
+			"quote_msg_id":    quoteMsgID,
 		}
 		taskJSON, _ := json.Marshal(task)
 		err = kafkaWriter.WriteMessages(context.Background(), kafka.Message{

@@ -10,6 +10,7 @@ struct SendMessageReq {
     3: i64 peer_id
     4: string content
     5: i64 client_seq
+    6: optional i64 quote_msg_id
 }
 
 struct SendMessageRes {
@@ -34,6 +35,7 @@ struct Message {
     8: optional i64 seq  // 会话内消息序号
     9: optional i16 status  // 消息状态：0=正常，1=已撤回
     10: optional bool is_edited  // 是否已编辑
+    11: optional i64 quote_msg_id  // 引用消息ID
 }
 
 struct GetHistoryReq {

@@ -35,7 +35,6 @@ type AgentRunConfig struct {
 	Model        string
 	SystemPrompt string
 	McpServers   []mcp.ServerConfig
-	History      []*schema.Message
 	UserContent  string
 }
 
@@ -78,7 +77,6 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 			Content: cfg.SystemPrompt,
 		})
 	}
-	messages = append(messages, cfg.History...)
 	messages = append(messages, &schema.Message{
 		Role:    schema.User,
 		Content: cfg.UserContent,

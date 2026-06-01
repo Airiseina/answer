@@ -13,13 +13,6 @@ import (
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
 
 var serviceMethods = map[string]kitex.MethodInfo{
-	"HandleMessage": kitex.NewMethodInfo(
-		handleMessageHandler,
-		newWorkServiceHandleMessageArgs,
-		newWorkServiceHandleMessageResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"SummarizeConversation": kitex.NewMethodInfo(
 		summarizeConversationHandler,
 		newWorkServiceSummarizeConversationArgs,
@@ -31,6 +24,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		suggestRepliesHandler,
 		newWorkServiceSuggestRepliesArgs,
 		newWorkServiceSuggestRepliesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"TranslateMessage": kitex.NewMethodInfo(
+		translateMessageHandler,
+		newWorkServiceTranslateMessageArgs,
+		newWorkServiceTranslateMessageResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -100,24 +100,6 @@ func newServiceInfo(hasStreaming bool, keepStreamingMethods bool, keepNonStreami
 	return svcInfo
 }
 
-func handleMessageHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*work.WorkServiceHandleMessageArgs)
-	realResult := result.(*work.WorkServiceHandleMessageResult)
-	success, err := handler.(work.WorkService).HandleMessage(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-func newWorkServiceHandleMessageArgs() interface{} {
-	return work.NewWorkServiceHandleMessageArgs()
-}
-
-func newWorkServiceHandleMessageResult() interface{} {
-	return work.NewWorkServiceHandleMessageResult()
-}
-
 func summarizeConversationHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*work.WorkServiceSummarizeConversationArgs)
 	realResult := result.(*work.WorkServiceSummarizeConversationResult)
@@ -154,6 +136,24 @@ func newWorkServiceSuggestRepliesResult() interface{} {
 	return work.NewWorkServiceSuggestRepliesResult()
 }
 
+func translateMessageHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceTranslateMessageArgs)
+	realResult := result.(*work.WorkServiceTranslateMessageResult)
+	success, err := handler.(work.WorkService).TranslateMessage(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceTranslateMessageArgs() interface{} {
+	return work.NewWorkServiceTranslateMessageArgs()
+}
+
+func newWorkServiceTranslateMessageResult() interface{} {
+	return work.NewWorkServiceTranslateMessageResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -162,16 +162,6 @@ func newServiceClient(c client.Client) *kClient {
 	return &kClient{
 		c: c,
 	}
-}
-
-func (p *kClient) HandleMessage(ctx context.Context, req *work.HandleMessageReq) (r *work.HandleMessageRes, err error) {
-	var _args work.WorkServiceHandleMessageArgs
-	_args.Req = req
-	var _result work.WorkServiceHandleMessageResult
-	if err = p.c.Call(ctx, "HandleMessage", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
 }
 
 func (p *kClient) SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq) (r *work.SummarizeConversationRes, err error) {
@@ -189,6 +179,16 @@ func (p *kClient) SuggestReplies(ctx context.Context, req *work.SuggestRepliesRe
 	_args.Req = req
 	var _result work.WorkServiceSuggestRepliesResult
 	if err = p.c.Call(ctx, "SuggestReplies", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) TranslateMessage(ctx context.Context, req *work.TranslateMessageReq) (r *work.TranslateMessageRes, err error) {
+	var _args work.WorkServiceTranslateMessageArgs
+	_args.Req = req
+	var _result work.WorkServiceTranslateMessageResult
+	if err = p.c.Call(ctx, "TranslateMessage", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

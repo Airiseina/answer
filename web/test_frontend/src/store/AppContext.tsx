@@ -48,6 +48,7 @@ interface ChatMessage {
   isSent: boolean;
   status?: number;
   isEdited?: boolean;
+  quoteMsgId?: string;
 }
 
 interface Conversation {
@@ -104,7 +105,7 @@ interface AppContextType extends AppState {
   logout: () => void;
   wsConnect: () => void;
   wsDisconnect: () => void;
-  sendMessage: (convId: string, content: string, mentionedIds?: string[]) => void;
+  sendMessage: (convId: string, content: string, mentionedIds?: string[], quoteMsgId?: string) => void;
   setActiveConvId: (id: string | null) => void;
   addConversation: (conv: Conversation) => void;
   setFriends: (friends: FriendInfo[]) => void;
@@ -287,6 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isSent: String(m.sender_account) === myAccount,
           status: m.status || 0,
           isEdited: m.is_edited || false,
+          quoteMsgId: m.quote_msg_id ? String(m.quote_msg_id) : undefined,
         };
       });
       historyLoadedRef.current.add(convId);
@@ -405,6 +407,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 isSent: String(m.sender_account) === myAccount,
                 status: m.status || 0,
                 isEdited: m.is_edited || false,
+                quoteMsgId: m.quote_msg_id ? String(m.quote_msg_id) : undefined,
               };
             });
             let maxSeq = 0;
@@ -473,6 +476,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             content: msg.content,
             time: timeSec,
             isSent,
+            quoteMsgId: msg.quote_msg_id ? String(msg.quote_msg_id) : undefined,
           };
 
           const displayText = extractDisplayText(msg.content);
@@ -565,7 +569,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
   }, []);
 
-  const sendMessage = useCallback((convId: string, content: string, mentionedIds?: string[]) => {
+  const sendMessage = useCallback((convId: string, content: string, mentionedIds?: string[], quoteMsgId?: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     const conv = conversationsRef.current.find(c => c.id === convId);
     if (!conv) return;
@@ -578,6 +582,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     if (mentionedIds && mentionedIds.length > 0) {
       msg.mentioned_ids = mentionedIds;
+    }
+    if (quoteMsgId) {
+      msg.quote_msg_id = quoteMsgId;
     }
     if (conv.type === 1) {
       const myAccount = auth.account;
@@ -598,6 +605,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content,
       time: Date.now() / 1000,
       isSent: true,
+      quoteMsgId,
     };
     setMessages(prev => ({
       ...prev,

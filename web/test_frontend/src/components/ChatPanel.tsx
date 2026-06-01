@@ -33,6 +33,10 @@ export default function ChatPanel() {
   const [summaryModal, setSummaryModal] = useState<string | null>(null)
   const [repliesLoading, setRepliesLoading] = useState(false)
   const [suggestedReplies, setSuggestedReplies] = useState<string[] | null>(null)
+  const [quotingMsg, setQuotingMsg] = useState<{ id: string; fromName: string; content: string } | null>(null)
+  const [translatingMsgId, setTranslatingMsgId] = useState<string | null>(null)
+  const [translatedMsgs, setTranslatedMsgs] = useState<Record<string, { content: string; lang: string }>>({})
+  const [translatePickerMsgId, setTranslatePickerMsgId] = useState<string | null>(null)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -62,20 +66,22 @@ export default function ChatPanel() {
 
       if (input.trim()) {
         const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
-        sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id))
+        sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id), quotingMsg?.id)
         setInput('')
         setPendingMentions([])
+        setQuotingMsg(null)
       }
       return
     }
 
     if (input.trim()) {
       const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
-      sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id))
+      sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id), quotingMsg?.id)
       setInput('')
       setPendingMentions([])
       setMentionPickerVisible(false)
       setMentionStartPos(-1)
+      setQuotingMsg(null)
     }
   }
 
@@ -262,6 +268,34 @@ export default function ChatPanel() {
     setInput(reply)
     setSuggestedReplies(null)
     setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  const LANGUAGES = [
+    { code: '中文', label: '中文' },
+    { code: '英语', label: 'English' },
+    { code: '日语', label: '日本語' },
+    { code: '韩语', label: '한국어' },
+    { code: '法语', label: 'Français' },
+    { code: '德语', label: 'Deutsch' },
+    { code: '西班牙语', label: 'Español' },
+    { code: '俄语', label: 'Русский' },
+  ]
+
+  const handleTranslate = async (msgId: string, content: string, targetLang: string) => {
+    setTranslatePickerMsgId(null)
+    setTranslatingMsgId(msgId)
+    try {
+      const parsed = parseMessageContent(content)
+      const textToTranslate = parsed.text || content
+      const res = await api('POST', '/api/chat/translate', { content: textToTranslate, target_lang: targetLang })
+      if (res.code === 0 && res.data?.translated_content) {
+        const translated = res.data.translated_content.trim()
+        if (translated && translated !== textToTranslate) {
+          setTranslatedMsgs(prev => ({ ...prev, [msgId]: { content: translated, lang: targetLang } }))
+        }
+      }
+    } catch { }
+    setTranslatingMsgId(null)
   }
 
   const renderTextWithMentions = (text: string, mentions?: MentionItem[]) => {
@@ -580,9 +614,9 @@ export default function ChatPanel() {
           </button>
         </div>
       </div>
-      <div className="chat-messages" onClick={() => setContextMenu(null)}>
+      <div className="chat-messages" onClick={() => { setContextMenu(null); setTranslatePickerMsgId(null) }}>
         {msgs.map(msg => (
-          <div key={msg.id} className={`msg-row ${msg.isSent ? 'sent' : 'received'}`}
+          <div key={msg.id} className={`msg-row ${msg.isSent ? 'sent' : 'received'}`} data-msg-id={msg.id}
             onContextMenu={(e) => handleContextMenu(e, msg.id, msg.isSent, msg.status === 1, msg.from)}
           >
             <div className="msg-avatar">
@@ -619,6 +653,24 @@ export default function ChatPanel() {
                 </div>
               ) : (
                 <>
+                  {msg.quoteMsgId && (() => {
+                    const quotedMsg = msgs.find(m => m.id === msg.quoteMsgId)
+                    if (quotedMsg) {
+                      const parsed = parseMessageContent(quotedMsg.content)
+                      return (
+                        <div className="msg-quote-card" onClick={() => {
+                          const el = document.querySelector(`[data-msg-id="${quotedMsg.id}"]`)
+                          el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          el?.classList.add('msg-highlight')
+                          setTimeout(() => el?.classList.remove('msg-highlight'), 1500)
+                        }}>
+                          <div className="msg-quote-sender">{quotedMsg.fromName || '未知'}</div>
+                          <div className="msg-quote-content">{parsed.text || quotedMsg.content}</div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
                   {renderMessageContent(msg.content)}
                   {msg.isEdited && (
                     <div className="msg-edited-tag" onClick={() => handleViewEditHistory(msg.id)} style={{ cursor: 'pointer' }}>
@@ -628,7 +680,36 @@ export default function ChatPanel() {
                 </>
               )}
               {msg.status !== 1 && (
-                <div className="msg-time">{formatTime(msg.time)}</div>
+                <div className="msg-actions-row">
+                  <div className="msg-time">{formatTime(msg.time)}</div>
+                  {(() => {
+                    const parsed = parseMessageContent(msg.content)
+                    return parsed.type === 'text' && parsed.text && (
+                      <button className="msg-translate-btn" onClick={(e) => {
+                        e.stopPropagation()
+                        setTranslatePickerMsgId(translatePickerMsgId === msg.id ? null : msg.id)
+                      }} title="翻译">🌐</button>
+                    )
+                  })()}
+                </div>
+              )}
+              {translatePickerMsgId === msg.id && (
+                <div className="translate-lang-picker" onClick={e => e.stopPropagation()}>
+                  {LANGUAGES.map(lang => (
+                    <button key={lang.code} className="translate-lang-item" onClick={() => handleTranslate(msg.id, msg.content, lang.code)}>
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {translatingMsgId === msg.id && (
+                <div className="msg-translating">翻译中...</div>
+              )}
+              {translatedMsgs[msg.id] && (
+                <div className="msg-translated">
+                  <div className="msg-translated-lang">{translatedMsgs[msg.id].lang}</div>
+                  <div className="msg-translated-content">{translatedMsgs[msg.id].content}</div>
+                </div>
               )}
             </div>
           </div>
@@ -639,6 +720,17 @@ export default function ChatPanel() {
         <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={e => e.stopPropagation()}
         >
+          {!contextMenu.isRecalled && (
+            <div className="context-menu-item" onClick={() => {
+              const m = msgs.find(m => m.id === contextMenu.msgId)
+              if (m) {
+                const parsed = parseMessageContent(m.content)
+                setQuotingMsg({ id: m.id, fromName: m.fromName, content: parsed.text || m.content })
+              }
+              setContextMenu(null)
+              setTimeout(() => textareaRef.current?.focus(), 0)
+            }}>引用</div>
+          )}
           {!contextMenu.isRecalled && (contextMenu.isSent || (conv?.type === 2)) && (
             <div className="context-menu-item" onClick={handleRecall}>撤回</div>
           )}
@@ -709,6 +801,15 @@ export default function ChatPanel() {
         </div>
       )}
       <div className="chat-input-area">
+        {quotingMsg && (
+          <div className="quote-preview-bar">
+            <div className="quote-preview-content">
+              <div className="quote-preview-label">回复 {quotingMsg.fromName}</div>
+              <div className="quote-preview-text">{quotingMsg.content.length > 60 ? quotingMsg.content.slice(0, 60) + '...' : quotingMsg.content}</div>
+            </div>
+            <button className="quote-preview-close" onClick={() => setQuotingMsg(null)}>✕</button>
+          </div>
+        )}
         {suggestedReplies && (
           <div className="suggest-replies-bar">
             <span className="suggest-replies-label">回复候选：</span>

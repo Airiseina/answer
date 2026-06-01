@@ -50,3 +50,7 @@ func SummarizeConversation(ctx context.Context, req *work.SummarizeConversationR
 func SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq) (*work.SuggestRepliesRes, error) {
 	return workCli.SuggestReplies(ctx, req)
 }
+
+func TranslateMessage(ctx context.Context, req *work.TranslateMessageReq) (*work.TranslateMessageRes, error) {
+	return workCli.TranslateMessage(ctx, req)
+}

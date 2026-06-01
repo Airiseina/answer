@@ -42,6 +42,7 @@ type BotTask struct {
 	ConversationID FlexInt `json:"conversation_id"`
 	SenderID       FlexInt `json:"sender_id"`
 	Content        string  `json:"content"`
+	QuoteMsgID     FlexInt `json:"quote_msg_id"`
 }
 
 type BotTaskConsumer struct {
@@ -169,7 +170,7 @@ func (c *BotTaskConsumer) processMessage(msg kafka.Message) {
 	handleCtx, handleCancel := context.WithTimeout(context.Background(), handleTimeout)
 	defer handleCancel()
 
-	_, err := c.workService.HandleMessage(handleCtx, int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, nil)
+	_, err := c.workService.HandleMessage(handleCtx, int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, int64(task.QuoteMsgID))
 	if err != nil {
 		if errors.Is(handleCtx.Err(), context.DeadlineExceeded) {
 			klog.Errorf("Bot[%d]处理消息超时(>%v): convId=%d, senderId=%d", task.BotID, handleTimeout, task.ConversationID, task.SenderID)

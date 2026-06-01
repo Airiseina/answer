@@ -17,6 +17,7 @@ type Message struct {
 	Status         int16  `gorm:"not null;default:0" json:"status"`
 	IsEdited       bool   `gorm:"not null;default:false" json:"is_edited"`
 	Timestamp      int64  `gorm:"not null;index:idx_conversation_timestamp" json:"timestamp"`
+	QuoteMsgID     int64  `gorm:"not null;default:0;index:idx_quote_msg_id" json:"quote_msg_id"`
 }
 
 func (Message) TableName() string {

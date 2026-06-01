@@ -13,15 +13,6 @@ type WorkServiceImpl struct {
 	workService *service.WorkService
 }
 
-func (s *WorkServiceImpl) HandleMessage(ctx context.Context, req *work.HandleMessageReq) (resp *work.HandleMessageRes, err error) {
-	success, err := s.workService.HandleMessage(ctx, req.BotId, req.ConversationId, req.SenderId, req.Content, req.History)
-	if err != nil {
-		klog.CtxErrorf(ctx, "Bot[%d]处理消息失败: %v", req.BotId, err)
-		return &work.HandleMessageRes{Success: false}, err
-	}
-	return &work.HandleMessageRes{Success: success}, nil
-}
-
 // SummarizeConversation implements the WorkServiceImpl interface.
 func (s *WorkServiceImpl) SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq) (resp *work.SummarizeConversationRes, err error) {
 	summary, err := s.workService.SummarizeConversation(ctx, req.ConversationId, req.UserId)
@@ -39,4 +30,13 @@ func (s *WorkServiceImpl) SuggestReplies(ctx context.Context, req *work.SuggestR
 		return &work.SuggestRepliesRes{Success: false}, err
 	}
 	return &work.SuggestRepliesRes{Success: true, Replies: replies}, nil
+}
+
+func (s *WorkServiceImpl) TranslateMessage(ctx context.Context, req *work.TranslateMessageReq) (resp *work.TranslateMessageRes, err error) {
+	result, err := s.workService.TranslateMessage(ctx, req.Content, req.TargetLang)
+	if err != nil {
+		klog.CtxErrorf(ctx, "翻译消息失败: %v", err)
+		return &work.TranslateMessageRes{Success: false}, err
+	}
+	return &work.TranslateMessageRes{Success: true, TranslatedContent: result}, nil
 }
