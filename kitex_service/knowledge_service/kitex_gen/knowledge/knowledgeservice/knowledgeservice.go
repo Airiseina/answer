@@ -104,6 +104,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BindSystemKnowledgeBase": kitex.NewMethodInfo(
+		bindSystemKnowledgeBaseHandler,
+		newKnowledgeServiceBindSystemKnowledgeBaseArgs,
+		newKnowledgeServiceBindSystemKnowledgeBaseResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"AddSystemDocument": kitex.NewMethodInfo(
+		addSystemDocumentHandler,
+		newKnowledgeServiceAddSystemDocumentArgs,
+		newKnowledgeServiceAddSystemDocumentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -404,6 +418,42 @@ func newKnowledgeServiceSearchKnowledgeResult() interface{} {
 	return knowledge.NewKnowledgeServiceSearchKnowledgeResult()
 }
 
+func bindSystemKnowledgeBaseHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*knowledge.KnowledgeServiceBindSystemKnowledgeBaseArgs)
+	realResult := result.(*knowledge.KnowledgeServiceBindSystemKnowledgeBaseResult)
+	success, err := handler.(knowledge.KnowledgeService).BindSystemKnowledgeBase(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newKnowledgeServiceBindSystemKnowledgeBaseArgs() interface{} {
+	return knowledge.NewKnowledgeServiceBindSystemKnowledgeBaseArgs()
+}
+
+func newKnowledgeServiceBindSystemKnowledgeBaseResult() interface{} {
+	return knowledge.NewKnowledgeServiceBindSystemKnowledgeBaseResult()
+}
+
+func addSystemDocumentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*knowledge.KnowledgeServiceAddSystemDocumentArgs)
+	realResult := result.(*knowledge.KnowledgeServiceAddSystemDocumentResult)
+	success, err := handler.(knowledge.KnowledgeService).AddSystemDocument(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newKnowledgeServiceAddSystemDocumentArgs() interface{} {
+	return knowledge.NewKnowledgeServiceAddSystemDocumentArgs()
+}
+
+func newKnowledgeServiceAddSystemDocumentResult() interface{} {
+	return knowledge.NewKnowledgeServiceAddSystemDocumentResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -539,6 +589,26 @@ func (p *kClient) SearchKnowledge(ctx context.Context, req *knowledge.SearchKnow
 	_args.Req = req
 	var _result knowledge.KnowledgeServiceSearchKnowledgeResult
 	if err = p.c.Call(ctx, "SearchKnowledge", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BindSystemKnowledgeBase(ctx context.Context, req *knowledge.BindSystemKnowledgeBaseReq) (r *knowledge.CommonRes, err error) {
+	var _args knowledge.KnowledgeServiceBindSystemKnowledgeBaseArgs
+	_args.Req = req
+	var _result knowledge.KnowledgeServiceBindSystemKnowledgeBaseResult
+	if err = p.c.Call(ctx, "BindSystemKnowledgeBase", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AddSystemDocument(ctx context.Context, req *knowledge.AddSystemDocumentReq) (r *knowledge.AddDocumentRes, err error) {
+	var _args knowledge.KnowledgeServiceAddSystemDocumentArgs
+	_args.Req = req
+	var _result knowledge.KnowledgeServiceAddSystemDocumentResult
+	if err = p.c.Call(ctx, "AddSystemDocument", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -190,9 +190,19 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, botCfg.SystemPrompt, chatHistory, content)
 		if llmErr != nil {
 			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
-			return fmt.Sprint("啊？你说啥😶?抱歉我没有听清,能再重复一遍吗(*/ω＼*)?")
+			return fmt.Sprint("抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?")
 		}
-		return llmResult
+		go func() {
+			saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
+			defer cancel()
+			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, llmResult)
+			saveRunID := ""
+			if isGroupChat {
+				saveRunID = runID
+			}
+			mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
+		}()
+		return "抱歉，我这边信号有点不好~我只能凭记忆给你回答了😥\n\n" + llmResult
 	}
 	go func() {
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)

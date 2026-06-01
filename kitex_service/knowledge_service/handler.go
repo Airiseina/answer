@@ -219,3 +219,23 @@ func (s *KnowledgeServiceImpl) SearchKnowledge(ctx context.Context, req *knowled
 	}
 	return &knowledge.SearchKnowledgeRes{Success: true, Chunks: chunks}, nil
 }
+
+// BindSystemKnowledgeBase implements the KnowledgeServiceImpl interface.
+func (s *KnowledgeServiceImpl) BindSystemKnowledgeBase(ctx context.Context, req *knowledge.BindSystemKnowledgeBaseReq) (resp *knowledge.CommonRes, err error) {
+	success, err := s.knowledgeService.BindSystemKnowledgeBase(req.BotId, req.KbId)
+	if err != nil {
+		klog.CtxErrorf(ctx, "系统Bot[%d]绑定知识库[%d]失败: %v", req.BotId, req.KbId, err)
+		return &knowledge.CommonRes{Success: false}, err
+	}
+	return &knowledge.CommonRes{Success: success}, nil
+}
+
+// AddSystemDocument implements the KnowledgeServiceImpl interface.
+func (s *KnowledgeServiceImpl) AddSystemDocument(ctx context.Context, req *knowledge.AddSystemDocumentReq) (resp *knowledge.AddDocumentRes, err error) {
+	docID, err := s.knowledgeService.AddSystemDocument(ctx, req.KbId, req.FileName, req.FileUrl, req.FileType, req.FileSize)
+	if err != nil {
+		klog.CtxErrorf(ctx, "系统知识库[%d]添加文档[%s]失败: %v", req.KbId, req.FileName, err)
+		return &knowledge.AddDocumentRes{Success: false}, err
+	}
+	return &knowledge.AddDocumentRes{Success: true, DocId: docID}, nil
+}

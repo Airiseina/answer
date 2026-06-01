@@ -19,6 +19,7 @@ func GetConfig() {
 	V.SetDefault("ai.system.bot_name", "AIM 助手")
 	V.SetDefault("ai.system.bot_prompt", "你是AIM助手，一个智能AI助手。你可以回答问题、总结对话、查询天气、翻译文本等。请用中文回复。")
 	V.SetDefault("ai.system.bot_prompt_file", "prompt/system_bot_prompt.md")
+	V.SetDefault("ai.system.bot_skill_dir", "prompt/skills/kiana.skill")
 	V.SetDefault("ai.system.bot_model", "glm-4.7-flash")
 	V.SetDefault("ai.system.bot_base_url", "https://open.bigmodel.cn/api/paas/v4")
 	V.SetDefault("ai.system.bot_api_key", "")

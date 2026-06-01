@@ -236,6 +236,51 @@ func (svc *KnowledgeService) GetBotKnowledgeBases(botID int64) ([]model.Knowledg
 	return svc.bkDao.GetKnowledgeBasesByBotID(botID)
 }
 
+func (svc *KnowledgeService) BindSystemKnowledgeBase(botID, kbID int64) (bool, error) {
+	kb, err := svc.kbDao.GetByID(kbID)
+	if err != nil {
+		return false, err
+	}
+	if kb.ID == 0 {
+		return false, fmt.Errorf("知识库不存在")
+	}
+	bkID := svc.snow.Generate()
+	bk := model.BotKnowledge{
+		ID:    bkID,
+		BotID: botID,
+		KBID:  kbID,
+	}
+	return true, svc.bkDao.Create(bk)
+}
+
+func (svc *KnowledgeService) AddSystemDocument(ctx context.Context, kbID int64, fileName, fileURL, fileType string, fileSize int64) (int64, error) {
+	kb, err := svc.kbDao.GetByID(kbID)
+	if err != nil {
+		return 0, err
+	}
+	if kb.ID == 0 {
+		return 0, fmt.Errorf("知识库不存在")
+	}
+	docID := svc.snow.Generate()
+	doc := model.KbDocument{
+		ID:       docID,
+		KBID:     kbID,
+		FileName: fileName,
+		FileURL:  fileURL,
+		FileType: fileType,
+		FileSize: fileSize,
+		Status:   model.DocStatusPending,
+	}
+	if err := svc.docDao.Create(doc); err != nil {
+		return 0, err
+	}
+	_ = svc.kbDao.IncrDocCount(kbID, 1)
+	if err := svc.publishDocParse(docID, kbID); err != nil {
+		klog.Warnf("系统文档[%d]解析消息发送失败(将等待轮询): %v", docID, err)
+	}
+	return docID, nil
+}
+
 func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) error {
 	doc, err := svc.docDao.GetByID(docID)
 	if err != nil {

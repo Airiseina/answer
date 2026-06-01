@@ -24,6 +24,8 @@ type Client interface {
 	UnbindKnowledgeBase(ctx context.Context, req *knowledge.UnbindKnowledgeBaseReq, callOptions ...callopt.Option) (r *knowledge.CommonRes, err error)
 	GetBotKnowledgeBases(ctx context.Context, req *knowledge.GetBotKnowledgeBasesReq, callOptions ...callopt.Option) (r *knowledge.GetBotKnowledgeBasesRes, err error)
 	SearchKnowledge(ctx context.Context, req *knowledge.SearchKnowledgeReq, callOptions ...callopt.Option) (r *knowledge.SearchKnowledgeRes, err error)
+	BindSystemKnowledgeBase(ctx context.Context, req *knowledge.BindSystemKnowledgeBaseReq, callOptions ...callopt.Option) (r *knowledge.CommonRes, err error)
+	AddSystemDocument(ctx context.Context, req *knowledge.AddSystemDocumentReq, callOptions ...callopt.Option) (r *knowledge.AddDocumentRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -118,4 +120,14 @@ func (p *kKnowledgeServiceClient) GetBotKnowledgeBases(ctx context.Context, req 
 func (p *kKnowledgeServiceClient) SearchKnowledge(ctx context.Context, req *knowledge.SearchKnowledgeReq, callOptions ...callopt.Option) (r *knowledge.SearchKnowledgeRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SearchKnowledge(ctx, req)
+}
+
+func (p *kKnowledgeServiceClient) BindSystemKnowledgeBase(ctx context.Context, req *knowledge.BindSystemKnowledgeBaseReq, callOptions ...callopt.Option) (r *knowledge.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BindSystemKnowledgeBase(ctx, req)
+}
+
+func (p *kKnowledgeServiceClient) AddSystemDocument(ctx context.Context, req *knowledge.AddSystemDocumentReq, callOptions ...callopt.Option) (r *knowledge.AddDocumentRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AddSystemDocument(ctx, req)
 }

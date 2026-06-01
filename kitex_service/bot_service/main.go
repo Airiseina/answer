@@ -14,6 +14,7 @@ import (
 	"github.com/Airiseina/answer/pkg/infra"
 	"github.com/Airiseina/answer/pkg/observability/meter"
 	"github.com/Airiseina/answer/pkg/observability/tracer"
+	"github.com/Airiseina/answer/pkg/storage"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/limit"
@@ -57,6 +58,7 @@ func main() {
 	}
 	rpc.ConnectUserService(resolver)
 	rpc.ConnectChatService(resolver)
+	rpc.ConnectKnowledgeService(resolver)
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4323")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
@@ -65,6 +67,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
+	storage.Init(v)
 	err = db.AutoMigrate(&model.Bot{}, &model.McpServer{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)

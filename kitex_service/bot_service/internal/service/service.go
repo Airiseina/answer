@@ -1,15 +1,19 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
 	"github.com/Airiseina/answer/pkg/snowflake"
+	"github.com/Airiseina/answer/pkg/storage"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )
@@ -265,7 +269,8 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("初始化系统Bot失败: %w", err)
 	}
-	userID, rpcErr := rpc.CreateBotUser(ctx, name, "")
+	avatarURL := svc.uploadSystemBotAvatar(ctx, botId)
+	userID, rpcErr := rpc.CreateBotUser(ctx, name, avatarURL)
 	if rpcErr != nil {
 		delErr := svc.dao.DeleteBot(botId)
 		if delErr != nil {
@@ -278,5 +283,123 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 		klog.Errorf("系统Bot[%d]更新user_id失败: %v", botId, err)
 	}
 	klog.Infof("系统Bot创建成功, ID: %d, UserID: %d", botId, userID)
+
+	svc.initSkillKnowledgeBase(ctx, botId)
+
 	return botId, nil
+}
+
+func (svc *BotService) uploadSystemBotAvatar(ctx context.Context, botID int64) string {
+	entries, err := os.ReadDir("avatar")
+	if err != nil {
+		klog.Warnf("系统Bot[%d]读取avatar目录失败: %v", botID, err)
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" && ext != ".webp" {
+			continue
+		}
+		filePath := filepath.Join("avatar", entry.Name())
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			klog.Warnf("系统Bot[%d]读取头像文件[%s]失败: %v", botID, filePath, err)
+			continue
+		}
+		if len(data) == 0 {
+			continue
+		}
+		contentHash := storage.ComputeContentHash(data)
+		objectName := storage.GenerateObjectName(contentHash, ext)
+		contentType := "image/png"
+		if ext != ".png" {
+			contentType = "image/" + ext[1:]
+		}
+		if err := storage.Client.PutObject(ctx, objectName, bytes.NewReader(data), contentType); err != nil {
+			klog.Errorf("系统Bot[%d]上传头像[%s]失败: %v", botID, filePath, err)
+			return ""
+		}
+		url := storage.PublicURL + storage.BasePath + "/" + objectName
+		klog.Infof("系统Bot[%d]头像上传成功: %s", botID, url)
+		return url
+	}
+	klog.Warnf("系统Bot[%d]未在avatar目录中找到图片文件", botID)
+	return ""
+}
+
+var skillFiles = []string{
+	"SKILL.md",
+	"profile.md",
+	"personality.md",
+	"interaction.md",
+	"relations.md",
+	"conflicts.md",
+	"background_story.md",
+	"memory.md",
+	"references/tone-guide.md",
+	"references/tone-engine.md",
+	"references/scene-dialogues.md",
+	"references/vocal-mannerisms.md",
+}
+
+func (svc *BotService) initSkillKnowledgeBase(ctx context.Context, botID int64) {
+	v := config.V
+	skillDir := v.GetString("ai.system.bot_skill_dir")
+	if skillDir == "" {
+		klog.Warn("未配置ai.system.bot_skill_dir，跳过Skill知识库初始化")
+		return
+	}
+
+	kbID, err := rpc.CreateKnowledgeBase(ctx, 0, "kiana角色Skill", "琪亚娜·卡斯兰娜角色扮演数据")
+	if err != nil {
+		klog.Errorf("系统Bot[%d]创建Skill知识库失败: %v", botID, err)
+		return
+	}
+	klog.Infof("系统Bot[%d]创建Skill知识库成功, KB ID: %d", botID, kbID)
+
+	if err := rpc.BindSystemKnowledgeBase(ctx, botID, kbID); err != nil {
+		klog.Errorf("系统Bot[%d]绑定Skill知识库[%d]失败: %v", botID, kbID, err)
+		return
+	}
+	klog.Infof("系统Bot[%d]绑定Skill知识库[%d]成功", botID, kbID)
+
+	for _, f := range skillFiles {
+		filePath := filepath.Join(skillDir, f)
+		svc.uploadSkillFile(ctx, kbID, filePath, f)
+	}
+	klog.Infof("系统Bot[%d] Skill知识库[%d]初始化完成", botID, kbID)
+}
+
+func (svc *BotService) uploadSkillFile(ctx context.Context, kbID int64, filePath, relativePath string) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		klog.Warnf("读取Skill文件[%s]失败: %v", filePath, err)
+		return
+	}
+	if len(data) == 0 {
+		klog.Warnf("Skill文件[%s]为空，跳过", filePath)
+		return
+	}
+
+	contentHash := storage.ComputeContentHash(data)
+	ext := filepath.Ext(relativePath)
+	objectName := storage.GenerateObjectName(contentHash, ext)
+
+	if err := storage.Client.PutObject(ctx, objectName, bytes.NewReader(data), "text/markdown"); err != nil {
+		klog.Errorf("上传Skill文件[%s]到SeaweedFS失败: %v", relativePath, err)
+		return
+	}
+
+	fileURL := storage.PublicURL + storage.BasePath + "/" + objectName
+	fileName := strings.TrimSuffix(filepath.Base(relativePath), ext)
+
+	_, err = rpc.AddSystemDocument(ctx, kbID, fileName, fileURL, "md", int64(len(data)))
+	if err != nil {
+		klog.Errorf("添加Skill文件[%s]到知识库[%d]失败: %v", relativePath, kbID, err)
+		return
+	}
+	klog.Infof("Skill文件[%s]上传成功, 知识库[%d]", relativePath, kbID)
 }

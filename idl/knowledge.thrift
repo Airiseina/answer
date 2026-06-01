@@ -144,6 +144,19 @@ struct SearchKnowledgeRes {
     2: list<KnowledgeChunk> chunks
 }
 
+struct BindSystemKnowledgeBaseReq {
+    1: i64 bot_id
+    2: i64 kb_id
+}
+
+struct AddSystemDocumentReq {
+    1: i64 kb_id
+    2: string file_name
+    3: string file_url
+    4: string file_type
+    5: i64 file_size
+}
+
 service KnowledgeService {
     CreateKnowledgeBaseRes CreateKnowledgeBase(1: CreateKnowledgeBaseReq req)
     GetKnowledgeBaseRes GetKnowledgeBase(1: GetKnowledgeBaseReq req)
@@ -161,4 +174,7 @@ service KnowledgeService {
     GetBotKnowledgeBasesRes GetBotKnowledgeBases(1: GetBotKnowledgeBasesReq req)
 
     SearchKnowledgeRes SearchKnowledge(1: SearchKnowledgeReq req)
+
+    CommonRes BindSystemKnowledgeBase(1: BindSystemKnowledgeBaseReq req)
+    AddDocumentRes AddSystemDocument(1: AddSystemDocumentReq req)
 }

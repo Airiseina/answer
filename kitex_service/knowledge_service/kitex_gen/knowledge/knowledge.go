@@ -1189,6 +1189,109 @@ var fieldIDToName_SearchKnowledgeRes = map[int16]string{
 	2: "chunks",
 }
 
+type BindSystemKnowledgeBaseReq struct {
+	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	KbId  int64 `thrift:"kb_id,2" frugal:"2,default,i64" json:"kb_id"`
+}
+
+func NewBindSystemKnowledgeBaseReq() *BindSystemKnowledgeBaseReq {
+	return &BindSystemKnowledgeBaseReq{}
+}
+
+func (p *BindSystemKnowledgeBaseReq) InitDefault() {
+}
+
+func (p *BindSystemKnowledgeBaseReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *BindSystemKnowledgeBaseReq) GetKbId() (v int64) {
+	return p.KbId
+}
+func (p *BindSystemKnowledgeBaseReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *BindSystemKnowledgeBaseReq) SetKbId(val int64) {
+	p.KbId = val
+}
+
+func (p *BindSystemKnowledgeBaseReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BindSystemKnowledgeBaseReq(%+v)", *p)
+}
+
+var fieldIDToName_BindSystemKnowledgeBaseReq = map[int16]string{
+	1: "bot_id",
+	2: "kb_id",
+}
+
+type AddSystemDocumentReq struct {
+	KbId     int64  `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	FileName string `thrift:"file_name,2" frugal:"2,default,string" json:"file_name"`
+	FileUrl  string `thrift:"file_url,3" frugal:"3,default,string" json:"file_url"`
+	FileType string `thrift:"file_type,4" frugal:"4,default,string" json:"file_type"`
+	FileSize int64  `thrift:"file_size,5" frugal:"5,default,i64" json:"file_size"`
+}
+
+func NewAddSystemDocumentReq() *AddSystemDocumentReq {
+	return &AddSystemDocumentReq{}
+}
+
+func (p *AddSystemDocumentReq) InitDefault() {
+}
+
+func (p *AddSystemDocumentReq) GetKbId() (v int64) {
+	return p.KbId
+}
+
+func (p *AddSystemDocumentReq) GetFileName() (v string) {
+	return p.FileName
+}
+
+func (p *AddSystemDocumentReq) GetFileUrl() (v string) {
+	return p.FileUrl
+}
+
+func (p *AddSystemDocumentReq) GetFileType() (v string) {
+	return p.FileType
+}
+
+func (p *AddSystemDocumentReq) GetFileSize() (v int64) {
+	return p.FileSize
+}
+func (p *AddSystemDocumentReq) SetKbId(val int64) {
+	p.KbId = val
+}
+func (p *AddSystemDocumentReq) SetFileName(val string) {
+	p.FileName = val
+}
+func (p *AddSystemDocumentReq) SetFileUrl(val string) {
+	p.FileUrl = val
+}
+func (p *AddSystemDocumentReq) SetFileType(val string) {
+	p.FileType = val
+}
+func (p *AddSystemDocumentReq) SetFileSize(val int64) {
+	p.FileSize = val
+}
+
+func (p *AddSystemDocumentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AddSystemDocumentReq(%+v)", *p)
+}
+
+var fieldIDToName_AddSystemDocumentReq = map[int16]string{
+	1: "kb_id",
+	2: "file_name",
+	3: "file_url",
+	4: "file_type",
+	5: "file_size",
+}
+
 type KnowledgeService interface {
 	CreateKnowledgeBase(ctx context.Context, req *CreateKnowledgeBaseReq) (r *CreateKnowledgeBaseRes, err error)
 
@@ -1215,6 +1318,10 @@ type KnowledgeService interface {
 	GetBotKnowledgeBases(ctx context.Context, req *GetBotKnowledgeBasesReq) (r *GetBotKnowledgeBasesRes, err error)
 
 	SearchKnowledge(ctx context.Context, req *SearchKnowledgeReq) (r *SearchKnowledgeRes, err error)
+
+	BindSystemKnowledgeBase(ctx context.Context, req *BindSystemKnowledgeBaseReq) (r *CommonRes, err error)
+
+	AddSystemDocument(ctx context.Context, req *AddSystemDocumentReq) (r *AddDocumentRes, err error)
 }
 
 type KnowledgeServiceCreateKnowledgeBaseArgs struct {
@@ -2202,5 +2309,157 @@ func (p *KnowledgeServiceSearchKnowledgeResult) String() string {
 }
 
 var fieldIDToName_KnowledgeServiceSearchKnowledgeResult = map[int16]string{
+	0: "success",
+}
+
+type KnowledgeServiceBindSystemKnowledgeBaseArgs struct {
+	Req *BindSystemKnowledgeBaseReq `thrift:"req,1" frugal:"1,default,BindSystemKnowledgeBaseReq" json:"req"`
+}
+
+func NewKnowledgeServiceBindSystemKnowledgeBaseArgs() *KnowledgeServiceBindSystemKnowledgeBaseArgs {
+	return &KnowledgeServiceBindSystemKnowledgeBaseArgs{}
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseArgs) InitDefault() {
+}
+
+var KnowledgeServiceBindSystemKnowledgeBaseArgs_Req_DEFAULT *BindSystemKnowledgeBaseReq
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseArgs) GetReq() (v *BindSystemKnowledgeBaseReq) {
+	if !p.IsSetReq() {
+		return KnowledgeServiceBindSystemKnowledgeBaseArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *KnowledgeServiceBindSystemKnowledgeBaseArgs) SetReq(val *BindSystemKnowledgeBaseReq) {
+	p.Req = val
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("KnowledgeServiceBindSystemKnowledgeBaseArgs(%+v)", *p)
+}
+
+var fieldIDToName_KnowledgeServiceBindSystemKnowledgeBaseArgs = map[int16]string{
+	1: "req",
+}
+
+type KnowledgeServiceBindSystemKnowledgeBaseResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewKnowledgeServiceBindSystemKnowledgeBaseResult() *KnowledgeServiceBindSystemKnowledgeBaseResult {
+	return &KnowledgeServiceBindSystemKnowledgeBaseResult{}
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseResult) InitDefault() {
+}
+
+var KnowledgeServiceBindSystemKnowledgeBaseResult_Success_DEFAULT *CommonRes
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return KnowledgeServiceBindSystemKnowledgeBaseResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *KnowledgeServiceBindSystemKnowledgeBaseResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *KnowledgeServiceBindSystemKnowledgeBaseResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("KnowledgeServiceBindSystemKnowledgeBaseResult(%+v)", *p)
+}
+
+var fieldIDToName_KnowledgeServiceBindSystemKnowledgeBaseResult = map[int16]string{
+	0: "success",
+}
+
+type KnowledgeServiceAddSystemDocumentArgs struct {
+	Req *AddSystemDocumentReq `thrift:"req,1" frugal:"1,default,AddSystemDocumentReq" json:"req"`
+}
+
+func NewKnowledgeServiceAddSystemDocumentArgs() *KnowledgeServiceAddSystemDocumentArgs {
+	return &KnowledgeServiceAddSystemDocumentArgs{}
+}
+
+func (p *KnowledgeServiceAddSystemDocumentArgs) InitDefault() {
+}
+
+var KnowledgeServiceAddSystemDocumentArgs_Req_DEFAULT *AddSystemDocumentReq
+
+func (p *KnowledgeServiceAddSystemDocumentArgs) GetReq() (v *AddSystemDocumentReq) {
+	if !p.IsSetReq() {
+		return KnowledgeServiceAddSystemDocumentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *KnowledgeServiceAddSystemDocumentArgs) SetReq(val *AddSystemDocumentReq) {
+	p.Req = val
+}
+
+func (p *KnowledgeServiceAddSystemDocumentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *KnowledgeServiceAddSystemDocumentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("KnowledgeServiceAddSystemDocumentArgs(%+v)", *p)
+}
+
+var fieldIDToName_KnowledgeServiceAddSystemDocumentArgs = map[int16]string{
+	1: "req",
+}
+
+type KnowledgeServiceAddSystemDocumentResult struct {
+	Success *AddDocumentRes `thrift:"success,0,optional" frugal:"0,optional,AddDocumentRes" json:"success,omitempty"`
+}
+
+func NewKnowledgeServiceAddSystemDocumentResult() *KnowledgeServiceAddSystemDocumentResult {
+	return &KnowledgeServiceAddSystemDocumentResult{}
+}
+
+func (p *KnowledgeServiceAddSystemDocumentResult) InitDefault() {
+}
+
+var KnowledgeServiceAddSystemDocumentResult_Success_DEFAULT *AddDocumentRes
+
+func (p *KnowledgeServiceAddSystemDocumentResult) GetSuccess() (v *AddDocumentRes) {
+	if !p.IsSetSuccess() {
+		return KnowledgeServiceAddSystemDocumentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *KnowledgeServiceAddSystemDocumentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*AddDocumentRes)
+}
+
+func (p *KnowledgeServiceAddSystemDocumentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *KnowledgeServiceAddSystemDocumentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("KnowledgeServiceAddSystemDocumentResult(%+v)", *p)
+}
+
+var fieldIDToName_KnowledgeServiceAddSystemDocumentResult = map[int16]string{
 	0: "success",
 }
