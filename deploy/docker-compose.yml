@@ -385,33 +385,6 @@ services:
       - answer-net
     restart: unless-stopped
 
-  mcp-brave-search:
-    build:
-      context: ..
-      dockerfile: deploy/docker/Dockerfile.mcp-brave-search
-    container_name: answer_mcp_brave_search
-    ports:
-      - "9002:8000"
-    environment:
-      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
-    networks:
-      - answer-net
-    restart: unless-stopped
-
-  mcp-translate:
-    build:
-      context: ../mcp-servers/translate
-      dockerfile: Dockerfile
-    container_name: answer_mcp_translate
-    ports:
-      - "9003:8000"
-    environment:
-      - TRANSLATE_PROVIDER=${TRANSLATE_PROVIDER:-mymemory}
-      - DEEPL_API_KEY=${DEEPL_API_KEY:-}
-    networks:
-      - answer-net
-    restart: unless-stopped
-
   mcp-timeserver:
     build:
       context: ..
@@ -449,6 +422,43 @@ services:
       - EMBEDDING_DIMS=${KNOWLEDGE_EMBEDDING_DIMS}
     networks:
       - answer-net
+    restart: unless-stopped
+
+  # ==========================================
+  # SearXNG 搜索引擎 + MCP Server
+  # ==========================================
+  searxng:
+    image: searxng/searxng:latest
+    container_name: answer_searxng
+    ports:
+      - "9007:8080"
+    volumes:
+      - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+    networks:
+      - answer-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/search?format=json&q=healthcheck&language=zh-CN || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+  mcp-searxng:
+    build:
+      context: ../mcp-servers/searxng
+      dockerfile: Dockerfile
+    container_name: answer_mcp_searxng
+    ports:
+      - "9008:8001"
+    environment:
+      - SEARXNG_BASE_URL=http://answer_searxng:8080
+      - SEARXNG_TIMEOUT=5
+    networks:
+      - answer-net
+    depends_on:
+      searxng:
+        condition: service_healthy
     restart: unless-stopped
 
   # ==========================================

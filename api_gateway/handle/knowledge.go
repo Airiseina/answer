@@ -9,6 +9,7 @@ import (
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 
+	bot "github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot"
 	knowledge "github.com/Airiseina/answer/kitex_service/knowledge_service/kitex_gen/knowledge"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -316,6 +317,20 @@ func BindKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 	var req BindKnowledgeBaseReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.Error(c, "参数错误", err.Error())
+		return
+	}
+	botResp, botErr := rpc.GetBot(ctx, &bot.GetBotReq{BotId: req.BotID})
+	if botErr != nil {
+		hlog.CtxErrorf(ctx, "查询Bot[%d]信息失败: %v", req.BotID, botErr)
+		response.Error(c, "查询Bot信息失败", nil)
+		return
+	}
+	if botResp == nil || botResp.BotInfo == nil {
+		response.Error(c, "Bot不存在", nil)
+		return
+	}
+	if botResp.BotInfo.IsSystem {
+		response.Error(c, "系统Bot不支持绑定知识库", nil)
 		return
 	}
 	resp, err := rpc.BindKnowledgeBase(ctx, &knowledge.BindKnowledgeBaseReq{

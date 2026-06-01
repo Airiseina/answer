@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Airiseina/answer/pkg/observability/meter"
@@ -18,10 +19,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-const defaultMcpTimeout = 15 * time.Second
+const defaultMcpTimeout = 20 * time.Second
 const memoryMcpTimeout = 60 * time.Second
-const healthCheckInterval = 30 * time.Second
-const healthCheckTimeout = 5 * time.Second
+const healthCheckInterval = 60 * time.Second
+const healthCheckTimeout = 10 * time.Second
 
 type ServerConfig struct {
 	Name      string
@@ -32,9 +33,10 @@ type ServerConfig struct {
 }
 
 type Connection struct {
-	Client mcpclient.MCPClient
-	Tools  []tool.BaseTool
-	Cfg    ServerConfig
+	Client   mcpclient.MCPClient
+	Tools    []tool.BaseTool
+	Cfg      ServerConfig
+	lastUsed atomic.Int64
 }
 
 type Pool struct {
@@ -108,6 +110,7 @@ func (p *Pool) Connect(ctx context.Context, cfg ServerConfig) (*Connection, erro
 		return nil, fmt.Errorf("获取MCP工具失败[%s]: %w", cfg.Name, err)
 	}
 	conn := &Connection{Client: cli, Tools: tools, Cfg: cfg}
+	conn.lastUsed.Store(time.Now().Unix())
 	p.conns[cfg.Name] = conn
 	meter.M.McpConnectTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("server", cfg.Name)))
 	klog.Infof("MCP Pool: %s 已连接(耗时%v)，可用工具: %v", cfg.Name, time.Since(start), func() []string {
@@ -154,6 +157,7 @@ func (p *Pool) CallToolWithTimeout(ctx context.Context, serverName, toolName str
 	}
 	callCtx, callCancel := context.WithTimeout(ctx, timeout)
 	defer callCancel()
+	conn.lastUsed.Store(time.Now().Unix())
 	result, err := conn.Client.CallTool(callCtx, mcpprotocol.CallToolRequest{
 		Params: mcpprotocol.CallToolParams{
 			Name:      toolName,
@@ -225,7 +229,12 @@ func (p *Pool) HealthCheck(ctx context.Context) []string {
 	defer p.mu.RUnlock()
 
 	var unhealthy []string
+	now := time.Now().Unix()
 	for name, conn := range p.conns {
+		lastUsed := conn.lastUsed.Load()
+		if now-lastUsed < int64(healthCheckInterval/time.Second)*2 {
+			continue
+		}
 		hcCtx, hcCancel := context.WithTimeout(ctx, healthCheckTimeout)
 		err := conn.Client.Ping(hcCtx)
 		hcCancel()
@@ -235,6 +244,8 @@ func (p *Pool) HealthCheck(ctx context.Context) []string {
 			}
 			unhealthy = append(unhealthy, name)
 			klog.Errorf("MCP Pool: 健康检查失败[%s]: %v", name, err)
+		} else {
+			conn.lastUsed.Store(now)
 		}
 	}
 	return unhealthy

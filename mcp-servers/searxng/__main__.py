@@ -1,4 +1,4 @@
-from translate import create_app, mcp
+from searxng import create_app, mcp
 import argparse
 import uvicorn
 
@@ -6,7 +6,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["stdio", "sse"], default="sse")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=8001)
     args = parser.parse_args()
 
     if args.mode == "stdio":

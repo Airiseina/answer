@@ -236,6 +236,20 @@ func CreateMcpServer(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数错误", err.Error())
 		return
 	}
+	botResp, botErr := rpc.GetBot(ctx, &bot.GetBotReq{BotId: req.BotId})
+	if botErr != nil {
+		hlog.CtxErrorf(ctx, "查询Bot[%d]信息失败: %v", req.BotId, botErr)
+		response.Error(c, "查询Bot信息失败", nil)
+		return
+	}
+	if botResp == nil || botResp.BotInfo == nil {
+		response.Error(c, "Bot不存在", nil)
+		return
+	}
+	if botResp.BotInfo.IsSystem {
+		response.Error(c, "系统Bot不支持添加MCP Server", nil)
+		return
+	}
 	rpcReq := &bot.CreateMcpServerReq{
 		OperatorId: userId,
 		BotId:      req.BotId,

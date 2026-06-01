@@ -483,6 +483,16 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   const groupConversations = conversations.filter(c => c.type === 2)
 
+  useEffect(() => {
+    if (!selectedKbId || documents.length === 0) return
+    const hasPending = documents.some(d => d.status === 'pending' || d.status === 'parsing')
+    if (!hasPending) return
+    const timer = setInterval(() => {
+      loadDocuments(selectedKbId)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [selectedKbId, documents])
+
   return (
     <div className="bots-panel">
       {toast && <div className="bots-toast">{toast}</div>}
@@ -552,7 +562,9 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
                   {groupConversations.length > 0 && (
                     <button className="btn-icon" title="拉入群聊" onClick={() => { setAddBotModal({ botId: b.bot_id, botName: b.name }); setSelectedConvId('') }} style={{ flexShrink: 0 }}>👥</button>
                   )}
-                  <button className="btn-icon" title="MCP 工具管理" onClick={() => { setMcpBotId(b.bot_id); setTab('mcp') }} style={{ flexShrink: 0 }}>🔧</button>
+                  {!b.is_system && (
+                    <button className="btn-icon" title="MCP 工具管理" onClick={() => { setMcpBotId(b.bot_id); setTab('mcp') }} style={{ flexShrink: 0 }}>🔧</button>
+                  )}
                   {!b.is_system && (
                     <>
                       <button className="btn-icon" title="编辑" onClick={() => openEditModal(b)} style={{ flexShrink: 0 }}>✎</button>
@@ -571,7 +583,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
               <label>选择 Bot</label>
               <select value={mcpBotId} onChange={e => setMcpBotId(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
                 <option value="">-- 请选择 Bot --</option>
-                {bots.map(b => (
+                {bots.filter(b => !b.is_system).map(b => (
                   <option key={b.bot_id} value={b.bot_id}>{b.name}</option>
                 ))}
               </select>
@@ -681,8 +693,8 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
                           <div className="mcp-server-info">
                             <div className="mcp-server-name">
                               {doc.file_type === 'pdf' ? '📄' : doc.file_type === 'md' ? '📝' : doc.file_type === 'docx' ? '📃' : doc.file_type === 'pptx' ? '📊' : '📄'} {doc.file_name}
-                              <span className={`mcp-badge ${doc.status === 'completed' ? 'enabled' : doc.status === 'failed' ? 'disabled' : 'sse'}`}>
-                                {doc.status === 'completed' ? '已完成' : doc.status === 'failed' ? '失败' : doc.status === 'processing' ? '解析中' : '待解析'}
+                              <span className={`mcp-badge ${doc.status === 'parsed' ? 'enabled' : doc.status === 'failed' ? 'disabled' : 'sse'}`}>
+                                {doc.status === 'parsed' ? '已完成' : doc.status === 'failed' ? '失败' : doc.status === 'parsing' ? '解析中' : '待解析'}
                               </span>
                               {doc.chunk_count > 0 && <span className="mcp-badge sse">{doc.chunk_count} 分块</span>}
                             </div>
@@ -860,7 +872,7 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
               <label>选择 Bot</label>
               <select value={bindKbBotId} onChange={e => { setBindKbBotId(e.target.value); if (e.target.value) loadBotKnowledgeBases(e.target.value) }} style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}>
                 <option value="">-- 请选择 Bot --</option>
-                {bots.map(b => (
+                {bots.filter(b => !b.is_system).map(b => (
                   <option key={b.bot_id} value={b.bot_id}>{b.name}</option>
                 ))}
               </select>

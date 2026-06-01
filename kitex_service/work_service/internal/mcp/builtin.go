@@ -24,18 +24,13 @@ func GetBuiltinServers() []BuiltinServer {
 			Transport: "sse",
 		},
 		{
-			Name:      "weather",
-			URL:       v.GetString("mcp.weather_url"),
+			Name:      "searxng",
+			URL:       v.GetString("mcp.searxng_url"),
 			Transport: "sse",
 		},
 		{
-			Name:      "brave-search",
-			URL:       v.GetString("mcp.brave_search_url"),
-			Transport: "http",
-		},
-		{
-			Name:      "translate",
-			URL:       v.GetString("mcp.translate_url"),
+			Name:      "weather",
+			URL:       v.GetString("mcp.weather_url"),
 			Transport: "sse",
 		},
 		{

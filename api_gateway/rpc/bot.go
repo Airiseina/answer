@@ -67,6 +67,10 @@ func GetSystemBot(ctx context.Context) (*bot.GetSystemBotRes, error) {
 	return botCli.GetSystemBot(ctx)
 }
 
+func GetBot(ctx context.Context, req *bot.GetBotReq) (*bot.GetBotRes, error) {
+	return botCli.GetBot(ctx, req)
+}
+
 func CreateMcpServer(ctx context.Context, req *bot.CreateMcpServerReq) (*bot.CreateMcpServerRes, error) {
 	return botCli.CreateMcpServer(ctx, req)
 }

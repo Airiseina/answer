@@ -25,7 +25,7 @@ const botReplyTopic = "bot-reply-topic"
 
 const (
 	mcpTimeout        = 60 * time.Second
-	llmTimeout        = 180 * time.Second
+	llmTimeout        = 120 * time.Second
 	memorySaveTimeout = 60 * time.Second
 )
 
@@ -84,7 +84,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	var result string
 	result = svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, history, isGroupChat)
 	if ctx.Err() != nil {
-		return false, fmt.Errorf("Bot[%d]处理消息超时，跳过发送", botId)
+		return false, fmt.Errorf("bot[%d]处理消息超时，跳过发送", botId)
 	}
 	sendCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

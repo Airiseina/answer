@@ -43,7 +43,10 @@ func (svc *McpServerService) CreateMcpServer(operatorId int64, botId int64, name
 	if bot.ID == 0 {
 		return 0, fmt.Errorf("bot不存在")
 	}
-	if !bot.IsSystem && bot.CreatorID != operatorId {
+	if bot.IsSystem {
+		return 0, fmt.Errorf("系统Bot不支持添加MCP Server")
+	}
+	if bot.CreatorID != operatorId {
 		return 0, fmt.Errorf("只有Bot创建者才能添加MCP Server")
 	}
 	if transport == "" {
@@ -94,7 +97,10 @@ func (svc *McpServerService) UpdateMcpServer(id, operatorId int64, updates map[s
 	if err != nil {
 		return false, err
 	}
-	if !bot.IsSystem && bot.CreatorID != operatorId {
+	if bot.IsSystem {
+		return false, fmt.Errorf("系统Bot不支持修改MCP Server")
+	}
+	if bot.CreatorID != operatorId {
 		return false, fmt.Errorf("只有Bot创建者才能修改MCP Server")
 	}
 	err = svc.dao.UpdateMcpServer(id, updates)
@@ -116,7 +122,10 @@ func (svc *McpServerService) DeleteMcpServer(id, operatorId int64) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	if !bot.IsSystem && bot.CreatorID != operatorId {
+	if bot.IsSystem {
+		return false, fmt.Errorf("系统Bot不支持删除MCP Server")
+	}
+	if bot.CreatorID != operatorId {
 		return false, fmt.Errorf("只有Bot创建者才能删除MCP Server")
 	}
 	err = svc.dao.DeleteMcpServer(id)

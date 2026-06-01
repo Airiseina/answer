@@ -1,0 +1,76 @@
+use_default_settings: true
+
+general:
+  instance_name: "Answer SearXNG"
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "zh-CN"
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+
+outgoing:
+  request_timeout: 2.0
+  max_request_timeout: 4.0
+  pool_connections: 100
+  pool_maxsize: 15
+  enable_http2: true
+  retries: 0
+
+engines:
+  - name: bing
+    engine: bing
+    shortcut: bi
+    disabled: false
+    timeout: 3.5
+    base_url: https://cn.bing.com
+
+  - name: bing news
+    engine: bing_news
+    shortcut: bin
+    disabled: false
+    timeout: 3.5
+    base_url: https://cn.bing.com
+
+  - name: google
+    engine: google
+    shortcut: go
+    disabled: true
+
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: true
+
+  - name: brave
+    engine: brave
+    shortcut: br
+    disabled: true
+
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    disabled: true
+
+  - name: wikidata
+    engine: wikidata
+    shortcut: wd
+    disabled: true
+
+  - name: startpage
+    engine: startpage
+    shortcut: sp
+    disabled: true
+
+  - name: qwant
+    engine: qwant
+    shortcut: qw
+    disabled: true

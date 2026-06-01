@@ -15,8 +15,7 @@ func GetConfig() {
 	V.SetDefault("kafka.brokers", "127.0.0.1:9094")
 	V.SetDefault("mcp.mem0_url", "http://localhost:9004/sse")
 	V.SetDefault("mcp.knowledge_url", "http://localhost:9006/sse")
+	V.SetDefault("mcp.searxng_url", "http://localhost:9008/sse")
 	V.SetDefault("mcp.weather_url", "http://localhost:9001/sse")
-	V.SetDefault("mcp.brave_search_url", "")
-	V.SetDefault("mcp.translate_url", "http://localhost:9003/sse")
 	V.SetDefault("mcp.timeserver_url", "http://localhost:9005/sse")
 }
