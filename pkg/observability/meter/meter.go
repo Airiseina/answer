@@ -47,6 +47,7 @@ type Metrics struct {
 	UserRegisterTotal    metric.Int64Counter
 	UserLoginTotal       metric.Int64Counter
 	FriendOpTotal        metric.Int64Counter
+	RateLimitHitTotal    metric.Int64Counter
 }
 
 var M *Metrics
@@ -165,6 +166,12 @@ func registerAll(serviceName string) {
 		metric.WithDescription("好友操作总数"),
 	)
 	mustRegister(err, "aim.friend.operation.total")
+
+	M.RateLimitHitTotal, err = Meter().Int64Counter(
+		"aim.ratelimit.hit.total",
+		metric.WithDescription("限流触发总数"),
+	)
+	mustRegister(err, "aim.ratelimit.hit.total")
 
 	fmt.Printf("[%s] 指标注册完成\n", serviceName)
 }

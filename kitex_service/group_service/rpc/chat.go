@@ -12,6 +12,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
 	"github.com/cloudwego/kitex/pkg/discovery"
 	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/cloudwego/kitex/pkg/loadbalance"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 )
@@ -31,13 +32,13 @@ var chatCli chatservice.Client
 //   - 这确保消息推送能准确路由到所有当前群成员
 func ConnectChatService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
-	fp.WithMaxRetryTimes(3)
-	fp.WithFixedBackOff(100)
+	fp.WithMaxRetryTimes(2)
+	fp.WithFixedBackOff(200)
 
 	cbConfig := circuitbreak.CBConfig{
 		Enable:    true,
-		ErrRate:   0.1,
-		MinSample: 10,
+		ErrRate:   0.5,
+		MinSample: 50,
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("chatservice", cbConfig)
@@ -48,6 +49,7 @@ func ConnectChatService(r discovery.Resolver) {
 		client.WithFailureRetry(fp),
 		client.WithRPCTimeout(5*time.Second),
 		client.WithCircuitBreaker(cbs),
+		client.WithLoadBalancer(loadbalance.NewWeightedRoundRobinBalancer()),
 	)
 	if err != nil {
 		klog.Fatalf("初始化 chat_service 客户端失败: %v", err)

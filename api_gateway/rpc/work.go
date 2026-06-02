@@ -20,12 +20,12 @@ var workCli workservice.Client
 
 func ConnectWorkService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
-	fp.WithMaxRetryTimes(3)
-	fp.WithFixedBackOff(100)
+	fp.WithMaxRetryTimes(1)
+	fp.WithFixedBackOff(500)
 	cbConfig := circuitbreak.CBConfig{
 		Enable:    true,
-		ErrRate:   0.1,
-		MinSample: 10,
+		ErrRate:   0.5,
+		MinSample: 20,
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("workservice", cbConfig)

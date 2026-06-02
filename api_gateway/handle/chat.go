@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/middleware/ratelimit"
 	"github.com/Airiseina/answer/api_gateway/response"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/pkg/storage"
@@ -724,6 +725,10 @@ func SummarizeConversation(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
 
+	if !ratelimit.CheckRateLimit(c, userID, "summarize", ratelimit.Default) {
+		return
+	}
+
 	var reqBody struct {
 		ConversationID string `json:"conversation_id"`
 	}
@@ -760,6 +765,10 @@ func SuggestReplies(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
 
+	if !ratelimit.CheckRateLimit(c, userID, "suggest_replies", ratelimit.Default) {
+		return
+	}
+
 	var reqBody struct {
 		ConversationID string `json:"conversation_id"`
 	}
@@ -772,7 +781,6 @@ func SuggestReplies(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数错误", "conversation_id格式不正确")
 		return
 	}
-
 	resp, err := rpc.SuggestReplies(ctx, &work.SuggestRepliesReq{
 		ConversationId: conversationID,
 		UserId:         userID,
@@ -792,6 +800,12 @@ func SuggestReplies(ctx context.Context, c *app.RequestContext) {
 }
 
 func TranslateMessage(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userID := userInfo.Id
+	if !ratelimit.CheckRateLimit(c, userID, "translate", ratelimit.Default) {
+		return
+	}
 	var reqBody struct {
 		Content    string `json:"content"`
 		TargetLang string `json:"target_lang"`
@@ -808,7 +822,6 @@ func TranslateMessage(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数错误", "目标语言不能为空")
 		return
 	}
-
 	resp, err := rpc.TranslateMessage(ctx, &work.TranslateMessageReq{
 		Content:    reqBody.Content,
 		TargetLang: reqBody.TargetLang,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Airiseina/answer/api_gateway/config"
 	"github.com/Airiseina/answer/api_gateway/middleware"
+	"github.com/Airiseina/answer/api_gateway/middleware/ratelimit"
 	"github.com/Airiseina/answer/api_gateway/routes"
 	"github.com/Airiseina/answer/api_gateway/rpc"
 	"github.com/Airiseina/answer/pkg/observability/meter"
@@ -53,6 +54,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	middleware.JwtMiddleware()
+	ratelimit.Default.StartCleanup(5 * time.Minute)
 	routes.Routes(h)
 	h.Spin()
 }

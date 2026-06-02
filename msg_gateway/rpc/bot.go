@@ -21,12 +21,12 @@ var botCli botservice.Client
 
 func ConnectBotService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
-	fp.WithMaxRetryTimes(3)
-	fp.WithFixedBackOff(100)
+	fp.WithMaxRetryTimes(2)
+	fp.WithFixedBackOff(200)
 	cbConfig := circuitbreak.CBConfig{
 		Enable:    true,
-		ErrRate:   0.1,
-		MinSample: 10,
+		ErrRate:   0.5,
+		MinSample: 50,
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("botservice", cbConfig)

@@ -99,8 +99,8 @@ func main() {
 		server.WithServiceAddr(addr),
 		server.WithRegistry(r),
 		server.WithLimit(&limit.Option{
-			MaxConnections: 1000,
-			MaxQPS:         2000,
+			MaxConnections: 200,
+			MaxQPS:         300,
 		}),
 	)
 	err = svr.Run()

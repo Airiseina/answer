@@ -73,8 +73,8 @@ func main() {
 		server.WithServiceAddr(addr),
 		server.WithRegistry(r),
 		server.WithLimit(&limit.Option{
-			MaxConnections: 1000,
-			MaxQPS:         2000,
+			MaxConnections: 500,
+			MaxQPS:         1000,
 		}))
 	r1, err := etcd.NewEtcdResolver([]string{etcdAddr})
 	if err != nil {

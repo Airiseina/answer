@@ -31,12 +31,12 @@ var chatCli chatservice.Client
 //   - 负载均衡: 加权轮询
 func ConnectChatService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
-	fp.WithMaxRetryTimes(3)
-	fp.WithFixedBackOff(100)
+	fp.WithMaxRetryTimes(2)
+	fp.WithFixedBackOff(200)
 	cbConfig := circuitbreak.CBConfig{
 		Enable:    true,
-		ErrRate:   0.1, // 错误率阈值 10%
-		MinSample: 10,  // 最小采样数
+		ErrRate:   0.5, // 错误率阈值 50%
+		MinSample: 50,  // 最小采样数
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("chatservice", cbConfig)
