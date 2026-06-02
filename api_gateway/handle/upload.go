@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Airiseina/answer/api_gateway/middleware"
 	"github.com/Airiseina/answer/api_gateway/response"
@@ -62,7 +63,16 @@ func FileProxy(ctx context.Context, c *app.RequestContext) {
 	}
 	targetURL := storage.FilerURL + filepath
 	hlog.CtxInfof(ctx, "FileProxy: %s -> %s", c.Request.URI().String(), targetURL)
-	resp, err := http.Get(targetURL)
+
+	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "FileProxy创建请求失败: url=%s, err=%v", targetURL, err)
+		c.SetStatusCode(http.StatusBadGateway)
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		hlog.CtxErrorf(ctx, "FileProxy请求SeaweedFS失败: url=%s, err=%v", targetURL, err)
 		c.SetStatusCode(http.StatusBadGateway)

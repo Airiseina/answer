@@ -137,7 +137,7 @@ func main() {
 	http.Handle("/ws", corsMiddleware(wsHandler))
 	http.Handle("/push", corsMiddleware(http.HandlerFunc(core.HandlePush)))
 	klog.Infof("msg_gateway 启动, gatewayAddr=%s", gatewayAddr)
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	if err := http.ListenAndServe(":8081", nil); err != nil {
 		klog.Fatalf("服务启动失败: %v", err)
 	}
 }

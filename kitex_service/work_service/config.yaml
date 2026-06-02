@@ -1,0 +1,19 @@
+## example
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+gateway:
+  addr: "127.0.0.1:8082"
+
+kafka:
+  brokers: "127.0.0.1:9094"
+
+mcp:
+  mem0_url: "http://localhost:9004/sse"
+  knowledge_url: "http://localhost:9006/sse"
+  searxng_url: "http://localhost:9008/sse"
+  weather_url: "http://localhost:9001/sse"
+  timeserver_url: "http://localhost:9005/sse"

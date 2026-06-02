@@ -60,11 +60,11 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接PostgreSQL失败:%v", err)
 	}
-	db.Exec("UPDATE message_table SET conversation_id = 0 WHERE conversation_id IS NULL")
 	err = db.AutoMigrate(&model.Message{}, &model.Conversation{}, &model.ConversationMember{}, &model.MessageEditHistory{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
+	db.Exec("UPDATE message_table SET conversation_id = 0 WHERE conversation_id IS NULL")
 	rdb, err := infra.ConnectRedis(v)
 	if err != nil {
 		klog.Fatalf("连接Redis失败:%v", err)

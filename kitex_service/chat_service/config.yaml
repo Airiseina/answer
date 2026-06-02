@@ -1,0 +1,17 @@
+## example
+postgres:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: "123456"
+  dbname: "answer_chat"
+  sslmode: "disable"
+
+redis:
+  addr: "127.0.0.1:6379"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"

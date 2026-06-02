@@ -1,12 +1,13 @@
+## example
 server:
   port: 4326
 
 mysql:
-  host: localhost
-  port: 3306
-  user: root
+  host: "localhost"
+  port: "3306"
+  user: "root"
   password: "123456"
-  name: answer
+  name: "answer"
 
 etcd:
   Addr: "127.0.0.1:2379"
@@ -22,7 +23,7 @@ kafka:
     knowledge: "knowledge-group"
 
 qdrant:
-  host: localhost
+  host: "localhost"
   port: 6334
 
 seaweedfs:
@@ -31,5 +32,5 @@ seaweedfs:
   public_url: "/files"
 
 embedding:
-  api_key: "f5d13525-ce49-47ef-a26f-d42cf7cc0127"
+  api_key: ""
   model: "doubao-embedding-vision-251215"

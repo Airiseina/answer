@@ -12,6 +12,11 @@ var (
 
 func AiInit(v *viper.Viper) {
 	apiKey := v.GetString("embedding.api_key")
+	baseURL := v.GetString("embedding.base_url")
 	douBaoModel = v.GetString("embedding.model")
-	douBaoClient = arkruntime.NewClientWithApiKey(apiKey)
+	if baseURL != "" {
+		douBaoClient = arkruntime.NewClientWithApiKey(apiKey, arkruntime.WithBaseUrl(baseURL))
+	} else {
+		douBaoClient = arkruntime.NewClientWithApiKey(apiKey)
+	}
 }

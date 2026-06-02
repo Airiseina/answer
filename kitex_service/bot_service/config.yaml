@@ -1,0 +1,23 @@
+## example
+mysql:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "123456"
+  name: "answer"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+ai:
+  system:
+    bot_name: "kiana"
+    bot_prompt: "你是AIM助手，一个智能AI助手。你可以回答问题、总结对话、查询天气、翻译文本等。请用中文回复。"
+    bot_prompt_file: "prompt/system_bot_prompt.md"     ## 可为空，为空直接使用prompt
+    bot_skill_dir: "prompt/skills/kiana.skill"
+    bot_model: "doubao-seed-1-8-251228"
+    bot_base_url: "https://ark.cn-beijing.volces.com/api/v3"
+    bot_api_key: ""

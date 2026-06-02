@@ -1,0 +1,3537 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Answer IM API",
+    "description": "Answer 即时通讯系统 API 接口文档",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:1234",
+      "description": "本地开发环境"
+    }
+  ],
+  "security": [],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "业务状态码，0 成功，1 失败",
+            "example": 0
+          },
+          "msg": {
+            "type": "string",
+            "description": "提示信息",
+            "example": "操作成功"
+          },
+          "data": {
+            "description": "响应数据"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "account",
+          "username",
+          "password"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "example": "testuser"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "测试用户"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "123456"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "account",
+          "password"
+        ],
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "账号",
+            "example": "testuser"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "123456"
+          }
+        }
+      },
+      "LoginData": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          },
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "account": {
+            "type": "string",
+            "example": "testuser"
+          }
+        }
+      },
+      "AddFriendRequest": {
+        "type": "object",
+        "required": [
+          "receiver_account"
+        ],
+        "properties": {
+          "receiver_account": {
+            "type": "string",
+            "description": "目标用户账号",
+            "example": "zhangsan"
+          },
+          "message": {
+            "type": "string",
+            "description": "好友请求附言",
+            "example": "你好，我想添加你为好友"
+          }
+        }
+      },
+      "HandleFriendReqRequest": {
+        "type": "object",
+        "required": [
+          "sender_account",
+          "accept"
+        ],
+        "properties": {
+          "sender_account": {
+            "type": "string",
+            "description": "请求发起者账号",
+            "example": "zhangsan"
+          },
+          "accept": {
+            "type": "boolean",
+            "description": "true 接受，false 拒绝",
+            "example": true
+          }
+        }
+      },
+      "DeleteFriendRequest": {
+        "type": "object",
+        "required": [
+          "friend_account"
+        ],
+        "properties": {
+          "friend_account": {
+            "type": "string",
+            "description": "要删除的好友账号",
+            "example": "zhangsan"
+          }
+        }
+      },
+      "FriendItem": {
+        "type": "object",
+        "properties": {
+          "friend_account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "remark": {
+            "type": "string",
+            "example": "小明"
+          },
+          "group_id": {
+            "type": "string",
+            "description": "所属分组 ID，0 表示默认分组",
+            "example": "1"
+          },
+          "name": {
+            "type": "string",
+            "example": "张三"
+          }
+        }
+      },
+      "FriendRequestItem": {
+        "type": "object",
+        "properties": {
+          "sender_account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "receiver_account": {
+            "type": "string",
+            "example": "lisi"
+          },
+          "message": {
+            "type": "string",
+            "example": "你好，我想添加你为好友"
+          },
+          "status": {
+            "type": "integer",
+            "description": "0 待处理，1 已接受，2 已拒绝",
+            "example": 0
+          }
+        }
+      },
+      "CreateFriendGroupRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "分组名称",
+            "example": "同学"
+          }
+        }
+      },
+      "UpdateFriendGroupRequest": {
+        "type": "object",
+        "required": [
+          "group_id",
+          "name"
+        ],
+        "properties": {
+          "group_id": {
+            "type": "integer",
+            "description": "分组 ID",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "新分组名称",
+            "example": "大学同学"
+          }
+        }
+      },
+      "DeleteFriendGroupRequest": {
+        "type": "object",
+        "required": [
+          "group_id"
+        ],
+        "properties": {
+          "group_id": {
+            "type": "integer",
+            "description": "分组 ID",
+            "example": 1
+          }
+        }
+      },
+      "MoveFriendToGroupRequest": {
+        "type": "object",
+        "required": [
+          "friend_account",
+          "group_id"
+        ],
+        "properties": {
+          "friend_account": {
+            "type": "string",
+            "description": "好友账号",
+            "example": "zhangsan"
+          },
+          "group_id": {
+            "type": "integer",
+            "description": "目标分组 ID，0 为默认分组",
+            "example": 1
+          }
+        }
+      },
+      "UpdateFriendRemarkRequest": {
+        "type": "object",
+        "required": [
+          "friend_account",
+          "remark"
+        ],
+        "properties": {
+          "friend_account": {
+            "type": "string",
+            "description": "好友账号",
+            "example": "zhangsan"
+          },
+          "remark": {
+            "type": "string",
+            "description": "新备注名，传空字符串可清除备注",
+            "example": "小明同学"
+          }
+        }
+      },
+      "FriendGroupItem": {
+        "type": "object",
+        "properties": {
+          "group_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "同学"
+          }
+        }
+      },
+      "CreateGroupRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "群组名称",
+            "example": "项目讨论组"
+          },
+          "initial_accounts": {
+            "type": "array",
+            "description": "初始成员账号列表",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhangsan",
+              "lisi",
+              "wangwu"
+            ]
+          }
+        }
+      },
+      "InviteMembersRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "accounts"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "accounts": {
+            "type": "array",
+            "description": "被邀请用户账号列表",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhaoliu",
+              "sunqi"
+            ]
+          }
+        }
+      },
+      "KickMembersRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "accounts"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "accounts": {
+            "type": "array",
+            "description": "被踢出用户账号列表",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhaoliu"
+            ]
+          }
+        }
+      },
+      "GroupMemberItem": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "name": {
+            "type": "string",
+            "example": "张三"
+          },
+          "role": {
+            "type": "integer",
+            "description": "1 普通成员，2 管理员，3 群主",
+            "example": 3
+          },
+          "is_muted": {
+            "type": "boolean",
+            "example": false
+          },
+          "join_time": {
+            "type": "integer",
+            "description": "Unix 时间戳",
+            "example": 1700000000
+          }
+        }
+      },
+      "GroupInfoData": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "项目讨论组"
+          },
+          "notice": {
+            "type": "string",
+            "example": "欢迎加入"
+          },
+          "create_time": {
+            "type": "integer",
+            "example": 1700000000
+          },
+          "group_number": {
+            "type": "string",
+            "example": "7234567890123456"
+          },
+          "owner_account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "owner_name": {
+            "type": "string",
+            "example": "张三"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberItem"
+            }
+          }
+        }
+      },
+      "ChangeOwnerRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "new_account"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "new_account": {
+            "type": "string",
+            "description": "新群主账号",
+            "example": "lisi"
+          }
+        }
+      },
+      "ChangeNoticeRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "notice"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "notice": {
+            "type": "string",
+            "description": "新公告内容",
+            "example": "本周五下午3点开会"
+          }
+        }
+      },
+      "MutedRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "muted_account",
+          "is_muted"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "muted_account": {
+            "type": "string",
+            "description": "被操作用户账号",
+            "example": "wangwu"
+          },
+          "is_muted": {
+            "type": "boolean",
+            "description": "true 禁言，false 解禁",
+            "example": true
+          }
+        }
+      },
+      "SetAdminRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "target_account",
+          "role"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "target_account": {
+            "type": "string",
+            "description": "目标用户账号",
+            "example": "lisi"
+          },
+          "role": {
+            "type": "integer",
+            "description": "1 取消管理员，2 设置管理员",
+            "example": 2
+          }
+        }
+      },
+      "UserGroupItem": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "项目讨论组"
+          },
+          "group_number": {
+            "type": "string",
+            "example": "7234567890123456"
+          }
+        }
+      },
+      "JoinGroupRequest": {
+        "type": "object",
+        "required": [
+          "group_number"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（必须为数字字符串）",
+            "example": "7234567890123456"
+          },
+          "message": {
+            "type": "string",
+            "description": "入群申请附言",
+            "example": "你好，我想加入这个群"
+          }
+        }
+      },
+      "HandleJoinReqRequest": {
+        "type": "object",
+        "required": [
+          "group_number",
+          "account",
+          "accept"
+        ],
+        "properties": {
+          "group_number": {
+            "type": "string",
+            "description": "群号（数字字符串）",
+            "example": "7234567890123456"
+          },
+          "account": {
+            "type": "string",
+            "description": "申请人账号",
+            "example": "wangwu"
+          },
+          "accept": {
+            "type": "boolean",
+            "description": "true 接受，false 拒绝",
+            "example": true
+          }
+        }
+      },
+      "JoinRequestItem": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "description": "申请人账号",
+            "example": "wangwu"
+          },
+          "name": {
+            "type": "string",
+            "description": "申请人用户名",
+            "example": "王五"
+          },
+          "message": {
+            "type": "string",
+            "description": "申请附言",
+            "example": "你好，我想加入这个群"
+          },
+          "status": {
+            "type": "integer",
+            "description": "0 待处理，1 已接受，2 已拒绝",
+            "example": 0
+          }
+        }
+      },
+      "MessageItem": {
+        "type": "object",
+        "properties": {
+          "msg_id": {
+            "type": "string",
+            "description": "服务端消息 ID",
+            "example": "1"
+          },
+          "client_seq": {
+            "type": "integer",
+            "description": "客户端序列号",
+            "example": 1001
+          },
+          "sender_account": {
+            "type": "string",
+            "description": "发送者账号",
+            "example": "zhangsan"
+          },
+          "sender_name": {
+            "type": "string",
+            "description": "发送者用户名",
+            "example": "张三"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID",
+            "example": "100"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容",
+            "example": "你好"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "发送时间（Unix 时间戳）",
+            "example": 1700000000
+          },
+          "status": {
+            "type": "integer",
+            "description": "0 正常，1 已撤回",
+            "example": 0
+          },
+          "is_edited": {
+            "type": "boolean",
+            "description": "是否已编辑",
+            "example": false
+          }
+        }
+      },
+      "ConversationItem": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "example": "100"
+          },
+          "type": {
+            "type": "integer",
+            "description": "1 单聊，2 群聊",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "单聊为对方用户名，群聊为群组名称",
+            "example": "张三"
+          },
+          "group_number": {
+            "type": "string",
+            "description": "群号，单聊时为 0",
+            "example": "0"
+          },
+          "member_accounts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhangsan",
+              "lisi"
+            ]
+          },
+          "max_seq": {
+            "type": "integer",
+            "example": 42
+          },
+          "max_read_seq": {
+            "type": "integer",
+            "example": 40
+          },
+          "unread_count": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "OnlineStatusRequest": {
+        "type": "object",
+        "required": [
+          "accounts"
+        ],
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "description": "用户账号列表，最多 100 个",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhangsan",
+              "lisi",
+              "wangwu"
+            ]
+          }
+        }
+      },
+      "OnlineStatusItem": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "online": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "RecallRequest": {
+        "type": "object",
+        "required": [
+          "conversation_id"
+        ],
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID",
+            "example": "100"
+          }
+        }
+      },
+      "EditMessageRequest": {
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "new_content"
+        ],
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID",
+            "example": "100"
+          },
+          "new_content": {
+            "type": "string",
+            "description": "新消息内容",
+            "example": "修改后的内容"
+          }
+        }
+      },
+      "EditHistoryItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "编辑记录 ID",
+            "example": "1"
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "消息 ID",
+            "example": "123456789"
+          },
+          "version": {
+            "type": "integer",
+            "description": "编辑版本号",
+            "example": 1
+          },
+          "old_content": {
+            "type": "string",
+            "description": "编辑前的内容",
+            "example": "原始内容"
+          },
+          "editor_account": {
+            "type": "string",
+            "description": "编辑者账号",
+            "example": "zhangsan"
+          },
+          "edited_at": {
+            "type": "integer",
+            "description": "编辑时间（Unix 时间戳）",
+            "example": 1700000100
+          }
+        }
+      },
+      "ConvSeqPair": {
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "last_seq"
+        ],
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID",
+            "example": "100"
+          },
+          "last_seq": {
+            "type": "integer",
+            "description": "客户端本地最大序号",
+            "example": 40
+          }
+        }
+      },
+      "SyncMessagesRequest": {
+        "type": "object",
+        "required": [
+          "conv_seqs"
+        ],
+        "properties": {
+          "conv_seqs": {
+            "type": "array",
+            "description": "会话序号对列表，最多 100 个会话",
+            "items": {
+              "$ref": "#/components/schemas/ConvSeqPair"
+            }
+          },
+          "limit_per_conv": {
+            "type": "integer",
+            "description": "每个会话返回条数，范围 [1, 200]，默认 50",
+            "example": 50
+          }
+        }
+      },
+      "SyncMessageItem": {
+        "type": "object",
+        "properties": {
+          "msg_id": {
+            "type": "string",
+            "example": "41"
+          },
+          "client_seq": {
+            "type": "integer",
+            "example": 0
+          },
+          "sender_account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "sender_name": {
+            "type": "string",
+            "example": "张三"
+          },
+          "conversation_id": {
+            "type": "string",
+            "example": "100"
+          },
+          "content": {
+            "type": "string",
+            "example": "新消息"
+          },
+          "timestamp": {
+            "type": "integer",
+            "example": 1700000200
+          },
+          "seq": {
+            "type": "integer",
+            "description": "消息序号",
+            "example": 41
+          },
+          "status": {
+            "type": "integer",
+            "example": 0
+          },
+          "is_edited": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "ConvMessagesItem": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "example": "100"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncMessageItem"
+            }
+          }
+        }
+      },
+      "ConversationMembersRequest": {
+        "type": "object",
+        "required": [
+          "accounts"
+        ],
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "description": "用户账号列表，最多 500 个",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "zhangsan",
+              "lisi",
+              "wangwu"
+            ]
+          }
+        }
+      },
+      "MemberItem": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "example": "zhangsan"
+          },
+          "name": {
+            "type": "string",
+            "example": "张三"
+          },
+          "avatar_url": {
+            "type": "string",
+            "description": "头像 URL，未设置时为空字符串",
+            "example": "https://oss.example.com/files/avatar1.jpg"
+          }
+        }
+      },
+      "UpdateAvatarRequest": {
+        "type": "object",
+        "required": [
+          "avatar_url"
+        ],
+        "properties": {
+          "avatar_url": {
+            "type": "string",
+            "description": "头像文件 URL（通过文件上传接口获取）",
+            "example": "https://oss.example.com/files/abc123.jpg"
+          }
+        }
+      },
+      "UploadData": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "文件访问地址",
+            "example": "https://oss.example.com/files/abc123.jpg"
+          },
+          "file_name": {
+            "type": "string",
+            "description": "文件名",
+            "example": "photo.jpg"
+          },
+          "file_size": {
+            "type": "integer",
+            "description": "文件大小（字节）",
+            "example": 102400
+          },
+          "media_type": {
+            "type": "string",
+            "description": "媒体类型：image、video、audio、file",
+            "enum": [
+              "image",
+              "video",
+              "audio",
+              "file"
+            ],
+            "example": "image"
+          }
+        }
+      },
+      "WsChatMessage": {
+        "type": "object",
+        "description": "客户端发送的聊天消息",
+        "required": ["type", "content"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["chat"],
+            "description": "消息类型，固定为 chat"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID（字符串格式，与 peer_account 至少填一个）"
+          },
+          "peer_account": {
+            "type": "string",
+            "description": "对端账号（首次单聊时使用，与 conversation_id 至少填一个）"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容（纯文本或 JSON 格式）"
+          },
+          "mentioned_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "@提及的用户 ID 列表（字符串数组，群聊中触发 Bot 必填）"
+          },
+          "client_seq": {
+            "type": "integer",
+            "format": "int64",
+            "description": "客户端序列号（用于消息去重）"
+          }
+        }
+      },
+      "WsMarkReadMessage": {
+        "type": "object",
+        "description": "标记已读消息",
+        "required": ["type", "conversation_id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["mark_read"]
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          }
+        }
+      },
+      "WsTypingMessage": {
+        "type": "object",
+        "description": "正在输入消息",
+        "required": ["type", "conversation_id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["typing"]
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          }
+        }
+      },
+      "WsRecallMessage": {
+        "type": "object",
+        "description": "撤回消息",
+        "required": ["type", "msg_id", "conversation_id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["recall"]
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "消息 ID"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          }
+        }
+      },
+      "WsEditMessage": {
+        "type": "object",
+        "description": "编辑消息",
+        "required": ["type", "msg_id", "conversation_id", "content"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "消息 ID"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "content": {
+            "type": "string",
+            "description": "新消息内容"
+          }
+        }
+      },
+      "WsSyncMessage": {
+        "type": "object",
+        "description": "同步消息",
+        "required": ["type", "conversation_id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["sync"]
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "max_seq": {
+            "type": "integer",
+            "format": "int64",
+            "description": "客户端已有的最大序号"
+          }
+        }
+      },
+      "WsChatPush": {
+        "type": "object",
+        "description": "服务端推送的新消息通知",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["chat"]
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "消息 ID"
+          },
+          "sender_id": {
+            "type": "string",
+            "description": "发送者用户 ID"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "会话 ID"
+          },
+          "content": {
+            "type": "string",
+            "description": "消息内容"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "消息时间戳（毫秒）"
+          },
+          "mentioned_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "@提及的用户 ID 列表"
+          },
+          "conversation_type": {
+            "type": "integer",
+            "format": "int16",
+            "description": "会话类型：1=私聊，2=群聊"
+          }
+        }
+      },
+      "WsMarkReadPush": {
+        "type": "object",
+        "description": "对端已读通知",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["mark_read"]
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "max_read_seq": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WsTypingPush": {
+        "type": "object",
+        "description": "对端正在输入通知",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["typing"]
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "sender_id": {
+            "type": "string"
+          }
+        }
+      },
+      "WsRecallPush": {
+        "type": "object",
+        "description": "消息被撤回通知",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["recall"]
+          },
+          "msg_id": {
+            "type": "string"
+          },
+          "conversation_id": {
+            "type": "string"
+          }
+        }
+      },
+      "WsEditPush": {
+        "type": "object",
+        "description": "消息被编辑通知",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "msg_id": {
+            "type": "string"
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/register": {
+      "post": {
+        "tags": [
+          "用户认证"
+        ],
+        "summary": "注册",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "注册成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "用户认证"
+        ],
+        "summary": "登录",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoginData"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/add_friend": {
+      "post": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "添加好友",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFriendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "添加好友结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "好友请求已发送"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/handle_friend_req": {
+      "post": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "处理好友请求",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandleFriendReqRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "处理结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "好友请求已通过"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/delete_friend": {
+      "post": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "删除好友",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteFriendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "删除成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_friend_list": {
+      "get": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "获取好友列表",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "好友列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FriendItem"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_friend_requests": {
+      "get": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "获取好友请求列表",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "好友请求列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FriendRequestItem"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/update_friend_remark": {
+      "post": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "修改好友备注",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFriendRemarkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "修改成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/search_user": {
+      "get": {
+        "tags": [
+          "好友管理"
+        ],
+        "summary": "搜索用户",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "required": true,
+            "description": "用户账号",
+            "schema": {
+              "type": "string"
+            },
+            "example": "testuser"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "string",
+                              "example": "testuser"
+                            },
+                            "name": {
+                              "type": "string",
+                              "example": "测试用户"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/create_friend_group": {
+      "post": {
+        "tags": [
+          "好友分组管理"
+        ],
+        "summary": "创建好友分组",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFriendGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "group_id": {
+                              "type": "string",
+                              "example": "1"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/update_friend_group": {
+      "post": {
+        "tags": [
+          "好友分组管理"
+        ],
+        "summary": "修改好友分组名称",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFriendGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "修改成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/delete_friend_group": {
+      "post": {
+        "tags": [
+          "好友分组管理"
+        ],
+        "summary": "删除好友分组",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteFriendGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "删除成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/move_friend_to_group": {
+      "post": {
+        "tags": [
+          "好友分组管理"
+        ],
+        "summary": "移动好友到分组",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveFriendToGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "移动成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_friend_groups": {
+      "get": {
+        "tags": [
+          "好友分组管理"
+        ],
+        "summary": "获取好友分组列表",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "分组列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FriendGroupItem"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/create_group": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "创建群组",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "group_number": {
+                              "type": "string",
+                              "example": "7234567890123456"
+                            },
+                            "conversation_id": {
+                              "type": "string",
+                              "example": "100"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/invite_members": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "邀请成员",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMembersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "邀请结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "邀请成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/kick_members": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "踢出成员",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KickMembersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "踢出结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "踢出成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_group_info": {
+      "get": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "获取群组信息",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_number",
+            "in": "query",
+            "required": true,
+            "description": "群号（数字字符串）",
+            "schema": {
+              "type": "string"
+            },
+            "example": "7234567890123456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "群组信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/GroupInfoData"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/change_owner": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "转让群主",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeOwnerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "转让结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "转让成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/change_notice": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "修改群公告",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeNoticeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "群公告修改成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/muted": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "禁言/解禁",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MutedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "操作结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "禁言状态修改成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/set_admin": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "设置管理员",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAdminRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "管理员设置修改成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_user_groups": {
+      "get": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "获取用户群组列表",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "群组列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/UserGroupItem"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/search_group": {
+      "get": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "搜索群组",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_number",
+            "in": "query",
+            "required": true,
+            "description": "群号（必须为数字）",
+            "schema": {
+              "type": "string"
+            },
+            "example": "7234567890123456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "项目讨论组"
+                            },
+                            "owner_name": {
+                              "type": "string",
+                              "example": "张三"
+                            },
+                            "group_number": {
+                              "type": "string",
+                              "example": "7234567890123456"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/join_group": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "申请入群",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "申请结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "申请已发送"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/handle_join_req": {
+      "post": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "处理入群申请",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandleJoinReqRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "处理结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "处理成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/get_join_requests": {
+      "get": {
+        "tags": [
+          "群组管理"
+        ],
+        "summary": "获取入群申请列表",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_number",
+            "in": "query",
+            "required": true,
+            "description": "群号（数字字符串）",
+            "schema": {
+              "type": "string"
+            },
+            "example": "7234567890123456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "入群申请列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/JoinRequestItem"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/messages": {
+      "get": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "获取消息列表",
+        "description": "拉取指定会话的消息，支持游标分页",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": true,
+            "description": "会话 ID",
+            "schema": {
+              "type": "string"
+            },
+            "example": "100"
+          },
+          {
+            "name": "before_msg_id",
+            "in": "query",
+            "required": false,
+            "description": "游标，返回 msg_id < before_msg_id 的消息，默认 0（从最新开始）",
+            "schema": {
+              "type": "string",
+              "default": "0"
+            },
+            "example": "0"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "返回条数，范围 [1, 100]，默认 20",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "消息列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "messages": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/MessageItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/conversations": {
+      "get": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "获取会话列表",
+        "description": "获取当前用户参与的所有会话，按最近活跃时间降序排列",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "会话列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "conversations": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/ConversationItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/mark_read/{conversation_id}": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "标记已读",
+        "description": "将指定会话标记为已读，更新用户的 max_read_seq",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "description": "会话 ID",
+            "schema": {
+              "type": "string"
+            },
+            "example": "100"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "标记结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "max_read_seq": {
+                              "type": "integer",
+                              "example": 42
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/online_status": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "查询在线状态",
+        "description": "批量查询用户的在线状态",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnlineStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "在线状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "statuses": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/OnlineStatusItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/recall/{msg_id}": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "撤回消息",
+        "description": "撤回指定消息，仅支持 2 分钟内撤回，且只能撤回自己发送的消息",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "msg_id",
+            "in": "path",
+            "required": true,
+            "description": "消息 ID",
+            "schema": {
+              "type": "string"
+            },
+            "example": "123456789"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "撤回结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "recalled": {
+                              "type": "boolean",
+                              "example": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/edit/{msg_id}": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "编辑消息",
+        "description": "编辑指定消息的内容，只能编辑自己发送且未撤回的消息",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "msg_id",
+            "in": "path",
+            "required": true,
+            "description": "消息 ID",
+            "schema": {
+              "type": "string"
+            },
+            "example": "123456789"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "编辑结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "edited": {
+                              "type": "boolean",
+                              "example": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/edit_history/{msg_id}": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "获取编辑历史",
+        "description": "获取指定消息的编辑历史记录",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "msg_id",
+            "in": "path",
+            "required": true,
+            "description": "消息 ID",
+            "schema": {
+              "type": "string"
+            },
+            "example": "123456789"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "编辑历史",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "histories": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/EditHistoryItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/sync": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "同步消息",
+        "description": "断线重连后，批量拉取多个会话的增量消息",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncMessagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "同步结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "conv_messages": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/ConvMessagesItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/chat/conversation_members": {
+      "post": {
+        "tags": [
+          "聊天服务"
+        ],
+        "summary": "获取会话成员信息",
+        "description": "批量获取会话成员的详细信息（账号、用户名、头像），用于前端缓存",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationMembersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成员信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "members": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/MemberItem"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/update_avatar": {
+      "post": {
+        "tags": [
+          "用户设置"
+        ],
+        "summary": "更新头像",
+        "description": "更新当前用户的头像，先通过文件上传接口获取 URL，再调用此接口关联",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAvatarRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "string",
+                          "example": "更新成功"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/api/files": {
+      "post": {
+        "tags": [
+          "文件管理"
+        ],
+        "summary": "上传文件",
+        "description": "上传文件到对象存储，文件大小不能超过 50MB",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "上传的文件，最大 50MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CommonResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UploadData"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "servers": [
+          {
+            "url": "http://localhost:1234",
+            "description": "本地开发环境"
+          }
+        ]
+      }
+    },
+    "/ws": {
+      "get": {
+        "tags": ["WebSocket"],
+        "summary": "WebSocket 连接",
+        "description": "WebSocket 连接地址：ws://host:8082/ws?token=JWT_TOKEN。认证方式：连接时通过 URL 参数 token 传递 JWT Token。连接后通过 JSON 消息通信，使用 type 字段区分消息类型。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "JWT Token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "协议切换为 WebSocket"
+          }
+        },
+        "x-websocket": {
+          "clientMessages": {
+            "chat": {
+              "description": "发送聊天消息",
+              "schema": {
+                "$ref": "#/components/schemas/WsChatMessage"
+              },
+              "examples": {
+                "private_chat": {
+                  "summary": "一对一私聊",
+                  "value": {
+                    "type": "chat",
+                    "conversation_id": "200",
+                    "content": "你好，请帮我写一段代码",
+                    "client_seq": 1003
+                  }
+                },
+                "group_mention_bot": {
+                  "summary": "群聊 @Bot",
+                  "value": {
+                    "type": "chat",
+                    "conversation_id": "100",
+                    "content": "{\"type\":\"text\",\"text\":\"@助手Bot 请帮我写代码\",\"mentions\":[{\"user_id\":\"999\",\"name\":\"助手Bot\"}]}",
+                    "mentioned_ids": ["999"],
+                    "client_seq": 1002
+                  }
+                }
+              }
+            },
+            "mark_read": {
+              "description": "标记已读",
+              "schema": {
+                "$ref": "#/components/schemas/WsMarkReadMessage"
+              }
+            },
+            "typing": {
+              "description": "正在输入",
+              "schema": {
+                "$ref": "#/components/schemas/WsTypingMessage"
+              }
+            },
+            "recall": {
+              "description": "撤回消息",
+              "schema": {
+                "$ref": "#/components/schemas/WsRecallMessage"
+              }
+            },
+            "edit": {
+              "description": "编辑消息",
+              "schema": {
+                "$ref": "#/components/schemas/WsEditMessage"
+              }
+            },
+            "sync": {
+              "description": "同步消息",
+              "schema": {
+                "$ref": "#/components/schemas/WsSyncMessage"
+              }
+            }
+          },
+          "serverMessages": {
+            "chat": {
+              "description": "新消息通知（含 Bot 回复）",
+              "schema": {
+                "$ref": "#/components/schemas/WsChatPush"
+              },
+              "examples": {
+                "bot_reply": {
+                  "summary": "Bot 回复推送",
+                  "value": {
+                    "type": "chat",
+                    "msg_id": "987654321012345678",
+                    "sender_id": "999",
+                    "conversation_id": "100",
+                    "content": "{\"type\":\"text\",\"text\":\"你好！我是AI助手，有什么可以帮你的？\"}",
+                    "timestamp": 1700000001000,
+                    "mentioned_ids": [],
+                    "conversation_type": 2
+                  }
+                }
+              }
+            },
+            "mark_read": {
+              "description": "对端已读通知",
+              "schema": {
+                "$ref": "#/components/schemas/WsMarkReadPush"
+              }
+            },
+            "typing": {
+              "description": "对端正在输入通知",
+              "schema": {
+                "$ref": "#/components/schemas/WsTypingPush"
+              }
+            },
+            "recall": {
+              "description": "消息被撤回通知",
+              "schema": {
+                "$ref": "#/components/schemas/WsRecallPush"
+              }
+            },
+            "edit": {
+              "description": "消息被编辑通知",
+              "schema": {
+                "$ref": "#/components/schemas/WsEditPush"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

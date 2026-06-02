@@ -1,0 +1,35 @@
+http:
+  routers:
+    frontend:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      service: frontend
+
+    api:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/login`) || PathPrefix(`/register`) || PathPrefix(`/api`) || PathPrefix(`/files`)"
+      priority: 10
+      service: api-gateway
+
+    ws:
+      entryPoints: ["web"]
+      rule: "PathPrefix(`/ws`)"
+      priority: 20
+      service: msg-gateway
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://answer_frontend:80"
+
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://answer_api_gateway:1234"
+
+    msg-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://answer_msg_gateway:8081"

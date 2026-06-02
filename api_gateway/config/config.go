@@ -9,7 +9,7 @@ var V *viper.Viper
 
 func GetConfig() {
 	V = pkgconfig.LoadConfig()
-	V.SetDefault("jwt.Key", "Airiseina")
+	V.SetDefault("jwt.Key", "")
 	V.SetDefault("etcd.Addr", "127.0.0.1:2379")
 	V.SetDefault("otel.Addr", "localhost:4317")
 	V.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")

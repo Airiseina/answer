@@ -22,6 +22,7 @@ interface WsMessage {
   is_edited?: boolean;
   seq?: number;
   client_seq?: number;
+  quote_msg_id?: string;
   conv_messages?: {
     conversation_id: string;
     messages: {

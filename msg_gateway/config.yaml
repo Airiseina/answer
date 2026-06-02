@@ -1,0 +1,21 @@
+## example
+jwt:
+  Key: "Airiseina"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+gateway:
+  addr: "localhost:8082"
+
+seaweedfs:
+  filer_url: "http://127.0.0.1:8888"
+  base_path: "/chat"
+  public_url: "/files"
+
+kafka:
+  brokers:
+    - "127.0.0.1:9094"

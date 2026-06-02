@@ -260,9 +260,9 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 		ID:           botId,
 		CreatorID:    0,
 		SystemPrompt: systemPrompt,
-		ApiKey:       v.GetString("ai.system.bot_api_key"),
-		Model:        v.GetString("ai.system.bot_model"),
-		BaseURL:      v.GetString("ai.system.bot_base_url"),
+		ApiKey:       strings.TrimSpace(v.GetString("ai.system.bot_api_key")),
+		Model:        strings.TrimSpace(v.GetString("ai.system.bot_model")),
+		BaseURL:      strings.TrimSpace(v.GetString("ai.system.bot_base_url")),
 		IsSystem:     true,
 	}
 	err = svc.dao.CreateBot(systemBot)

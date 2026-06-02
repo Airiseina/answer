@@ -7,15 +7,3 @@ node_modules
 dist
 
 deploy/.env
-
-kitex_service/bot_service/config.yaml
-
-docs/CHANGELOG.md
-
-docs/Group_API_Docs.md
-
-docs/api_doc.md
-
-docs/question.md
-
-docs/路线.md

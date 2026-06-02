@@ -1,0 +1,14 @@
+## example
+jwt:
+  Key: "Airiseina"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+seaweedfs:
+  filer_url: "http://127.0.0.1:8888"
+  base_path: "/chat"
+  public_url: "/files"

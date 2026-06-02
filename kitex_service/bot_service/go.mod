@@ -60,7 +60,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/petermattis/goid v0.0.0-20260330135022-df67b199bc81 // indirect
-	github.com/pierrec/lz4/v4 v4.1.15 // indirect
+	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/redis/go-redis/v9 v9.20.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
@@ -111,11 +111,13 @@ require (
 
 require (
 	github.com/Airiseina/answer/kitex_service/chat_service v0.0.0
+	github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/user_service v0.0.0
 )
 
 replace (
 	github.com/Airiseina/answer/kitex_service/chat_service => ../chat_service
+	github.com/Airiseina/answer/kitex_service/knowledge_service => ../knowledge_service
 	github.com/Airiseina/answer/kitex_service/user_service => ../user_service
 	github.com/Airiseina/answer/pkg => ../../pkg
 )

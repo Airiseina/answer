@@ -1,4 +1,4 @@
-use_default_settings: true
+use_default_settings: false
 
 general:
   instance_name: "Answer SearXNG"
@@ -39,38 +39,3 @@ engines:
     disabled: false
     timeout: 3.5
     base_url: https://cn.bing.com
-
-  - name: google
-    engine: google
-    shortcut: go
-    disabled: true
-
-  - name: duckduckgo
-    engine: duckduckgo
-    shortcut: ddg
-    disabled: true
-
-  - name: brave
-    engine: brave
-    shortcut: br
-    disabled: true
-
-  - name: wikipedia
-    engine: wikipedia
-    shortcut: wp
-    disabled: true
-
-  - name: wikidata
-    engine: wikidata
-    shortcut: wd
-    disabled: true
-
-  - name: startpage
-    engine: startpage
-    shortcut: sp
-    disabled: true
-
-  - name: qwant
-    engine: qwant
-    shortcut: qw
-    disabled: true

@@ -1,5 +1,3 @@
-github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0-20260530171222-2e72a465e6f3 h1:N58drwY1l3WIy6o/xP3oLILgE2aKAcSo7a9AM1+PIW0=
-github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0-20260530171222-2e72a465e6f3/go.mod h1:v1Ye+yrUMSCz7g92q+NN8yvCNgeQq7ocdQIJu8lB3KE=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
