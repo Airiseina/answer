@@ -20,4 +20,4 @@ ai:
     bot_skill_dir: "prompt/skills/kiana.skill"
     bot_model: "doubao-seed-1-8-251228"
     bot_base_url: "https://ark.cn-beijing.volces.com/api/v3"
-    bot_api_key: ""
+    bot_api_key: "f5d13525-ce49-47ef-a26f-d42cf7cc0127"

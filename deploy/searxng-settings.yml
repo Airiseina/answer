@@ -1,4 +1,4 @@
-use_default_settings: false
+use_default_settings: true
 
 general:
   instance_name: "Answer SearXNG"
@@ -17,25 +17,127 @@ server:
   port: 8080
   limiter: false
 
+redis:
+  url: redis://answer_garnet:6379/0
+
 outgoing:
-  request_timeout: 2.0
-  max_request_timeout: 4.0
+  request_timeout: 8.0
+  max_request_timeout: 15.0
   pool_connections: 100
   pool_maxsize: 15
   enable_http2: true
-  retries: 0
+  retries: 1
 
 engines:
+  # === 国内可用搜索引擎 ===
+
+  # 百度 - 国内市场份额第一(50.7%)
+  - name: baidu
+    engine: baidu
+    shortcut: bd
+    disabled: false
+    timeout: 8.0
+
+  # Bing - 国内桌面端份额第二(24.2%), cn.bing.com可访问
   - name: bing
     engine: bing
     shortcut: bi
     disabled: false
-    timeout: 3.5
-    base_url: https://cn.bing.com
+    timeout: 8.0
 
+  # 360搜索 - 国内份额第三(17.0%)
+  - name: 360search
+    engine: 360search
+    shortcut: 360so
+    disabled: false
+    timeout: 10.0
+
+  # 搜狗 - 微信/QQ内置搜索
+  - name: sogou
+    engine: sogou
+    shortcut: sg
+    disabled: false
+    timeout: 8.0
+
+  # Bing新闻
   - name: bing news
     engine: bing_news
     shortcut: bin
     disabled: false
-    timeout: 3.5
-    base_url: https://cn.bing.com
+    timeout: 8.0
+
+  # 搜狗微信 - 搜索微信公众号文章
+  - name: sogou wechat
+    engine: sogou_wechat
+    shortcut: sgwx
+    disabled: false
+    timeout: 8.0
+
+  # B站视频搜索
+  - name: bilibili
+    engine: bilibili
+    shortcut: bl
+    disabled: false
+    timeout: 6.0
+
+  # === 国内无法访问的搜索引擎，全部禁用 ===
+
+  - name: google
+    disabled: true
+
+  - name: brave
+    disabled: true
+
+  - name: duckduckgo
+    disabled: true
+
+  - name: wikipedia
+    disabled: true
+
+  - name: startpage
+    disabled: true
+
+  - name: qwant
+    disabled: true
+
+  - name: mojeek
+    disabled: true
+
+  - name: yahoo
+    disabled: true
+
+  - name: alexandria
+    disabled: true
+
+  - name: wikidata
+    disabled: true
+
+  - name: wikimedia commons
+    disabled: true
+
+  - name: reddit
+    disabled: true
+
+  - name: arxiv
+    disabled: true
+
+  - name: github
+    disabled: true
+
+  - name: stackoverflow
+    disabled: true
+
+  - name: ddg definitions
+    disabled: true
+
+  - name: wikine
+    disabled: true
+
+  - name: dictzone
+    disabled: true
+
+  - name: etools
+    disabled: true
+
+  - name: etymonline
+    disabled: true

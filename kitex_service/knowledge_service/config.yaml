@@ -32,5 +32,5 @@ seaweedfs:
   public_url: "/files"
 
 embedding:
-  api_key: ""
+  api_key: "f5d13525-ce49-47ef-a26f-d42cf7cc0127"
   model: "doubao-embedding-vision-251215"

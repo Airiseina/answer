@@ -7,6 +7,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
+from starlette.responses import Response
 from starlette.routing import Mount, Route
 
 logger = logging.getLogger("searxng_mcp_server")
@@ -17,7 +18,7 @@ logging.basicConfig(
 mcp = FastMCP("searxng")
 
 _searxng_base_url = os.getenv("SEARXNG_BASE_URL", "http://answer_searxng:8080")
-_searxng_timeout = float(os.getenv("SEARXNG_TIMEOUT", "5.0"))
+_searxng_timeout = float(os.getenv("SEARXNG_TIMEOUT", "8.0"))
 
 logger.info("SearXNG MCP Server 配置: URL=%s, Timeout=%.1fs", _searxng_base_url, _searxng_timeout)
 
@@ -64,14 +65,14 @@ def web_search(query: str, max_results: int = 5) -> str:
         return json.dumps({"results": results, "total": len(results)}, ensure_ascii=False)
     except httpx.HTTPStatusError as e:
         logger.error("SearXNG HTTP错误: %s", e)
-        return json.dumps({"error": f"HTTP {e.response.status_code}"}, ensure_ascii=False)
+        return f"搜索服务暂时不可用(HTTP {e.response.status_code})，请稍后再试或换一种方式提问。"
     except httpx.ConnectError:
-        return json.dumps({"error": "SearXNG不可用"}, ensure_ascii=False)
+        return "搜索服务连接失败，请稍后再试。"
     except httpx.TimeoutException:
-        return json.dumps({"error": "搜索超时"}, ensure_ascii=False)
+        return "搜索请求超时，请稍后再试或简化搜索词。"
     except Exception as e:
         logger.error("web_search 失败: %s", e)
-        return json.dumps({"error": str(e)[:200]}, ensure_ascii=False)
+        return f"搜索时发生错误，请稍后再试。"
 
 
 @mcp.tool()
@@ -107,14 +108,14 @@ def news_search(query: str, max_results: int = 5) -> str:
         return json.dumps({"results": results, "total": len(results)}, ensure_ascii=False)
     except httpx.HTTPStatusError as e:
         logger.error("SearXNG HTTP错误: %s", e)
-        return json.dumps({"error": f"HTTP {e.response.status_code}"}, ensure_ascii=False)
+        return f"新闻搜索服务暂时不可用(HTTP {e.response.status_code})，请稍后再试。"
     except httpx.ConnectError:
-        return json.dumps({"error": "SearXNG不可用"}, ensure_ascii=False)
+        return "新闻搜索服务连接失败，请稍后再试。"
     except httpx.TimeoutException:
-        return json.dumps({"error": "搜索超时"}, ensure_ascii=False)
+        return "新闻搜索请求超时，请稍后再试或简化搜索词。"
     except Exception as e:
         logger.error("news_search 失败: %s", e)
-        return json.dumps({"error": str(e)[:200]}, ensure_ascii=False)
+        return f"新闻搜索时发生错误，请稍后再试。"
 
 
 def create_app():
@@ -127,10 +128,11 @@ def create_app():
             await mcp._mcp_server.run(
                 streams[0], streams[1], mcp._mcp_server.create_initialization_options()
             )
+        return Response()
 
     return Starlette(
         routes=[
-            Route("/sse", endpoint=handle_sse),
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
         ],
     )

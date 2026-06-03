@@ -270,7 +270,7 @@ def create_app():
 
     return Starlette(
         routes=[
-            Route("/sse", endpoint=handle_sse),
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
         ],
     )

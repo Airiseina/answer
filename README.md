@@ -226,34 +226,34 @@ npm install
 npm run dev
 ```
 
-## Makefile
+## 构建脚本
 
-项目提供 `Makefile` 简化常用操作：
+项目提供 `build.go`（Go 编写，跨平台兼容）简化常用操作：
 
 ```bash
 # 查看所有可用命令
-make help
+go run build.go help
 
 # 启动全部基础设施（不含业务服务）
-make infra-up
+go run build.go infra-up
 
 # 启动完整 Docker 环境
-make docker-up
+go run build.go docker-up
 
 # 停止 Docker 环境
-make docker-down
+go run build.go docker-down
 
 # 编译所有 Go 服务
-make build
+go run build.go build
 
 # 安装 MCP Server 依赖
-make mcp-install
+go run build.go mcp-install
 
 # 格式化代码
-make fmt
+go run build.go fmt
 
 # 运行代码检查
-make lint
+go run build.go lint
 ```
 
 ## 核心功能

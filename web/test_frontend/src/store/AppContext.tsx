@@ -433,6 +433,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const lastSyncMsg = syncMsgs[syncMsgs.length - 1];
             if (lastSyncMsg) {
               const displayText = extractDisplayText(lastSyncMsg.content);
+              // sync 返回的当前活跃会话消息，通知服务端已读
+              if (convId === activeConvRef.current) {
+                api('POST', `/api/chat/mark_read/${convId}`).catch(() => {});
+              }
               setConversations(prev => {
                 const exists = prev.find(c => c.id === convId);
                 if (exists) {
@@ -481,6 +485,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           };
 
           const displayText = extractDisplayText(msg.content);
+
+          // 收到当前活跃会话的消息，通知服务端已读
+          if (convId === activeConvRef.current && !isSent) {
+            api('POST', `/api/chat/mark_read/${convId}`).catch(() => {});
+          }
 
           setConversations(prev => {
             const tempConv = prev.find(c => c.id === '' && c.type === 1);

@@ -26,6 +26,7 @@ const botReplyTopic = "bot-reply-topic"
 const (
 	mcpTimeout        = 60 * time.Second
 	llmTimeout        = 120 * time.Second
+	agentTimeout      = 180 * time.Second // Agent需要多轮ChatModel+工具调用, 给更充裕的时间
 	memorySaveTimeout = 60 * time.Second
 )
 
@@ -156,6 +157,23 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	if botCfg.Name != "" {
 		enhancedPrompt += fmt.Sprintf("\n\n你的名字是「%s」，当用户用@提及你时（如@%s），他们就是在和你说话。请自然地回应。", botCfg.Name, botCfg.Name)
 	}
+	// 根据可用的MCP服务器添加工具使用引导，促使LLM主动调用工具
+	if len(mcpServers) > 0 {
+		var toolHints []string
+		for _, s := range mcpServers {
+			switch s.Name {
+			case "searxng":
+				toolHints = append(toolHints, "- 当你需要搜索互联网上的最新信息、新闻、实时数据或你不确定的事实时，必须使用web_search或news_search工具搜索，不要凭记忆猜测")
+			case "weather":
+				toolHints = append(toolHints, "- 当用户询问天气、空气质量等气象信息时，请使用weather相关工具查询")
+			case "timeserver":
+				toolHints = append(toolHints, "- 当用户询问当前时间、日期等时间信息时，请使用timeserver相关工具查询")
+			default:
+				toolHints = append(toolHints, fmt.Sprintf("- 当用户的问题可能需要%s工具提供的信息时，请主动调用该工具", s.Name))
+			}
+		}
+		enhancedPrompt += "\n\n你可以使用以下工具来获取实时信息，请在需要时主动调用，不要凭记忆回答不确定的内容：\n" + strings.Join(toolHints, "\n")
+	}
 	userContent := content
 	if quoteMsgID > 0 {
 		quoteMsgs, quoteErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, 50)
@@ -183,7 +201,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 			}
 		}
 	}
-	agentCtx, agentCancel := context.WithTimeout(ctx, llmTimeout)
+	agentCtx, agentCancel := context.WithTimeout(ctx, agentTimeout)
 	defer agentCancel()
 	agentResult, err := svc.agent.Run(agentCtx, agent.AgentRunConfig{
 		APIKey:       botCfg.ApiKey,
