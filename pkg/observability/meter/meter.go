@@ -43,6 +43,9 @@ type Metrics struct {
 	McpConnectTotal      metric.Int64Counter
 	McpConnectErrors     metric.Int64Counter
 	McpReconnectTotal    metric.Int64Counter
+	McpRetryTotal        metric.Int64Counter
+	McpFallbackTotal     metric.Int64Counter
+	McpCallTimeoutTotal  metric.Int64Counter
 	GroupOpTotal         metric.Int64Counter
 	UserRegisterTotal    metric.Int64Counter
 	UserLoginTotal       metric.Int64Counter
@@ -142,6 +145,24 @@ func registerAll(serviceName string) {
 		metric.WithDescription("MCP 重连总数"),
 	)
 	mustRegister(err, "aim.mcp.reconnect.total")
+
+	M.McpRetryTotal, err = Meter().Int64Counter(
+		"aim.mcp.retry.total",
+		metric.WithDescription("MCP 调用重试总数"),
+	)
+	mustRegister(err, "aim.mcp.retry.total")
+
+	M.McpFallbackTotal, err = Meter().Int64Counter(
+		"aim.mcp.fallback.total",
+		metric.WithDescription("MCP 调用降级总数"),
+	)
+	mustRegister(err, "aim.mcp.fallback.total")
+
+	M.McpCallTimeoutTotal, err = Meter().Int64Counter(
+		"aim.mcp.call.timeout.total",
+		metric.WithDescription("MCP 调用超时总数"),
+	)
+	mustRegister(err, "aim.mcp.call.timeout.total")
 
 	M.GroupOpTotal, err = Meter().Int64Counter(
 		"aim.group.operation.total",

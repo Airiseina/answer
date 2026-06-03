@@ -18,4 +18,8 @@ func GetConfig() {
 	V.SetDefault("mcp.searxng_url", "http://localhost:9008/sse")
 	V.SetDefault("mcp.weather_url", "http://localhost:9001/sse")
 	V.SetDefault("mcp.timeserver_url", "http://localhost:9005/sse")
+	V.SetDefault("mcp.call_timeout", 20)          // MCP工具调用超时(秒)
+	V.SetDefault("mcp.retry.max_attempts", 2)     // MCP调用最大重试次数(不含首次调用)
+	V.SetDefault("mcp.retry.initial_interval", 1) // MCP重试初始间隔(秒)
+	V.SetDefault("mcp.fallback.enabled", true)    // MCP降级开关
 }

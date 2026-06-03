@@ -17,3 +17,9 @@ mcp:
   searxng_url: "http://localhost:9008/sse"
   weather_url: "http://localhost:9001/sse"
   timeserver_url: "http://localhost:9005/sse"
+  call_timeout: 20        # MCP工具调用超时(秒)
+  retry:
+    max_attempts: 2       # MCP调用最大重试次数(不含首次调用)
+    initial_interval: 1   # MCP重试初始间隔(秒)
+  fallback:
+    enabled: true         # MCP降级开关

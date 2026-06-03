@@ -79,7 +79,10 @@ func SearchMemories(ctx context.Context, pool *Pool, query string, userID string
 	if runID != "" {
 		args["run_id"] = runID
 	}
-	result, err := pool.CallToolWithTimeout(ctx, "mem0", "search_memories", args, memoryMcpTimeout)
+	result, err := pool.CallToolWithFallback(ctx, "mem0", "search_memories", args, memoryMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
+		klog.Warnf("记忆搜索降级: %v", err)
+		return "", nil
+	})
 	if err != nil {
 		klog.Errorf("搜索记忆失败: %v", err)
 		return ""
@@ -96,12 +99,15 @@ func SaveMemory(ctx context.Context, pool *Pool, content string, userID string, 
 		klog.Errorf("确保mem0连接失败: %v", err)
 		return
 	}
-	result, err := pool.CallToolWithTimeout(ctx, "mem0", "add_memory", map[string]any{
+	result, err := pool.CallToolWithFallback(ctx, "mem0", "add_memory", map[string]any{
 		"content":  content,
 		"user_id":  userID,
 		"agent_id": botID,
 		"run_id":   runID,
-	}, memoryMcpTimeout)
+	}, memoryMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
+		klog.Warnf("保存记忆降级，跳过: %v", err)
+		return "", nil
+	})
 	if err != nil {
 		klog.Errorf("保存记忆失败: %v", err)
 		return

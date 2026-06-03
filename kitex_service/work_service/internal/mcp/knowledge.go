@@ -51,7 +51,10 @@ func SearchKnowledge(ctx context.Context, pool *Pool, query string, kbIDs string
 		"kb_ids": kbIDs,
 		"top_k":  topK,
 	}
-	result, err := pool.CallToolWithTimeout(ctx, "knowledge", "search_knowledge", args, knowledgeMcpTimeout)
+	result, err := pool.CallToolWithFallback(ctx, "knowledge", "search_knowledge", args, knowledgeMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
+		klog.Warnf("知识库搜索降级: %v", err)
+		return "", nil
+	})
 	if err != nil {
 		klog.Errorf("搜索知识库失败: %v", err)
 		return ""
@@ -71,7 +74,10 @@ func GetBotKnowledgeBases(ctx context.Context, pool *Pool, botID string) string 
 	args := map[string]any{
 		"bot_id": botID,
 	}
-	result, err := pool.CallToolWithTimeout(ctx, "knowledge", "get_bot_knowledge_bases", args, knowledgeMcpTimeout)
+	result, err := pool.CallToolWithFallback(ctx, "knowledge", "get_bot_knowledge_bases", args, knowledgeMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
+		klog.Warnf("获取Bot知识库列表降级: %v", err)
+		return "", nil
+	})
 	if err != nil {
 		klog.Errorf("获取Bot知识库列表失败: %v", err)
 		return ""
