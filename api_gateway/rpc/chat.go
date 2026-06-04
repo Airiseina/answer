@@ -94,3 +94,9 @@ func GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq) (*chat.Get
 func SyncMessages(ctx context.Context, req *chat.SyncMessagesReq) (*chat.SyncMessagesRes, error) {
 	return chatCli.SyncMessages(ctx, req)
 }
+
+// SearchMessages 调用 chat_service 搜索历史消息
+// 支持按关键词和时间范围搜索，同时搜索热库和冷库
+func SearchMessages(ctx context.Context, req *chat.SearchMessagesReq) (*chat.SearchMessagesRes, error) {
+	return chatCli.SearchMessages(ctx, req)
+}

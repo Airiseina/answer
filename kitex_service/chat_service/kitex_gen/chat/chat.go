@@ -2053,6 +2053,163 @@ var fieldIDToName_SearchColdMessagesRes = map[int16]string{
 	2: "messages",
 }
 
+type SearchMessagesReq struct {
+	UserId         int64   `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Keyword        *string `thrift:"keyword,2,optional" frugal:"2,optional,string" json:"keyword,omitempty"`
+	ConversationId *int64  `thrift:"conversation_id,3,optional" frugal:"3,optional,i64" json:"conversation_id,omitempty"`
+	StartTime      *int64  `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time,omitempty"`
+	EndTime        *int64  `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time,omitempty"`
+	Limit          *int16  `thrift:"limit,6,optional" frugal:"6,optional,i16" json:"limit,omitempty"`
+}
+
+func NewSearchMessagesReq() *SearchMessagesReq {
+	return &SearchMessagesReq{}
+}
+
+func (p *SearchMessagesReq) InitDefault() {
+}
+
+func (p *SearchMessagesReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+var SearchMessagesReq_Keyword_DEFAULT string
+
+func (p *SearchMessagesReq) GetKeyword() (v string) {
+	if !p.IsSetKeyword() {
+		return SearchMessagesReq_Keyword_DEFAULT
+	}
+	return *p.Keyword
+}
+
+var SearchMessagesReq_ConversationId_DEFAULT int64
+
+func (p *SearchMessagesReq) GetConversationId() (v int64) {
+	if !p.IsSetConversationId() {
+		return SearchMessagesReq_ConversationId_DEFAULT
+	}
+	return *p.ConversationId
+}
+
+var SearchMessagesReq_StartTime_DEFAULT int64
+
+func (p *SearchMessagesReq) GetStartTime() (v int64) {
+	if !p.IsSetStartTime() {
+		return SearchMessagesReq_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var SearchMessagesReq_EndTime_DEFAULT int64
+
+func (p *SearchMessagesReq) GetEndTime() (v int64) {
+	if !p.IsSetEndTime() {
+		return SearchMessagesReq_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+
+var SearchMessagesReq_Limit_DEFAULT int16
+
+func (p *SearchMessagesReq) GetLimit() (v int16) {
+	if !p.IsSetLimit() {
+		return SearchMessagesReq_Limit_DEFAULT
+	}
+	return *p.Limit
+}
+func (p *SearchMessagesReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SearchMessagesReq) SetKeyword(val *string) {
+	p.Keyword = val
+}
+func (p *SearchMessagesReq) SetConversationId(val *int64) {
+	p.ConversationId = val
+}
+func (p *SearchMessagesReq) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *SearchMessagesReq) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+func (p *SearchMessagesReq) SetLimit(val *int16) {
+	p.Limit = val
+}
+
+func (p *SearchMessagesReq) IsSetKeyword() bool {
+	return p.Keyword != nil
+}
+
+func (p *SearchMessagesReq) IsSetConversationId() bool {
+	return p.ConversationId != nil
+}
+
+func (p *SearchMessagesReq) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *SearchMessagesReq) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *SearchMessagesReq) IsSetLimit() bool {
+	return p.Limit != nil
+}
+
+func (p *SearchMessagesReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchMessagesReq(%+v)", *p)
+}
+
+var fieldIDToName_SearchMessagesReq = map[int16]string{
+	1: "user_id",
+	2: "keyword",
+	3: "conversation_id",
+	4: "start_time",
+	5: "end_time",
+	6: "limit",
+}
+
+type SearchMessagesRes struct {
+	Success  bool       `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Messages []*Message `thrift:"messages,2" frugal:"2,default,list<Message>" json:"messages"`
+}
+
+func NewSearchMessagesRes() *SearchMessagesRes {
+	return &SearchMessagesRes{}
+}
+
+func (p *SearchMessagesRes) InitDefault() {
+}
+
+func (p *SearchMessagesRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SearchMessagesRes) GetMessages() (v []*Message) {
+	return p.Messages
+}
+func (p *SearchMessagesRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SearchMessagesRes) SetMessages(val []*Message) {
+	p.Messages = val
+}
+
+func (p *SearchMessagesRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchMessagesRes(%+v)", *p)
+}
+
+var fieldIDToName_SearchMessagesRes = map[int16]string{
+	1: "success",
+	2: "messages",
+}
+
 type ChatService interface {
 	SendMessage(ctx context.Context, req *SendMessageReq) (r *SendMessageRes, err error)
 
@@ -2091,6 +2248,8 @@ type ChatService interface {
 	SyncMessages(ctx context.Context, req *SyncMessagesReq) (r *SyncMessagesRes, err error)
 
 	SearchColdMessages(ctx context.Context, req *SearchColdMessagesReq) (r *SearchColdMessagesRes, err error)
+
+	SearchMessages(ctx context.Context, req *SearchMessagesReq) (r *SearchMessagesRes, err error)
 }
 
 type ChatServiceSendMessageArgs struct {
@@ -3534,5 +3693,81 @@ func (p *ChatServiceSearchColdMessagesResult) String() string {
 }
 
 var fieldIDToName_ChatServiceSearchColdMessagesResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceSearchMessagesArgs struct {
+	Req *SearchMessagesReq `thrift:"req,1" frugal:"1,default,SearchMessagesReq" json:"req"`
+}
+
+func NewChatServiceSearchMessagesArgs() *ChatServiceSearchMessagesArgs {
+	return &ChatServiceSearchMessagesArgs{}
+}
+
+func (p *ChatServiceSearchMessagesArgs) InitDefault() {
+}
+
+var ChatServiceSearchMessagesArgs_Req_DEFAULT *SearchMessagesReq
+
+func (p *ChatServiceSearchMessagesArgs) GetReq() (v *SearchMessagesReq) {
+	if !p.IsSetReq() {
+		return ChatServiceSearchMessagesArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceSearchMessagesArgs) SetReq(val *SearchMessagesReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceSearchMessagesArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceSearchMessagesArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSearchMessagesArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSearchMessagesArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceSearchMessagesResult struct {
+	Success *SearchMessagesRes `thrift:"success,0,optional" frugal:"0,optional,SearchMessagesRes" json:"success,omitempty"`
+}
+
+func NewChatServiceSearchMessagesResult() *ChatServiceSearchMessagesResult {
+	return &ChatServiceSearchMessagesResult{}
+}
+
+func (p *ChatServiceSearchMessagesResult) InitDefault() {
+}
+
+var ChatServiceSearchMessagesResult_Success_DEFAULT *SearchMessagesRes
+
+func (p *ChatServiceSearchMessagesResult) GetSuccess() (v *SearchMessagesRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceSearchMessagesResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceSearchMessagesResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SearchMessagesRes)
+}
+
+func (p *ChatServiceSearchMessagesResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceSearchMessagesResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSearchMessagesResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSearchMessagesResult = map[int16]string{
 	0: "success",
 }

@@ -5,12 +5,17 @@ import (
 )
 
 // serviceName: 比如 "api_gateway" 或 "user_service"
-// endpoint: jaeger 容器的 OTLP 地址，因为同在一个 Network 里，可用 "jaeger:4317"
+// endpoint: OTel Collector 的 OTLP gRPC 地址，如 "otel-collector:4317"
 func InitTracer(serviceName string, endpoint string) provider.OtelProvider {
 	p := provider.NewOpenTelemetryProvider(
 		provider.WithServiceName(serviceName),
 		provider.WithExportEndpoint(endpoint),
 		provider.WithInsecure(), // 本地开发不使用 TLS
 	)
+
+	// kitex-contrib provider 已自动配置了 OTLP Metric 导出器（默认 enableMetrics=true）
+	// meter.InitMeter() 通过 otel.GetMeterProvider() 获取的 MeterProvider 即为 provider 创建的
+	// 无需再手动创建 MeterProvider，否则会覆盖掉 provider 设置的（含 service.name 等资源属性）
+
 	return p
 }

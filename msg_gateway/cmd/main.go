@@ -127,6 +127,13 @@ func main() {
 	}
 	core.InitKafkaProducer(kafkaWriter)
 	rpc.Connect(v)
+	garnetClient, err := infra.ConnectRedis(v)
+	if err != nil {
+		klog.Warnf("连接Garnet失败，将降级使用RPC管理在线状态: %v", err)
+	} else {
+		core.InitRedis(garnetClient)
+		klog.Infof("Garnet连接成功，在线状态将直接写入Garnet")
+	}
 	botReplyReader, err := infra.ConnectKafkaConsumerGroup(v, "bot-reply-group", "bot-reply-topic")
 	if err != nil {
 		klog.Fatalf("连接Bot回复Kafka ConsumerGroup失败: %v", err)

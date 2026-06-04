@@ -41,6 +41,7 @@ func Routes(h *server.Hertz) {
 	authGroup.GET("/search_user", handle.SearchUserByAccount)
 	authGroup.GET("/chat/messages", handle.GetHistory)
 	authGroup.GET("/chat/conversations", handle.GetConversations)
+	authGroup.GET("/chat/search", handle.SearchMessages)
 	authGroup.POST("/chat/mark_read/:conversation_id", handle.MarkRead)
 	authGroup.POST("/chat/online_status", handle.GetOnlineStatus)
 	authGroup.POST("/chat/recall/:msg_id", handle.RecallMessage)

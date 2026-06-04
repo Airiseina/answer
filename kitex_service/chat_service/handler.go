@@ -345,3 +345,53 @@ func (s *ChatServiceImpl) SearchColdMessages(ctx context.Context, req *chat.Sear
 		Messages: list,
 	}, nil
 }
+
+func (s *ChatServiceImpl) SearchMessages(ctx context.Context, req *chat.SearchMessagesReq) (resp *chat.SearchMessagesRes, err error) {
+	var conversationID int64
+	if req.ConversationId != nil {
+		conversationID = *req.ConversationId
+	}
+	var keyword string
+	if req.Keyword != nil {
+		keyword = *req.Keyword
+	}
+	var startTime int64
+	if req.StartTime != nil {
+		startTime = *req.StartTime
+	}
+	var endTime int64
+	if req.EndTime != nil {
+		endTime = *req.EndTime
+	}
+	var limit int16
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+	messages, err := s.chatService.SearchMessages(ctx, req.UserId, keyword, conversationID, startTime, endTime, limit)
+	if err != nil {
+		klog.CtxErrorf(ctx, "用户[%d]搜索历史消息失败: %v", req.UserId, err)
+		return &chat.SearchMessagesRes{Success: false}, nil
+	}
+	var list []*chat.Message
+	for _, m := range messages {
+		msg := &chat.Message{
+			MsgId:          m.MsgID,
+			ClientSeq:      m.ClientSeq,
+			SenderId:       m.SenderID,
+			ConversationId: m.ConversationID,
+			Content:        m.Content,
+			Timestamp:      m.Timestamp,
+			Seq:            &m.Seq,
+			Status:         &m.Status,
+			IsEdited:       &m.IsEdited,
+		}
+		if m.QuoteMsgID != 0 {
+			msg.QuoteMsgId = &m.QuoteMsgID
+		}
+		list = append(list, msg)
+	}
+	return &chat.SearchMessagesRes{
+		Success:  true,
+		Messages: list,
+	}, nil
+}

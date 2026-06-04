@@ -20,11 +20,13 @@ import (
 	"github.com/Airiseina/answer/msg_gateway/rpc"
 
 	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
 
 var pushSecret []byte
 var kafkaWriter *kafka.Writer
+var rdb *redis.Client
 
 func InitPushSecret(secret string) {
 	pushSecret = []byte(secret)
@@ -33,6 +35,17 @@ func InitPushSecret(secret string) {
 func InitKafkaProducer(writer *kafka.Writer) {
 	kafkaWriter = writer
 }
+
+func InitRedis(client *redis.Client) {
+	rdb = client
+}
+
+const (
+	// 在线状态键前缀：online:user:{userId} → gatewayAddr
+	onlineKeyPrefix = "online:user:"
+	// 在线状态 TTL，网关通过心跳续期
+	onlineTTL = 90 * time.Second
+)
 
 type Manager struct {
 	Clients     map[int64]*Client   // 在线用户映射表：UserID → Client
@@ -71,15 +84,26 @@ func (manager *Manager) Start() {
 			onlineCount := len(manager.Clients)
 			manager.Lock.Unlock()
 			meter.M.WsConnectTotal.Add(context.Background(), 1)
+			// 直接写入 Garnet：userId → gatewayAddr，支持跨网关路由
 			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-				defer cancel()
-				_, err := rpc.SetOnline(ctx, &chat.SetOnlineReq{
-					UserId:      client.UserId,
-					GatewayAddr: manager.GatewayAddr,
-				})
-				if err != nil {
-					klog.Errorf("用户%d上线注册到Redis失败: %v", client.UserId, err)
+				if rdb != nil {
+					key := fmt.Sprintf("%s%d", onlineKeyPrefix, client.UserId)
+					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+					defer cancel()
+					if err := rdb.Set(ctx, key, manager.GatewayAddr, onlineTTL).Err(); err != nil {
+						klog.Errorf("用户%d上线写入Garnet失败: %v", client.UserId, err)
+					}
+				} else {
+					// 降级：Garnet 不可用时回退到 RPC
+					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+					defer cancel()
+					_, err := rpc.SetOnline(ctx, &chat.SetOnlineReq{
+						UserId:      client.UserId,
+						GatewayAddr: manager.GatewayAddr,
+					})
+					if err != nil {
+						klog.Errorf("用户%d上线注册到Redis失败: %v", client.UserId, err)
+					}
 				}
 			}()
 			klog.Infof("用户%d上线, 当前在线: %d", client.UserId, onlineCount)
@@ -96,14 +120,25 @@ func (manager *Manager) Start() {
 				meter.M.WsDisconnectTotal.Add(context.Background(), 1)
 				manager.Lock.Unlock()
 
+				// 从 Garnet 删除在线状态
 				go func() {
-					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-					defer cancel()
-					_, err := rpc.SetOffline(ctx, &chat.SetOfflineReq{
-						UserId: client.UserId,
-					})
-					if err != nil {
-						klog.Errorf("用户%d下线注销从Redis失败: %v", client.UserId, err)
+					if rdb != nil {
+						key := fmt.Sprintf("%s%d", onlineKeyPrefix, client.UserId)
+						ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+						defer cancel()
+						if err := rdb.Del(ctx, key).Err(); err != nil {
+							klog.Errorf("用户%d下线从Garnet删除失败: %v", client.UserId, err)
+						}
+					} else {
+						// 降级：Garnet 不可用时回退到 RPC
+						ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+						defer cancel()
+						_, err := rpc.SetOffline(ctx, &chat.SetOfflineReq{
+							UserId: client.UserId,
+						})
+						if err != nil {
+							klog.Errorf("用户%d下线注销从Redis失败: %v", client.UserId, err)
+						}
 					}
 				}()
 				klog.Infof("用户%d下线, 当前在线: %d", client.UserId, onlineCount)
@@ -129,12 +164,27 @@ func (manager *Manager) renewAllOnline() {
 	if len(userIDs) == 0 {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	for _, uid := range userIDs {
-		_, err := rpc.RenewOnline(ctx, &chat.RenewOnlineReq{UserId: uid})
-		if err != nil {
-			klog.Errorf("用户%d在线状态续期失败: %v", uid, err)
+	// 使用 Garnet Pipeline 批量续期在线状态 TTL
+	if rdb != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		pipe := rdb.Pipeline()
+		for _, uid := range userIDs {
+			key := fmt.Sprintf("%s%d", onlineKeyPrefix, uid)
+			pipe.Expire(ctx, key, onlineTTL)
+		}
+		if _, err := pipe.Exec(ctx); err != nil {
+			klog.Errorf("批量续期在线状态失败: %v", err)
+		}
+	} else {
+		// 降级：Garnet 不可用时回退到 RPC
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		for _, uid := range userIDs {
+			_, err := rpc.RenewOnline(ctx, &chat.RenewOnlineReq{UserId: uid})
+			if err != nil {
+				klog.Errorf("用户%d在线状态续期失败: %v", uid, err)
+			}
 		}
 	}
 }
@@ -287,28 +337,61 @@ func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg
 	if len(otherMemberIDs) == 0 {
 		return
 	}
-	pushCtx, pushCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer pushCancel()
-	statusResp, err := rpc.GetOnlineStatus(pushCtx, &chat.GetOnlineStatusReq{
-		UserIds: otherMemberIDs,
-	})
-	if err != nil {
-		klog.Errorf("查询会话成员在线状态失败: %v", err)
-		return
-	}
-	for _, status := range statusResp.Statuses {
-		if !status.Online {
-			continue
+	// 优先从 Garnet 批量查询在线状态
+	if rdb != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		keys := make([]string, len(otherMemberIDs))
+		for i, uid := range otherMemberIDs {
+			keys[i] = fmt.Sprintf("%s%d", onlineKeyPrefix, uid)
 		}
-		manager.Lock.RLock()
-		client, localOnline := manager.Clients[status.UserId]
-		manager.Lock.RUnlock()
-		if localOnline {
-			if err := client.Send(chatMsg); err != nil {
-				klog.Errorf("推送消息给本地用户%d失败: %v", status.UserId, err)
+		addrs, err := rdb.MGet(ctx, keys...).Result()
+		if err != nil {
+			klog.Errorf("从Garnet批量查询在线状态失败: %v", err)
+			return
+		}
+		for i, addr := range addrs {
+			if addr == nil {
+				continue
 			}
-		} else if status.GatewayAddr != manager.GatewayAddr {
-			pushToGateway(status.GatewayAddr, chatMsg, []int64{status.UserId})
+			gatewayAddr := addr.(string)
+			uid := otherMemberIDs[i]
+			manager.Lock.RLock()
+			client, localOnline := manager.Clients[uid]
+			manager.Lock.RUnlock()
+			if localOnline {
+				if err := client.Send(chatMsg); err != nil {
+					klog.Errorf("推送消息给本地用户%d失败: %v", uid, err)
+				}
+			} else if gatewayAddr != manager.GatewayAddr {
+				pushToGateway(gatewayAddr, chatMsg, []int64{uid})
+			}
+		}
+	} else {
+		// 降级：Garnet 不可用时回退到 RPC
+		pushCtx, pushCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer pushCancel()
+		statusResp, err := rpc.GetOnlineStatus(pushCtx, &chat.GetOnlineStatusReq{
+			UserIds: otherMemberIDs,
+		})
+		if err != nil {
+			klog.Errorf("查询会话成员在线状态失败: %v", err)
+			return
+		}
+		for _, status := range statusResp.Statuses {
+			if !status.Online {
+				continue
+			}
+			manager.Lock.RLock()
+			client, localOnline := manager.Clients[status.UserId]
+			manager.Lock.RUnlock()
+			if localOnline {
+				if err := client.Send(chatMsg); err != nil {
+					klog.Errorf("推送消息给本地用户%d失败: %v", status.UserId, err)
+				}
+			} else if status.GatewayAddr != manager.GatewayAddr {
+				pushToGateway(status.GatewayAddr, chatMsg, []int64{status.UserId})
+			}
 		}
 	}
 }
@@ -505,27 +588,51 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 	}
 
 	// 查询在线状态
-	statusResp, err := rpc.GetOnlineStatus(ctx, &chat.GetOnlineStatusReq{
-		UserIds: otherMemberIDs,
-	})
-	if err != nil {
-		klog.Errorf("查询会话成员在线状态失败: %v", err)
-		return
-	}
-
-	for _, status := range statusResp.Statuses {
-		if !status.Online {
-			continue
+	if rdb != nil {
+		keys := make([]string, len(otherMemberIDs))
+		for i, uid := range otherMemberIDs {
+			keys[i] = fmt.Sprintf("%s%d", onlineKeyPrefix, uid)
 		}
-		manager.Lock.RLock()
-		client, localOnline := manager.Clients[status.UserId]
-		manager.Lock.RUnlock()
-		if localOnline {
-			// 本地用户：直接通过 WS 推送
-			client.Send(typingMsg)
-		} else if status.GatewayAddr != manager.GatewayAddr {
-			// 跨网关用户：HTTP 推送到目标网关
-			pushToGateway(status.GatewayAddr, typingMsg, []int64{status.UserId})
+		addrs, err := rdb.MGet(ctx, keys...).Result()
+		if err != nil {
+			klog.Errorf("从Garnet批量查询在线状态失败: %v", err)
+			return
+		}
+		for i, addr := range addrs {
+			if addr == nil {
+				continue
+			}
+			gatewayAddr := addr.(string)
+			uid := otherMemberIDs[i]
+			manager.Lock.RLock()
+			client, localOnline := manager.Clients[uid]
+			manager.Lock.RUnlock()
+			if localOnline {
+				client.Send(typingMsg)
+			} else if gatewayAddr != manager.GatewayAddr {
+				pushToGateway(gatewayAddr, typingMsg, []int64{uid})
+			}
+		}
+	} else {
+		statusResp, err := rpc.GetOnlineStatus(ctx, &chat.GetOnlineStatusReq{
+			UserIds: otherMemberIDs,
+		})
+		if err != nil {
+			klog.Errorf("查询会话成员在线状态失败: %v", err)
+			return
+		}
+		for _, status := range statusResp.Statuses {
+			if !status.Online {
+				continue
+			}
+			manager.Lock.RLock()
+			client, localOnline := manager.Clients[status.UserId]
+			manager.Lock.RUnlock()
+			if localOnline {
+				client.Send(typingMsg)
+			} else if status.GatewayAddr != manager.GatewayAddr {
+				pushToGateway(status.GatewayAddr, typingMsg, []int64{status.UserId})
+			}
 		}
 	}
 }

@@ -1108,3 +1108,107 @@ func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID i
 	}
 	return msgs, nil
 }
+
+// SearchMessages 搜索历史消息（支持关键词和时间范围，统一搜索热库+冷库）
+// 搜索策略：
+//  1. 先搜索热库（PostgreSQL），获取近 hotMonths 个月的消息
+//  2. 若启用冷库且热库结果不足，继续搜索冷库（ClickHouse）
+//  3. 若指定了 conversationID，校验用户是否为会话成员
+//  4. 若未指定 conversationID，只搜索用户参与的会话
+//
+// 参数:
+//   - userID: 请求者用户ID，用于权限校验
+//   - keyword: 搜索关键词
+//   - conversationID: 会话ID（0 表示搜索所有会话）
+//   - startTime: 时间范围起始（毫秒时间戳，0 表示不限）
+//   - endTime: 时间范围结束（毫秒时间戳，0 表示不限）
+//   - limit: 返回条数上限，默认20，上限100
+func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keyword string, conversationID int64, startTime int64, endTime int64, limit int16) ([]MessageDTO, error) {
+	if strings.TrimSpace(keyword) == "" && startTime <= 0 && endTime <= 0 {
+		return nil, fmt.Errorf("搜索关键词和时间范围不能同时为空")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// 权限校验：若指定了会话ID，校验用户是否为会话成员
+	if conversationID > 0 {
+		members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
+		if err != nil {
+			return nil, fmt.Errorf("查询会话成员失败: %w", err)
+		}
+		isMember := false
+		for _, m := range members {
+			if m == userID {
+				isMember = true
+				break
+			}
+		}
+		if !isMember {
+			return nil, fmt.Errorf("无权搜索该会话消息")
+		}
+	}
+
+	var msgs []MessageDTO
+
+	// 1. 搜索热库（PostgreSQL）
+	hotMessages, err := svc.dao.SearchHotMessages(conversationID, keyword, startTime, endTime, limit)
+	if err != nil {
+		klog.CtxWarnf(ctx, "搜索热库消息失败: %v", err)
+	} else {
+		for _, msg := range hotMessages {
+			content := msg.Content
+			if msg.Status == model.MsgStatusRecalled {
+				content = "该消息已撤回"
+			}
+			msgs = append(msgs, MessageDTO{
+				MsgID:          msg.MsgID,
+				ClientSeq:      msg.ClientSeq,
+				SenderID:       msg.SenderID,
+				ConversationID: msg.ConversationID,
+				Seq:            msg.Seq,
+				Content:        content,
+				Timestamp:      msg.Timestamp,
+				Status:         msg.Status,
+				IsEdited:       msg.IsEdited,
+				QuoteMsgID:     msg.QuoteMsgID,
+			})
+		}
+	}
+
+	// 2. 搜索冷库（ClickHouse）：启用冷库且热库结果不足时
+	if svc.coldEnabled && svc.coldStorageDao != nil && len(msgs) < int(limit) {
+		remaining := limit - int16(len(msgs))
+		coldMessages, coldErr := svc.coldStorageDao.SearchMessagesByTimeRange(ctx, conversationID, keyword, userID, startTime, endTime, remaining)
+		if coldErr != nil {
+			klog.CtxWarnf(ctx, "搜索冷库消息失败: %v", coldErr)
+		} else {
+			for _, msg := range coldMessages {
+				content := msg.Content
+				if msg.Status == model.MsgStatusRecalled {
+					content = "该消息已撤回"
+				}
+				msgs = append(msgs, MessageDTO{
+					MsgID:          msg.MsgID,
+					ClientSeq:      msg.ClientSeq,
+					SenderID:       msg.SenderID,
+					ConversationID: msg.ConversationID,
+					Seq:            msg.Seq,
+					Content:        content,
+					Timestamp:      msg.Timestamp,
+					Status:         msg.Status,
+					IsEdited:       msg.IsEdited,
+					QuoteMsgID:     msg.QuoteMsgID,
+				})
+			}
+		}
+	}
+
+	if len(msgs) == 0 {
+		return nil, nil
+	}
+	return msgs, nil
+}

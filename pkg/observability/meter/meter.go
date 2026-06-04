@@ -8,7 +8,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-const MeterName = "aim"
+// MeterName 留空，避免 OTel Collector Prometheus 导出器重复添加前缀
+// 指标名已自带 aim. 前缀，Prometheus 导出器会将点转为下划线
+const MeterName = ""
 
 var meter metric.Meter
 
@@ -86,7 +88,6 @@ func registerAll(serviceName string) {
 	M.MessageLatency, err = Meter().Float64Histogram(
 		"aim.message.latency",
 		metric.WithDescription("消息投递延迟(毫秒)"),
-		metric.WithUnit("ms"),
 	)
 	mustRegister(err, "aim.message.latency")
 
@@ -99,7 +100,6 @@ func registerAll(serviceName string) {
 	M.BotResponseLatency, err = Meter().Float64Histogram(
 		"aim.bot.response.latency",
 		metric.WithDescription("Bot 响应延迟(毫秒)"),
-		metric.WithUnit("ms"),
 	)
 	mustRegister(err, "aim.bot.response.latency")
 
@@ -118,7 +118,6 @@ func registerAll(serviceName string) {
 	M.McpCallLatency, err = Meter().Float64Histogram(
 		"aim.mcp.call.latency",
 		metric.WithDescription("MCP 工具调用延迟(毫秒)"),
-		metric.WithUnit("ms"),
 	)
 	mustRegister(err, "aim.mcp.call.latency")
 

@@ -75,6 +75,7 @@ services:
 #      - GATEWAY_ADDR=answer_msg_gateway:8081
 #      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
 #      - KAFKA_BROKERS=kafka-1:9092
+#      - REDIS_ADDR=garnet:6379
 #    networks:
 #      - answer-net
 #    depends_on:

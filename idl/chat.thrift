@@ -278,6 +278,23 @@ struct SearchColdMessagesRes {
     2: list<Message> messages
 }
 
+// 搜索历史消息请求
+// 支持按关键词和时间范围搜索，同时搜索热库（PostgreSQL）和冷库（ClickHouse）
+struct SearchMessagesReq {
+    1: i64 user_id                      // 请求者用户ID，用于权限校验
+    2: optional string keyword          // 搜索关键词（可选，不传则仅按时间范围搜索）
+    3: optional i64 conversation_id     // 会话ID（不传或传0表示搜索所有会话）
+    4: optional i64 start_time          // 时间范围起始（毫秒时间戳，不传表示不限）
+    5: optional i64 end_time            // 时间范围结束（毫秒时间戳，不传表示不限）
+    6: optional i16 limit               // 返回条数，默认20，上限100
+}
+
+// 搜索历史消息响应
+struct SearchMessagesRes {
+    1: bool success
+    2: list<Message> messages
+}
+
 service ChatService {
     SendMessageRes SendMessage(1: SendMessageReq req)
     GetHistoryRes GetHistory(1: GetHistoryReq req)
@@ -306,4 +323,6 @@ service ChatService {
     SyncMessagesRes SyncMessages(1: SyncMessagesReq req)
     // 搜索冷库消息：在 ClickHouse 中搜索历史消息
     SearchColdMessagesRes SearchColdMessages(1: SearchColdMessagesReq req)
+    // 搜索历史消息：支持按关键词和时间范围搜索，同时搜索热库和冷库
+    SearchMessagesRes SearchMessages(1: SearchMessagesReq req)
 }

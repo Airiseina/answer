@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../store/AppContext.tsx'
 import { api, uploadFile, parseMessageContent, buildTextContent, buildMediaContent, type MentionItem } from '../api/client.ts'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './ChatPanel.css'
 
 interface PendingAttachment {
@@ -37,12 +39,21 @@ export default function ChatPanel() {
   const [translatingMsgId, setTranslatingMsgId] = useState<string | null>(null)
   const [translatedMsgs, setTranslatedMsgs] = useState<Record<string, { content: string; lang: string }>>({})
   const [translatePickerMsgId, setTranslatePickerMsgId] = useState<string | null>(null)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchStartTime, setSearchStartTime] = useState('')
+  const [searchEndTime, setSearchEndTime] = useState('')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
   const msgEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const conv = conversations.find(c => c.id === activeConvId)
   const msgs = activeConvId !== null ? (messages[activeConvId] || []) : []
+
+  // 判断消息是否来自bot：bot账号以 "bot_" 开头（由 user_service.CreateBotUser 生成）
+  const isBotMessage = (from: string) => from.startsWith('bot_')
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -298,6 +309,83 @@ export default function ChatPanel() {
     setTranslatingMsgId(null)
   }
 
+  const handleSearchMessages = async () => {
+    if (!searchKeyword.trim() && !searchStartTime && !searchEndTime) {
+      alert('请至少填写关键词或选择时间范围')
+      return
+    }
+    setSearchLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (searchKeyword.trim()) params.set('keyword', searchKeyword.trim())
+      if (activeConvId) params.set('conversation_id', activeConvId)
+      if (searchStartTime) {
+        const startMs = Date.parse(searchStartTime)
+        if (isNaN(startMs)) {
+          alert('开始时间格式不正确')
+          setSearchLoading(false)
+          return
+        }
+        params.set('start_time', String(startMs))
+      }
+      if (searchEndTime) {
+        const endMs = Date.parse(searchEndTime)
+        if (isNaN(endMs)) {
+          alert('结束时间格式不正确')
+          setSearchLoading(false)
+          return
+        }
+        params.set('end_time', String(endMs))
+      }
+      params.set('limit', '50')
+      const res = await api('GET', `/api/chat/search?${params.toString()}`)
+      if (res.code === 0 && res.data?.messages) {
+        setSearchResults(res.data.messages)
+      } else {
+        setSearchResults([])
+        alert(res.msg || '搜索失败')
+      }
+    } catch {
+      setSearchResults([])
+      alert('搜索失败')
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  const handleOpenSearch = () => {
+    setShowSearch(true)
+    setSearchKeyword('')
+    setSearchStartTime('')
+    setSearchEndTime('')
+    setSearchResults([])
+  }
+
+  const handleCloseSearch = () => {
+    setShowSearch(false)
+    setSearchKeyword('')
+    setSearchStartTime('')
+    setSearchEndTime('')
+    setSearchResults([])
+  }
+
+  const handleJumpToMessage = (msg: any) => {
+    const convId = String(msg.conversation_id)
+    if (convId !== activeConvId) {
+      setActiveConvId(convId)
+    }
+    // 切换到对应会话后，滚动到对应消息
+    setTimeout(() => {
+      const el = document.querySelector(`[data-msg-id="${msg.msg_id}"]`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('msg-highlight')
+        setTimeout(() => el.classList.remove('msg-highlight'), 1500)
+      }
+    }, 300)
+    handleCloseSearch()
+  }
+
   const renderTextWithMentions = (text: string, mentions?: MentionItem[]) => {
     if (!mentions || mentions.length === 0) {
       return text
@@ -404,7 +492,7 @@ export default function ChatPanel() {
     )
   }
 
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (content: string, isBot: boolean = false) => {
     const parsed = parseMessageContent(content)
     switch (parsed.type) {
       case 'image':
@@ -432,6 +520,15 @@ export default function ChatPanel() {
           </div>
         )
       default:
+        if (isBot) {
+          return (
+            <div className="msg-text msg-markdown">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {parsed.text || content}
+              </ReactMarkdown>
+            </div>
+          )
+        }
         return (
           <div className="msg-text">
             {renderTextWithMentions(parsed.text || content, parsed.mentions)}
@@ -603,6 +700,9 @@ export default function ChatPanel() {
           )}
         </div>
         <div className="chat-header-actions">
+          <button className="chat-header-action-btn" onClick={handleOpenSearch} title="搜索消息">
+            🔍
+          </button>
           <button className="chat-header-action-btn" onClick={handleSummarize} disabled={summaryLoading} title="总结聊天">
             {summaryLoading ? '⏳' : '📋'}
           </button>
@@ -671,7 +771,7 @@ export default function ChatPanel() {
                     }
                     return null
                   })()}
-                  {renderMessageContent(msg.content)}
+                  {renderMessageContent(msg.content, isBotMessage(msg.from))}
                   {msg.isEdited && (
                     <div className="msg-edited-tag" onClick={() => handleViewEditHistory(msg.id)} style={{ cursor: 'pointer' }}>
                       已编辑
@@ -868,6 +968,80 @@ export default function ChatPanel() {
         </div>
       )}
       {showNewChat && renderNewChatModal()}
+      {showSearch && (
+        <div className="modal-overlay" onClick={handleCloseSearch}>
+          <div className="modal-card search-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-card-header">
+              <h3>搜索历史消息</h3>
+              <button className="modal-card-close" onClick={handleCloseSearch}>✕</button>
+            </div>
+            <div className="search-form">
+              <div className="modal-field">
+                <label>关键词</label>
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={e => setSearchKeyword(e.target.value)}
+                  placeholder="搜索关键词（可选）"
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearchMessages() }}
+                  autoFocus
+                />
+              </div>
+              <div className="search-time-row">
+                <div className="modal-field search-time-field">
+                  <label>开始时间</label>
+                  <input
+                    type="datetime-local"
+                    value={searchStartTime}
+                    onChange={e => setSearchStartTime(e.target.value)}
+                  />
+                </div>
+                <div className="modal-field search-time-field">
+                  <label>结束时间</label>
+                  <input
+                    type="datetime-local"
+                    value={searchEndTime}
+                    onChange={e => setSearchEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="search-hint">
+                {activeConvId ? '当前搜索范围：当前会话' : '当前搜索范围：所有会话'}（关键词和时间范围至少填一项）
+              </div>
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={handleCloseSearch}>取消</button>
+                <button className="btn-primary" onClick={handleSearchMessages} disabled={searchLoading || (!searchKeyword.trim() && !searchStartTime && !searchEndTime)}>
+                  {searchLoading ? '搜索中...' : '搜索'}
+                </button>
+              </div>
+            </div>
+            {searchResults.length > 0 && (
+              <div className="search-results">
+                <div className="search-results-header">找到 {searchResults.length} 条结果</div>
+                <div className="search-results-list">
+                  {searchResults.map((msg, idx) => {
+                    const parsed = parseMessageContent(msg.content)
+                    const timeSec = msg.timestamp > 1e12 ? msg.timestamp / 1000 : msg.timestamp
+                    const displayText = parsed.type === 'text' ? parsed.text : parsed.type === 'image' ? '[图片]' : parsed.type === 'file' ? `[文件] ${parsed.filename || ''}` : '[语音]'
+                    return (
+                      <div key={idx} className="search-result-item" onClick={() => handleJumpToMessage(msg)}>
+                        <div className="search-result-header">
+                          <span className="search-result-sender">{msg.sender_name || msg.sender_account}</span>
+                          <span className="search-result-time">{new Date(timeSec * 1000).toLocaleString()}</span>
+                        </div>
+                        <div className="search-result-content">{displayText}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {searchResults.length === 0 && (searchKeyword || searchStartTime || searchEndTime) && !searchLoading && (
+              <div className="search-empty">未找到相关消息</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -77,17 +77,17 @@
       "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, rate(aim_message_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(aim_message_latency_bucket[5m])))",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(aim_message_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(aim_message_latency_bucket[5m])))",
           "legendFormat": "P95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(aim_message_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(aim_message_latency_bucket[5m])))",
           "legendFormat": "P99",
           "refId": "C"
         }
@@ -117,17 +117,17 @@
       "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, rate(aim_bot_response_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(aim_bot_response_latency_bucket[5m])))",
           "legendFormat": "P50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(aim_bot_response_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(aim_bot_response_latency_bucket[5m])))",
           "legendFormat": "P95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(aim_bot_response_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(aim_bot_response_latency_bucket[5m])))",
           "legendFormat": "P99",
           "refId": "C"
         }
@@ -159,7 +159,7 @@
       "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(aim_mcp_call_latency_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, sum by (le, server) (rate(aim_mcp_call_latency_bucket[5m])))",
           "legendFormat": "P95/{{server}}",
           "refId": "A"
         }

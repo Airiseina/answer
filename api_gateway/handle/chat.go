@@ -839,3 +839,145 @@ func TranslateMessage(ctx context.Context, c *app.RequestContext) {
 		"translated_content": resp.TranslatedContent,
 	})
 }
+
+func SearchMessages(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
+	userID := userInfo.Id
+
+	keyword := c.Query("keyword")
+
+	var conversationID int64
+	conversationIDStr := c.Query("conversation_id")
+	if conversationIDStr != "" {
+		id, err := strconv.ParseInt(conversationIDStr, 10, 64)
+		if err != nil {
+			response.Error(c, "参数错误", "conversation_id格式不正确")
+			return
+		}
+		conversationID = id
+	}
+
+	var startTime int64
+	startTimeStr := c.Query("start_time")
+	if startTimeStr != "" {
+		t, err := strconv.ParseInt(startTimeStr, 10, 64)
+		if err != nil {
+			response.Error(c, "参数错误", "start_time格式不正确")
+			return
+		}
+		startTime = t
+	}
+
+	var endTime int64
+	endTimeStr := c.Query("end_time")
+	if endTimeStr != "" {
+		t, err := strconv.ParseInt(endTimeStr, 10, 64)
+		if err != nil {
+			response.Error(c, "参数错误", "end_time格式不正确")
+			return
+		}
+		endTime = t
+	}
+
+	limitInt, _ := strconv.ParseInt(c.DefaultQuery("limit", "20"), 10, 16)
+	if limitInt <= 0 {
+		limitInt = 20
+	}
+	if limitInt > 100 {
+		limitInt = 100
+	}
+
+	if keyword == "" && startTime <= 0 && endTime <= 0 {
+		response.Error(c, "参数缺失", "请至少提供关键词或时间范围（start_time/end_time）中的任意一项")
+		return
+	}
+
+	req := &chat.SearchMessagesReq{
+		UserId: userID,
+		Limit:  int16Ptr(int16(limitInt)),
+	}
+	if keyword != "" {
+		req.Keyword = stringPtr(keyword)
+	}
+	if conversationID > 0 {
+		req.ConversationId = int64Ptr(conversationID)
+	}
+	if startTime > 0 {
+		req.StartTime = int64Ptr(startTime)
+	}
+	if endTime > 0 {
+		req.EndTime = int64Ptr(endTime)
+	}
+
+	resp, err := rpc.SearchMessages(ctx, req)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "RPC SearchMessages失败: %v", err)
+		response.Error(c, "系统繁忙", "搜索消息失败，请稍后重试")
+		return
+	}
+	if !resp.Success {
+		response.Error(c, "搜索失败", "搜索历史消息失败")
+		return
+	}
+
+	senderIDs := make([]int64, 0, len(resp.Messages))
+	for _, m := range resp.Messages {
+		senderIDs = append(senderIDs, m.SenderId)
+	}
+	accountMap := buildAccountMap(ctx, senderIDs)
+	nameMap := make(map[int64]string)
+	if len(senderIDs) > 0 {
+		nameResp, nameErr := rpc.GetUserNames(ctx, &user.GetUserNamesReq{UserIds: senderIDs})
+		if nameErr == nil && nameResp != nil {
+			for _, u := range nameResp.Users {
+				nameMap[u.Id] = u.Name
+			}
+		}
+	}
+
+	type messageItem struct {
+		MsgID          int64  `json:"msg_id,string"`
+		ClientSeq      int64  `json:"client_seq"`
+		SenderAccount  string `json:"sender_account"`
+		SenderName     string `json:"sender_name"`
+		ConversationID int64  `json:"conversation_id,string"`
+		Content        string `json:"content"`
+		Timestamp      int64  `json:"timestamp"`
+		Status         int16  `json:"status"`
+		IsEdited       bool   `json:"is_edited"`
+	}
+
+	var messages []messageItem
+	for _, m := range resp.Messages {
+		messages = append(messages, messageItem{
+			MsgID:          m.MsgId,
+			ClientSeq:      m.ClientSeq,
+			SenderAccount:  accountMap[m.SenderId],
+			SenderName:     nameMap[m.SenderId],
+			ConversationID: m.ConversationId,
+			Content:        storage.NormalizeContentURLs(m.Content),
+			Timestamp:      m.Timestamp,
+			Status:         m.GetStatus(),
+			IsEdited:       m.GetIsEdited(),
+		})
+	}
+	if messages == nil {
+		messages = []messageItem{}
+	}
+	response.Success(c, map[string]interface{}{
+		"messages": messages,
+	})
+}
+
+func stringPtr(v string) *string {
+	return &v
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
+}
+
+func int16Ptr(v int16) *int16 {
+	return &v
+}

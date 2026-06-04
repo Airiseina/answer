@@ -109,3 +109,51 @@ func (dao *coldStorageDao) SearchMessages(ctx context.Context, conversationID in
 	}
 	return messages, nil
 }
+
+// SearchMessagesByTimeRange 在冷库中按关键词和时间范围搜索消息
+// 扩展 SearchMessages，增加时间范围过滤
+// keyword 为空时仅按时间范围过滤
+func (dao *coldStorageDao) SearchMessagesByTimeRange(ctx context.Context, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error) {
+	query := "SELECT msg_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE 1=1"
+	args := []interface{}{}
+
+	if keyword != "" {
+		query += " AND content LIKE ?"
+		args = append(args, "%"+keyword+"%")
+	}
+	if conversationID > 0 {
+		query += " AND conversation_id = ?"
+		args = append(args, conversationID)
+	}
+	if startTime > 0 {
+		query += " AND timestamp >= ?"
+		args = append(args, startTime)
+	}
+	if endTime > 0 {
+		query += " AND timestamp <= ?"
+		args = append(args, endTime)
+	}
+
+	query += " ORDER BY timestamp DESC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := dao.chConn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("搜索ClickHouse冷库失败: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []model.ColdMessage
+	for rows.Next() {
+		var msg model.ColdMessage
+		if err := rows.Scan(
+			&msg.MsgID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
+			&msg.Seq, &msg.Content, &msg.Status, &msg.IsEdited,
+			&msg.Timestamp, &msg.QuoteMsgID, &msg.ArchivedAt,
+		); err != nil {
+			return nil, fmt.Errorf("扫描ClickHouse搜索结果失败: %w", err)
+		}
+		messages = append(messages, msg)
+	}
+	return messages, nil
+}

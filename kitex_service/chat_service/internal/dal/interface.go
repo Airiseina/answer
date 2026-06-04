@@ -156,6 +156,16 @@ type ChatDao interface {
 	// 参数 beforeTimestamp: 时间戳（毫秒），删除 timestamp < beforeTimestamp 的消息
 	// 返回值: 删除的行数、错误信息
 	DeleteMessagesBeforeTime(beforeTimestamp int64) (int64, error)
+
+	// SearchHotMessages 在热库（PostgreSQL）中搜索消息
+	// 支持按关键词和时间范围过滤，使用 PostgreSQL 的 jsonb 文本搜索
+	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
+	// 参数 keyword: 搜索关键词
+	// 参数 startTime: 时间范围起始（毫秒时间戳，0 表示不限）
+	// 参数 endTime: 时间范围结束（毫秒时间戳，0 表示不限）
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表、错误信息
+	SearchHotMessages(conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error)
 }
 
 // OnlineDao 在线状态数据访问接口
@@ -362,4 +372,15 @@ type ColdStorageDao interface {
 	// 参数 limit: 返回条数上限
 	// 返回值: 冷库消息列表、错误信息
 	SearchMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error)
+
+	// SearchMessagesByTimeRange 在冷库中按关键词和时间范围搜索消息
+	// 扩展 SearchMessages，增加时间范围过滤能力
+	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
+	// 参数 keyword: 搜索关键词
+	// 参数 userID: 用户ID（用于权限校验，只搜索用户参与的会话）
+	// 参数 startTime: 时间范围起始（毫秒时间戳，0 表示不限）
+	// 参数 endTime: 时间范围结束（毫秒时间戳，0 表示不限）
+	// 参数 limit: 返回条数上限
+	// 返回值: 冷库消息列表、错误信息
+	SearchMessagesByTimeRange(ctx context.Context, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error)
 }

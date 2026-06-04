@@ -18,4 +18,5 @@ func GetConfig() {
 	V.SetDefault("seaweedfs.base_path", "/chat")
 	V.SetDefault("seaweedfs.public_url", "/files")
 	V.SetDefault("kafka.brokers", []string{"127.0.0.1:9094"})
+	V.SetDefault("redis.addr", "127.0.0.1:6379")
 }

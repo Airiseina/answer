@@ -183,3 +183,30 @@ func (dao *chatDao) DeleteMessagesBeforeTime(beforeTimestamp int64) (int64, erro
 	}
 	return result.RowsAffected, nil
 }
+
+// SearchHotMessages 在热库（PostgreSQL）中搜索消息
+// 支持按关键词和时间范围过滤
+// 关键词搜索使用 PostgreSQL 的 jsonb 文本搜索：content::text LIKE '%keyword%'
+// keyword 为空时仅按时间范围过滤
+// 时间范围通过 timestamp 字段过滤
+func (dao *chatDao) SearchHotMessages(conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error) {
+	var messages []model.Message
+	query := dao.db
+	if keyword != "" {
+		query = query.Where("content::text LIKE ?", "%"+keyword+"%")
+	}
+	if conversationID > 0 {
+		query = query.Where("conversation_id = ?", conversationID)
+	}
+	if startTime > 0 {
+		query = query.Where("timestamp >= ?", startTime)
+	}
+	if endTime > 0 {
+		query = query.Where("timestamp <= ?", endTime)
+	}
+	err := query.Order("timestamp DESC").Limit(int(limit)).Find(&messages).Error
+	if err != nil {
+		return nil, fmt.Errorf("搜索热库消息失败: %w", err)
+	}
+	return messages, nil
+}
