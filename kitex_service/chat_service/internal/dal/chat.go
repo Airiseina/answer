@@ -1,7 +1,11 @@
 package dal
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 )
 
@@ -106,4 +110,76 @@ func (dao *chatDao) GetMessagesAfterSeq(conversationID int64, afterSeq int64, li
 		return nil, fmt.Errorf("查询seq之后的消息失败: %w", err)
 	}
 	return messages, nil
+}
+
+// CacheMessage 将消息写入 Redis 缓存，加速首屏加载
+// 使用 Redis List 结构，每个会话保留最近 N 条消息
+// Key 格式: conv:msgs:{conversationID}
+// 使用 LPUSH + LTRIM 保证列表长度不超过 N
+// 设置 TTL 为 24 小时，避免冷门会话长期占用内存
+func (dao *chatDao) CacheMessage(ctx context.Context, msg *model.Message) {
+	if dao.rdb == nil {
+		return
+	}
+	key := fmt.Sprintf("conv:msgs:%d", msg.ConversationID)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	pipe := dao.rdb.Pipeline()
+	pipe.LPush(ctx, key, data)
+	pipe.LTrim(ctx, key, 0, int64(model.MessageCacheCount-1))
+	pipe.Expire(ctx, key, 24*time.Hour)
+	_, _ = pipe.Exec(ctx)
+}
+
+// GetCachedMessages 从 Redis 缓存获取会话最近 N 条消息
+// 缓存未命中时返回空切片和 nil 错误，由调用方决定是否回源数据库
+// 返回值: 消息列表、是否命中缓存、错误信息
+func (dao *chatDao) GetCachedMessages(ctx context.Context, conversationID int64, limit int16) ([]model.Message, bool, error) {
+	if dao.rdb == nil {
+		return nil, false, nil
+	}
+	key := fmt.Sprintf("conv:msgs:%d", conversationID)
+	results, err := dao.rdb.LRange(ctx, key, 0, int64(limit-1)).Result()
+	if err != nil {
+		return nil, false, nil
+	}
+	if len(results) == 0 {
+		return nil, false, nil
+	}
+	messages := make([]model.Message, 0, len(results))
+	for _, data := range results {
+		var msg model.Message
+		if json.Unmarshal([]byte(data), &msg) != nil {
+			continue
+		}
+		messages = append(messages, msg)
+	}
+	return messages, true, nil
+}
+
+// GetHotMessagesBeforeTime 查询热库中指定时间之前的消息（用于冷热分界判断）
+// 参数 conversationID: 会话ID
+// 参数 beforeTimestamp: 时间戳（毫秒），返回 timestamp < beforeTimestamp 的消息
+// 参数 limit: 返回条数上限
+func (dao *chatDao) GetHotMessagesBeforeTime(conversationID int64, beforeTimestamp int64, limit int16) ([]model.Message, error) {
+	var messages []model.Message
+	err := dao.db.Where("conversation_id = ? AND timestamp < ?", conversationID, beforeTimestamp).
+		Order("timestamp DESC").Limit(int(limit)).Find(&messages).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询热库历史消息失败: %w", err)
+	}
+	return messages, nil
+}
+
+// DeleteMessagesBeforeTime 删除热库中指定时间之前的消息（归档后清理）
+// 参数 beforeTimestamp: 时间戳（毫秒），删除 timestamp < beforeTimestamp 的消息
+// 返回值: 删除的行数、错误信息
+func (dao *chatDao) DeleteMessagesBeforeTime(beforeTimestamp int64) (int64, error) {
+	result := dao.db.Where("timestamp < ?", beforeTimestamp).Delete(&model.Message{})
+	if result.Error != nil {
+		return 0, fmt.Errorf("删除热库过期消息失败: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }

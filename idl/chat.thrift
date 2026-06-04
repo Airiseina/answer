@@ -261,6 +261,23 @@ struct SyncMessagesRes {
     2: list<ConvMessages> conv_messages  // 各会话的同步消息结果
 }
 
+// ===== 冷热分离：冷库查询接口 =====
+
+// 搜索冷库消息请求
+// 当用户需要搜索历史消息时，路由到 ClickHouse 进行高效搜索
+struct SearchColdMessagesReq {
+    1: i64 conversation_id   // 会话ID（0 表示搜索所有会话）
+    2: string keyword        // 搜索关键词
+    3: i64 user_id           // 用户ID，用于权限校验
+    4: i16 limit             // 返回条数，默认20，上限100
+}
+
+// 搜索冷库消息响应
+struct SearchColdMessagesRes {
+    1: bool success
+    2: list<Message> messages
+}
+
 service ChatService {
     SendMessageRes SendMessage(1: SendMessageReq req)
     GetHistoryRes GetHistory(1: GetHistoryReq req)
@@ -287,4 +304,6 @@ service ChatService {
     GetEditHistoryRes GetEditHistory(1: GetEditHistoryReq req)
     // 同步消息：客户端断线重连后按会话维度拉取缺失消息
     SyncMessagesRes SyncMessages(1: SyncMessagesReq req)
+    // 搜索冷库消息：在 ClickHouse 中搜索历史消息
+    SearchColdMessagesRes SearchColdMessages(1: SearchColdMessagesReq req)
 }

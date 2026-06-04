@@ -34,23 +34,31 @@ func getConvSnowNode() *snowflake.Node {
 }
 
 // ChatService 聊天业务逻辑层
-// 职责：消息收发、会话管理、在线状态管理、ID 生成
+// 职责：消息收发、会话管理、在线状态管理、ID 生成、冷热路由、写扩散/读扩散
 // 边界：仅处理业务逻辑，不直接操作数据库/缓存（通过 DAO 接口），不处理协议转换（由 handler 层负责）
 type ChatService struct {
-	dao             dal.ChatDao         // 消息数据访问
+	dao             dal.ChatDao         // 消息数据访问（热库 PostgreSQL + Redis 缓存）
 	onlineDao       dal.OnlineDao       // 在线状态数据访问
 	conversationDao dal.ConversationDao // 会话数据访问
+	inboxDao        dal.InboxDao        // 写扩散收件箱数据访问（小群写扩散）
+	coldStorageDao  dal.ColdStorageDao  // 冷库数据访问（ClickHouse）
 	msgSnowNode     *snowflake.Node     // 消息ID的 Snowflake 节点（节点编号 3）
 	rdb             *redis.Client       // Redis 客户端，用于 client_seq 去重
+	coldEnabled     bool                // 是否启用冷库归档
+	hotMonths       int                 // 热数据保留月数
 }
 
-func NewChatService(dao dal.ChatDao, onlineDao dal.OnlineDao, conversationDao dal.ConversationDao, rdb *redis.Client) *ChatService {
+func NewChatService(dao dal.ChatDao, onlineDao dal.OnlineDao, conversationDao dal.ConversationDao, inboxDao dal.InboxDao, coldStorageDao dal.ColdStorageDao, rdb *redis.Client, coldEnabled bool, hotMonths int) *ChatService {
 	return &ChatService{
 		dao:             dao,
 		onlineDao:       onlineDao,
 		conversationDao: conversationDao,
+		inboxDao:        inboxDao,
+		coldStorageDao:  coldStorageDao,
 		msgSnowNode:     snowflake.NewNode(3),
 		rdb:             rdb,
+		coldEnabled:     coldEnabled,
+		hotMonths:       hotMonths,
 	}
 }
 
@@ -196,6 +204,29 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	if err != nil {
 		return nil, err
 	}
+	// 写扩散：小群（≤100人）为每个成员写入收件箱记录
+	// 小群写扩散优势：拉取消息时直接查个人收件箱，无需实时计算，读取快
+	// 大群（>100人）采用读扩散：只写群信箱（message_table），拉取时实时计算，节省写压力
+	if len(members) <= model.WriteDiffusionThreshold {
+		inboxMessages := make([]model.InboxMessage, 0, len(members))
+		for _, memberID := range members {
+			inboxMessages = append(inboxMessages, model.InboxMessage{
+				UserID:         memberID,
+				ConversationID: convID,
+				MsgID:          msgID,
+				SenderID:       senderID,
+				Seq:            seq,
+				Content:        normalizedContent,
+				Timestamp:      now,
+				QuoteMsgID:     quoteMsgID,
+			})
+		}
+		if inboxErr := svc.inboxDao.BatchCreateInboxMessages(ctx, inboxMessages); inboxErr != nil {
+			klog.CtxWarnf(ctx, "写扩散写入收件箱失败: %v", inboxErr)
+		}
+	}
+	// 消息缓存：将消息写入 Redis，加速首屏加载
+	svc.dao.CacheMessage(ctx, msg)
 	// 设置撤回窗口键：recall:msg:{msgID}，TTL=2min
 	// 撤回时通过 EXISTS 判断该键是否存在，存在则可撤回，不存在则超时
 	recallKey := fmt.Sprintf("recall:msg:%d", msgID)
@@ -227,9 +258,9 @@ type MessageDTO struct {
 	QuoteMsgID     int64  // 引用消息ID
 }
 
-// GetHistory 拉取会话历史消息
-// 新增成员身份校验：请求者必须是会话成员才能拉取历史消息
-// 防止非成员通过猜测 conversation_id 读取他人聊天记录
+// GetHistory 拉取会话历史消息（支持冷热路由）
+// 查询优先级：Redis 缓存 → PostgreSQL 热库 → ClickHouse 冷库
+// 冷热分界：近 hotMonths 个月的消息在热库，更早的消息在冷库
 //
 // 参数:
 //   - userID: 请求者用户ID，用于身份校验
@@ -263,31 +294,145 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 	if !isMember {
 		return nil, fmt.Errorf("无权查看该会话消息")
 	}
+
+	// 判断是否使用写扩散路径（小群从收件箱读取）
+	useWriteDiffusion := len(members) <= model.WriteDiffusionThreshold
+
 	var msgs []MessageDTO
-	messages, err := svc.dao.GetHistory(conversationID, beforeMsgID, limit)
-	if err != nil {
-		return nil, err
-	}
-	if len(messages) == 0 {
-		return nil, nil
-	}
-	for _, msg := range messages {
-		content := msg.Content
-		if msg.Status == model.MsgStatusRecalled {
-			content = "该消息已撤回"
+
+	// 1. 首屏加载（beforeMsgID == 0）：优先从 Redis 缓存读取
+	if beforeMsgID == 0 {
+		cachedMessages, hit, _ := svc.dao.GetCachedMessages(ctx, conversationID, limit)
+		if hit && len(cachedMessages) > 0 {
+			for _, msg := range cachedMessages {
+				content := msg.Content
+				if msg.Status == model.MsgStatusRecalled {
+					content = "该消息已撤回"
+				}
+				msgs = append(msgs, MessageDTO{
+					ClientSeq:      msg.ClientSeq,
+					MsgID:          msg.MsgID,
+					SenderID:       msg.SenderID,
+					ConversationID: msg.ConversationID,
+					Seq:            msg.Seq,
+					Content:        content,
+					Timestamp:      msg.Timestamp,
+					Status:         msg.Status,
+					IsEdited:       msg.IsEdited,
+					QuoteMsgID:     msg.QuoteMsgID,
+				})
+			}
+			return msgs, nil
 		}
-		msgs = append(msgs, MessageDTO{
-			ClientSeq:      msg.ClientSeq,
-			MsgID:          msg.MsgID,
-			SenderID:       msg.SenderID,
-			ConversationID: msg.ConversationID,
-			Seq:            msg.Seq,
-			Content:        content,
-			Timestamp:      msg.Timestamp,
-			Status:         msg.Status,
-			IsEdited:       msg.IsEdited,
-			QuoteMsgID:     msg.QuoteMsgID,
-		})
+	}
+
+	// 2. 写扩散路径：从收件箱读取（小群）
+	// 收件箱的游标是 seq，客户端传的是 beforeMsgID，需要先转换为 beforeSeq
+	inboxHit := false
+	if useWriteDiffusion {
+		var beforeSeq int64
+		if beforeMsgID > 0 {
+			// 将 beforeMsgID 转换为收件箱中的 beforeSeq
+			seq, seqErr := svc.inboxDao.GetInboxSeqByMsgID(ctx, userID, conversationID, beforeMsgID)
+			if seqErr != nil {
+				klog.CtxWarnf(ctx, "查询收件箱seq失败，回退到群信箱: %v", seqErr)
+			} else {
+				beforeSeq = seq
+			}
+		}
+		inboxMsgs, err := svc.inboxDao.GetInboxMessages(ctx, userID, conversationID, beforeSeq, limit)
+		if err != nil {
+			klog.CtxWarnf(ctx, "从收件箱读取消息失败，回退到群信箱: %v", err)
+		} else if len(inboxMsgs) > 0 {
+			inboxHit = true
+			for _, msg := range inboxMsgs {
+				content := msg.Content
+				if msg.Status == model.MsgStatusRecalled {
+					content = "该消息已撤回"
+				}
+				msgs = append(msgs, MessageDTO{
+					MsgID:          msg.MsgID,
+					SenderID:       msg.SenderID,
+					ConversationID: msg.ConversationID,
+					Seq:            msg.Seq,
+					Content:        content,
+					Timestamp:      msg.Timestamp,
+					Status:         msg.Status,
+					IsEdited:       msg.IsEdited,
+					QuoteMsgID:     msg.QuoteMsgID,
+				})
+			}
+			// 写扩散路径数据充足时直接返回，不足时跳过读扩散，直接走冷库补充
+			if len(msgs) >= int(limit) {
+				return msgs, nil
+			}
+		}
+	}
+
+	// 3. 读扩散路径：从群信箱（热库 PostgreSQL）读取
+	// 仅在写扩散未命中时执行，避免与收件箱数据重复
+	if !inboxHit {
+		messages, err := svc.dao.GetHistory(conversationID, beforeMsgID, limit)
+		if err != nil {
+			return nil, err
+		}
+		for _, msg := range messages {
+			content := msg.Content
+			if msg.Status == model.MsgStatusRecalled {
+				content = "该消息已撤回"
+			}
+			msgs = append(msgs, MessageDTO{
+				ClientSeq:      msg.ClientSeq,
+				MsgID:          msg.MsgID,
+				SenderID:       msg.SenderID,
+				ConversationID: msg.ConversationID,
+				Seq:            msg.Seq,
+				Content:        content,
+				Timestamp:      msg.Timestamp,
+				Status:         msg.Status,
+				IsEdited:       msg.IsEdited,
+				QuoteMsgID:     msg.QuoteMsgID,
+			})
+		}
+	}
+
+	// 4. 冷库路由：热库数据不足且启用冷库时，查询 ClickHouse
+	if svc.coldEnabled && len(msgs) < int(limit) && svc.coldStorageDao != nil {
+		hotBoundary := time.Now().AddDate(0, -svc.hotMonths, 0).UnixMilli()
+		var beforeTimestamp int64
+		if len(msgs) > 0 {
+			beforeTimestamp = msgs[len(msgs)-1].Timestamp
+		} else {
+			beforeTimestamp = hotBoundary
+		}
+		remaining := limit - int16(len(msgs))
+		coldMessages, coldErr := svc.coldStorageDao.GetColdHistory(ctx, conversationID, beforeTimestamp, remaining)
+		if coldErr != nil {
+			klog.CtxWarnf(ctx, "查询冷库消息失败: %v", coldErr)
+		} else {
+			for _, msg := range coldMessages {
+				content := msg.Content
+				if msg.Status == model.MsgStatusRecalled {
+					content = "该消息已撤回"
+				}
+				msgs = append(msgs, MessageDTO{
+					MsgID:          msg.MsgID,
+					ClientSeq:      msg.ClientSeq,
+					SenderID:       msg.SenderID,
+					ConversationID: msg.ConversationID,
+					Seq:            msg.Seq,
+					Content:        content,
+					Timestamp:      msg.Timestamp,
+					Status:         msg.Status,
+					IsEdited:       msg.IsEdited,
+					QuoteMsgID:     msg.QuoteMsgID,
+				})
+			}
+		}
+	}
+
+	if len(msgs) == 0 {
+		return nil, nil
 	}
 	return msgs, nil
 }
@@ -614,6 +759,10 @@ func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID i
 	if err != nil {
 		return nil, fmt.Errorf("撤回消息失败: %w", err)
 	}
+	// 同步更新收件箱中的消息撤回状态（写扩散场景）
+	if inboxErr := svc.inboxDao.RecallInboxMessage(ctx, msgID); inboxErr != nil {
+		klog.CtxWarnf(ctx, "同步收件箱撤回状态失败: %v", inboxErr)
+	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("查询会话成员失败: %w", err)
@@ -677,6 +826,10 @@ func (svc *ChatService) EditMessage(ctx context.Context, userID int64, msgID int
 	err = svc.dao.EditMessage(msgID, normalizedContent)
 	if err != nil {
 		return nil, fmt.Errorf("编辑消息失败: %w", err)
+	}
+	// 同步更新收件箱中的消息编辑内容（写扩散场景）
+	if inboxErr := svc.inboxDao.EditInboxMessage(ctx, msgID, normalizedContent); inboxErr != nil {
+		klog.CtxWarnf(ctx, "同步收件箱编辑内容失败: %v", inboxErr)
 	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
 	if err != nil {
@@ -782,32 +935,68 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 			klog.CtxWarnf(ctx, "SyncMessages: 用户%d不在会话%d中", userID, pair.ConversationID)
 			continue
 		}
-		messages, err := svc.dao.GetMessagesAfterSeq(pair.ConversationID, pair.LastSeq, limit)
-		if err != nil {
-			klog.CtxWarnf(ctx, "SyncMessages: 查询会话%d增量消息失败: %v", pair.ConversationID, err)
-			continue
-		}
-		if len(messages) == 0 {
-			continue
-		}
+
 		var dtos []MessageDTO
-		for _, msg := range messages {
-			content := msg.Content
-			if msg.Status == model.MsgStatusRecalled {
-				content = "该消息已撤回"
+
+		// 写扩散路径：小群（≤100人）从收件箱读取增量消息
+		// 与 GetHistory 保持一致，小群优先查个人收件箱
+		if len(members) <= model.WriteDiffusionThreshold {
+			inboxMsgs, inboxErr := svc.inboxDao.GetInboxMessagesAfterSeq(ctx, userID, pair.ConversationID, pair.LastSeq, limit)
+			if inboxErr != nil {
+				klog.CtxWarnf(ctx, "SyncMessages: 从收件箱读取会话%d增量消息失败，回退到群信箱: %v", pair.ConversationID, inboxErr)
+			} else if len(inboxMsgs) > 0 {
+				for _, msg := range inboxMsgs {
+					content := msg.Content
+					if msg.Status == model.MsgStatusRecalled {
+						content = "该消息已撤回"
+					}
+					dtos = append(dtos, MessageDTO{
+						MsgID:          msg.MsgID,
+						SenderID:       msg.SenderID,
+						ConversationID: msg.ConversationID,
+						Seq:            msg.Seq,
+						Content:        content,
+						Timestamp:      msg.Timestamp,
+						Status:         msg.Status,
+						IsEdited:       msg.IsEdited,
+						QuoteMsgID:     msg.QuoteMsgID,
+					})
+				}
 			}
-			dtos = append(dtos, MessageDTO{
-				ClientSeq:      msg.ClientSeq,
-				MsgID:          msg.MsgID,
-				SenderID:       msg.SenderID,
-				ConversationID: msg.ConversationID,
-				Seq:            msg.Seq,
-				Content:        content,
-				Timestamp:      msg.Timestamp,
-				Status:         msg.Status,
-				IsEdited:       msg.IsEdited,
-				QuoteMsgID:     msg.QuoteMsgID,
-			})
+		}
+
+		// 读扩散路径：大群或收件箱无数据时，从群信箱读取
+		if len(dtos) == 0 {
+			messages, err := svc.dao.GetMessagesAfterSeq(pair.ConversationID, pair.LastSeq, limit)
+			if err != nil {
+				klog.CtxWarnf(ctx, "SyncMessages: 查询会话%d增量消息失败: %v", pair.ConversationID, err)
+				continue
+			}
+			if len(messages) == 0 {
+				continue
+			}
+			for _, msg := range messages {
+				content := msg.Content
+				if msg.Status == model.MsgStatusRecalled {
+					content = "该消息已撤回"
+				}
+				dtos = append(dtos, MessageDTO{
+					ClientSeq:      msg.ClientSeq,
+					MsgID:          msg.MsgID,
+					SenderID:       msg.SenderID,
+					ConversationID: msg.ConversationID,
+					Seq:            msg.Seq,
+					Content:        content,
+					Timestamp:      msg.Timestamp,
+					Status:         msg.Status,
+					IsEdited:       msg.IsEdited,
+					QuoteMsgID:     msg.QuoteMsgID,
+				})
+			}
+		}
+
+		if len(dtos) == 0 {
+			continue
 		}
 		results = append(results, ConvSyncResult{
 			ConversationID: pair.ConversationID,
@@ -815,4 +1004,107 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 		})
 	}
 	return results, nil
+}
+
+// ArchiveColdMessages 归档冷数据：将热库中超过 hotMonths 的消息迁移到 ClickHouse 冷库
+// 流程：
+//  1. 计算冷热分界时间戳（当前时间 - hotMonths 个月）
+//  2. 从热库查询分界时间之前的消息（按会话维度批量处理）
+//  3. 批量写入 ClickHouse 冷库
+//  4. 归档成功后删除热库中已归档的消息
+//
+// 此方法应由定时任务调用（如每天凌晨3点），避免在业务高峰期执行
+func (svc *ChatService) ArchiveColdMessages(ctx context.Context) error {
+	if !svc.coldEnabled || svc.coldStorageDao == nil {
+		return nil
+	}
+	hotBoundary := time.Now().AddDate(0, -svc.hotMonths, 0).UnixMilli()
+	totalArchived := 0
+	batchSize := int16(500)
+	// 按会话维度归档：每次处理一个会话的过期消息
+	// 先查询会话0的过期消息作为入口，然后逐会话处理
+	for {
+		messages, err := svc.dao.GetHotMessagesBeforeTime(0, hotBoundary, batchSize)
+		if err != nil {
+			klog.CtxWarnf(ctx, "查询热库过期消息失败: %v", err)
+			break
+		}
+		if len(messages) == 0 {
+			break
+		}
+		// 转换为冷库消息格式
+		coldMessages := make([]model.ColdMessage, 0, len(messages))
+		for _, msg := range messages {
+			coldMessages = append(coldMessages, model.ColdMessage{
+				MsgID:          msg.MsgID,
+				ClientSeq:      msg.ClientSeq,
+				SenderID:       msg.SenderID,
+				ConversationID: msg.ConversationID,
+				Seq:            msg.Seq,
+				Content:        msg.Content,
+				Status:         msg.Status,
+				IsEdited:       msg.IsEdited,
+				Timestamp:      msg.Timestamp,
+				QuoteMsgID:     msg.QuoteMsgID,
+				ArchivedAt:     time.Now().UnixMilli(),
+			})
+		}
+		// 写入冷库
+		if err := svc.coldStorageDao.ArchiveMessages(ctx, coldMessages); err != nil {
+			klog.CtxWarnf(ctx, "归档消息到冷库失败: %v", err)
+			break
+		}
+		totalArchived += len(coldMessages)
+		// 如果本批不足 batchSize，说明已处理完
+		if len(messages) < int(batchSize) {
+			break
+		}
+	}
+	// 归档完成后清理热库
+	if totalArchived > 0 {
+		deleted, err := svc.dao.DeleteMessagesBeforeTime(hotBoundary)
+		if err != nil {
+			return fmt.Errorf("清理热库归档消息失败: %w", err)
+		}
+		klog.Infof("归档完成: 共归档%d条消息, 清理热库%d条记录", totalArchived, deleted)
+	}
+	return nil
+}
+
+// SearchColdMessages 在冷库中搜索消息
+// 当用户需要搜索历史消息时，路由到 ClickHouse 进行高效搜索
+func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]MessageDTO, error) {
+	if !svc.coldEnabled || svc.coldStorageDao == nil {
+		return nil, fmt.Errorf("冷库未启用")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	coldMessages, err := svc.coldStorageDao.SearchMessages(ctx, conversationID, keyword, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("搜索冷库消息失败: %w", err)
+	}
+	var msgs []MessageDTO
+	for _, msg := range coldMessages {
+		content := msg.Content
+		if msg.Status == model.MsgStatusRecalled {
+			content = "该消息已撤回"
+		}
+		msgs = append(msgs, MessageDTO{
+			MsgID:          msg.MsgID,
+			ClientSeq:      msg.ClientSeq,
+			SenderID:       msg.SenderID,
+			ConversationID: msg.ConversationID,
+			Seq:            msg.Seq,
+			Content:        content,
+			Timestamp:      msg.Timestamp,
+			Status:         msg.Status,
+			IsEdited:       msg.IsEdited,
+			QuoteMsgID:     msg.QuoteMsgID,
+		})
+	}
+	return msgs, nil
 }

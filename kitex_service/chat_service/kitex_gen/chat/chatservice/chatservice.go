@@ -139,6 +139,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"SearchColdMessages": kitex.NewMethodInfo(
+		searchColdMessagesHandler,
+		newChatServiceSearchColdMessagesArgs,
+		newChatServiceSearchColdMessagesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -529,6 +536,24 @@ func newChatServiceSyncMessagesResult() interface{} {
 	return chat.NewChatServiceSyncMessagesResult()
 }
 
+func searchColdMessagesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceSearchColdMessagesArgs)
+	realResult := result.(*chat.ChatServiceSearchColdMessagesResult)
+	success, err := handler.(chat.ChatService).SearchColdMessages(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceSearchColdMessagesArgs() interface{} {
+	return chat.NewChatServiceSearchColdMessagesArgs()
+}
+
+func newChatServiceSearchColdMessagesResult() interface{} {
+	return chat.NewChatServiceSearchColdMessagesResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -714,6 +739,16 @@ func (p *kClient) SyncMessages(ctx context.Context, req *chat.SyncMessagesReq) (
 	_args.Req = req
 	var _result chat.ChatServiceSyncMessagesResult
 	if err = p.c.Call(ctx, "SyncMessages", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq) (r *chat.SearchColdMessagesRes, err error) {
+	var _args chat.ChatServiceSearchColdMessagesArgs
+	_args.Req = req
+	var _result chat.ChatServiceSearchColdMessagesResult
+	if err = p.c.Call(ctx, "SearchColdMessages", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

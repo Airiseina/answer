@@ -2,8 +2,10 @@ package dal
 
 import (
 	"context"
+
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -17,14 +19,15 @@ type ConvSeqPair struct {
 
 // ==================== DAO 实现结构体 ====================
 
-// chatDao 消息数据访问对象，操作 PostgreSQL
+// chatDao 消息数据访问对象，操作 PostgreSQL 和 Redis
 type chatDao struct {
-	db *gorm.DB
+	db  *gorm.DB
+	rdb *redis.Client
 }
 
 // NewChatDao 创建消息 DAO 实例
-func NewChatDao(db *gorm.DB) ChatDao {
-	return &chatDao{db}
+func NewChatDao(db *gorm.DB, rdb *redis.Client) ChatDao {
+	return &chatDao{db: db, rdb: rdb}
 }
 
 // onlineDao 在线状态数据访问对象，操作 Redis
@@ -47,6 +50,26 @@ type conversationDao struct {
 // NewConversationDao 创建会话 DAO 实例
 func NewConversationDao(db *gorm.DB, rdb *redis.Client) ConversationDao {
 	return &conversationDao{db: db, rdb: rdb}
+}
+
+// inboxDao 写扩散收件箱数据访问对象，操作 PostgreSQL
+type inboxDao struct {
+	db *gorm.DB
+}
+
+// NewInboxDao 创建收件箱 DAO 实例
+func NewInboxDao(db *gorm.DB) InboxDao {
+	return &inboxDao{db}
+}
+
+// coldStorageDao 冷库数据访问对象，操作 ClickHouse
+type coldStorageDao struct {
+	chConn clickhouse.Conn
+}
+
+// NewColdStorageDao 创建冷库 DAO 实例
+func NewColdStorageDao(chConn clickhouse.Conn) ColdStorageDao {
+	return &coldStorageDao{chConn: chConn}
 }
 
 // ==================== DAO 接口定义 ====================
@@ -107,6 +130,32 @@ type ChatDao interface {
 	// 参数 limit: 返回条数上限
 	// 返回值: 消息列表（按 seq 升序），查询失败时返回 error
 	GetMessagesAfterSeq(conversationID int64, afterSeq int64, limit int16) ([]model.Message, error)
+
+	// CacheMessage 将消息写入 Redis 缓存，加速首屏加载
+	// 使用 Redis List 结构，每个会话保留最近 N 条消息
+	// 参数 ctx: 上下文
+	// 参数 msg: 消息对象
+	CacheMessage(ctx context.Context, msg *model.Message)
+
+	// GetCachedMessages 从 Redis 缓存获取会话最近 N 条消息
+	// 缓存未命中时返回空切片和 nil 错误，由调用方决定是否回源数据库
+	// 参数 ctx: 上下文
+	// 参数 conversationID: 会话ID
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表、是否命中缓存、错误信息
+	GetCachedMessages(ctx context.Context, conversationID int64, limit int16) ([]model.Message, bool, error)
+
+	// GetHotMessagesBeforeTime 查询热库中指定时间之前的消息（用于冷热分界判断）
+	// 参数 conversationID: 会话ID
+	// 参数 beforeTimestamp: 时间戳（毫秒），返回 timestamp < beforeTimestamp 的消息
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表、错误信息
+	GetHotMessagesBeforeTime(conversationID int64, beforeTimestamp int64, limit int16) ([]model.Message, error)
+
+	// DeleteMessagesBeforeTime 删除热库中指定时间之前的消息（归档后清理）
+	// 参数 beforeTimestamp: 时间戳（毫秒），删除 timestamp < beforeTimestamp 的消息
+	// 返回值: 删除的行数、错误信息
+	DeleteMessagesBeforeTime(beforeTimestamp int64) (int64, error)
 }
 
 // OnlineDao 在线状态数据访问接口
@@ -236,4 +285,81 @@ type ConversationDao interface {
 	// 参数 conversationIDs: 会话ID列表
 	// 返回值: map[conversationID]maxReadSeq、错误信息
 	BatchGetMemberReadSeq(ctx context.Context, userID int64, conversationIDs []int64) (map[int64]int64, error)
+}
+
+// InboxDao 写扩散收件箱数据访问接口
+// 小群（≤100人）采用写扩散：发消息时为每个成员写入一条收件箱记录
+// 拉取消息时直接查个人收件箱，无需实时计算，读取快
+type InboxDao interface {
+	// BatchCreateInboxMessages 批量写入收件箱消息
+	// 写扩散的核心写入操作：为会话中的每个成员创建一条收件箱记录
+	// 参数 messages: 收件箱消息列表
+	// 返回值: 错误信息
+	BatchCreateInboxMessages(ctx context.Context, messages []model.InboxMessage) error
+
+	// GetInboxMessages 查询用户的收件箱消息（按会话维度）
+	// 写扩散的核心读取操作：直接查个人收件箱，无需关联会话表
+	// 参数 userID: 用户ID
+	// 参数 conversationID: 会话ID
+	// 参数 beforeSeq: 游标，返回 seq < beforeSeq 的消息；传 0 表示从最新开始
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表（按 seq 降序）、错误信息
+	GetInboxMessages(ctx context.Context, userID int64, conversationID int64, beforeSeq int64, limit int16) ([]model.InboxMessage, error)
+
+	// GetInboxMessagesAfterSeq 查询用户收件箱中 seq > afterSeq 的消息
+	// 用于上线同步：客户端上报本地最大 seq，服务端返回增量消息
+	// 参数 userID: 用户ID
+	// 参数 conversationID: 会话ID
+	// 参数 afterSeq: 客户端本地最大已同步seq
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表（按 seq 升序）、错误信息
+	GetInboxMessagesAfterSeq(ctx context.Context, userID int64, conversationID int64, afterSeq int64, limit int16) ([]model.InboxMessage, error)
+
+	// RecallInboxMessage 更新收件箱中消息的撤回状态
+	// 撤回消息时需要更新所有成员收件箱中对应消息的状态
+	// 参数 msgID: 消息ID
+	// 返回值: 错误信息
+	RecallInboxMessage(ctx context.Context, msgID int64) error
+
+	// EditInboxMessage 更新收件箱中消息的内容和编辑状态
+	// 编辑消息时需要更新所有成员收件箱中对应消息的内容
+	// 参数 msgID: 消息ID
+	// 参数 newContent: 新的消息内容
+	// 返回值: 错误信息
+	EditInboxMessage(ctx context.Context, msgID int64, newContent string) error
+
+	// GetInboxSeqByMsgID 根据消息ID查询收件箱中的 seq
+	// 用于 GetHistory 翻页游标转换：客户端传 beforeMsgID，需转为 beforeSeq 查收件箱
+	// 参数 userID: 用户ID
+	// 参数 conversationID: 会话ID
+	// 参数 msgID: 消息ID
+	// 返回值: 对应的 seq（0 表示未找到）、错误信息
+	GetInboxSeqByMsgID(ctx context.Context, userID int64, conversationID int64, msgID int64) (int64, error)
+}
+
+// ColdStorageDao 冷库数据访问接口
+// 历史消息异步归档至 ClickHouse，当用户搜索或拉取更早历史时路由到冷库查询
+type ColdStorageDao interface {
+	// ArchiveMessages 批量归档消息到 ClickHouse 冷库
+	// 将 PostgreSQL 中的历史消息批量写入 ClickHouse
+	// 参数 messages: 待归档的冷库消息列表
+	// 返回值: 错误信息
+	ArchiveMessages(ctx context.Context, messages []model.ColdMessage) error
+
+	// GetColdHistory 从冷库拉取历史消息
+	// 当热库查询不到足够消息时，路由到冷库查询更早的历史
+	// 参数 conversationID: 会话ID
+	// 参数 beforeTimestamp: 游标，返回 timestamp < beforeTimestamp 的消息
+	// 参数 limit: 返回条数上限
+	// 返回值: 冷库消息列表、错误信息
+	GetColdHistory(ctx context.Context, conversationID int64, beforeTimestamp int64, limit int16) ([]model.ColdMessage, error)
+
+	// SearchMessages 在冷库中搜索消息
+	// ClickHouse 支持海量数据的高效文本搜索和分析查询
+	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
+	// 参数 keyword: 搜索关键词
+	// 参数 userID: 用户ID（用于权限校验，只搜索用户参与的会话）
+	// 参数 limit: 返回条数上限
+	// 返回值: 冷库消息列表、错误信息
+	SearchMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error)
 }

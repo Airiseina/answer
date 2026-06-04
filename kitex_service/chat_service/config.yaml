@@ -15,3 +15,21 @@ etcd:
 
 otel:
   Addr: "localhost:4317"
+
+# ClickHouse 冷库配置
+# 用于存储归档的历史消息，支持海量数据的高效分析查询
+clickhouse:
+  addr: "localhost:9000"
+  username: "default"
+  password: "123456"
+  database: "answer_cold"
+
+# 冷热分离配置
+cold_storage:
+  enabled: false          # 是否启用冷库归档（生产环境建议启用）
+  hot_months: 6           # 热数据保留月数，超过此时间的消息将被归档到冷库
+  archive_cron: "0 0 3 * * ?"  # 归档定时任务 cron 表达式（默认每天凌晨3点）
+
+# 消息缓存配置
+cache:
+  message_count: 50       # 每个会话在 Redis 中缓存的消息条数

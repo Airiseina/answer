@@ -1959,6 +1959,100 @@ var fieldIDToName_SyncMessagesRes = map[int16]string{
 	2: "conv_messages",
 }
 
+type SearchColdMessagesReq struct {
+	ConversationId int64  `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	Keyword        string `thrift:"keyword,2" frugal:"2,default,string" json:"keyword"`
+	UserId         int64  `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+	Limit          int16  `thrift:"limit,4" frugal:"4,default,i16" json:"limit"`
+}
+
+func NewSearchColdMessagesReq() *SearchColdMessagesReq {
+	return &SearchColdMessagesReq{}
+}
+
+func (p *SearchColdMessagesReq) InitDefault() {
+}
+
+func (p *SearchColdMessagesReq) GetConversationId() (v int64) {
+	return p.ConversationId
+}
+
+func (p *SearchColdMessagesReq) GetKeyword() (v string) {
+	return p.Keyword
+}
+
+func (p *SearchColdMessagesReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SearchColdMessagesReq) GetLimit() (v int16) {
+	return p.Limit
+}
+func (p *SearchColdMessagesReq) SetConversationId(val int64) {
+	p.ConversationId = val
+}
+func (p *SearchColdMessagesReq) SetKeyword(val string) {
+	p.Keyword = val
+}
+func (p *SearchColdMessagesReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SearchColdMessagesReq) SetLimit(val int16) {
+	p.Limit = val
+}
+
+func (p *SearchColdMessagesReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchColdMessagesReq(%+v)", *p)
+}
+
+var fieldIDToName_SearchColdMessagesReq = map[int16]string{
+	1: "conversation_id",
+	2: "keyword",
+	3: "user_id",
+	4: "limit",
+}
+
+type SearchColdMessagesRes struct {
+	Success  bool       `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Messages []*Message `thrift:"messages,2" frugal:"2,default,list<Message>" json:"messages"`
+}
+
+func NewSearchColdMessagesRes() *SearchColdMessagesRes {
+	return &SearchColdMessagesRes{}
+}
+
+func (p *SearchColdMessagesRes) InitDefault() {
+}
+
+func (p *SearchColdMessagesRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SearchColdMessagesRes) GetMessages() (v []*Message) {
+	return p.Messages
+}
+func (p *SearchColdMessagesRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SearchColdMessagesRes) SetMessages(val []*Message) {
+	p.Messages = val
+}
+
+func (p *SearchColdMessagesRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SearchColdMessagesRes(%+v)", *p)
+}
+
+var fieldIDToName_SearchColdMessagesRes = map[int16]string{
+	1: "success",
+	2: "messages",
+}
+
 type ChatService interface {
 	SendMessage(ctx context.Context, req *SendMessageReq) (r *SendMessageRes, err error)
 
@@ -1995,6 +2089,8 @@ type ChatService interface {
 	GetEditHistory(ctx context.Context, req *GetEditHistoryReq) (r *GetEditHistoryRes, err error)
 
 	SyncMessages(ctx context.Context, req *SyncMessagesReq) (r *SyncMessagesRes, err error)
+
+	SearchColdMessages(ctx context.Context, req *SearchColdMessagesReq) (r *SearchColdMessagesRes, err error)
 }
 
 type ChatServiceSendMessageArgs struct {
@@ -3362,5 +3458,81 @@ func (p *ChatServiceSyncMessagesResult) String() string {
 }
 
 var fieldIDToName_ChatServiceSyncMessagesResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceSearchColdMessagesArgs struct {
+	Req *SearchColdMessagesReq `thrift:"req,1" frugal:"1,default,SearchColdMessagesReq" json:"req"`
+}
+
+func NewChatServiceSearchColdMessagesArgs() *ChatServiceSearchColdMessagesArgs {
+	return &ChatServiceSearchColdMessagesArgs{}
+}
+
+func (p *ChatServiceSearchColdMessagesArgs) InitDefault() {
+}
+
+var ChatServiceSearchColdMessagesArgs_Req_DEFAULT *SearchColdMessagesReq
+
+func (p *ChatServiceSearchColdMessagesArgs) GetReq() (v *SearchColdMessagesReq) {
+	if !p.IsSetReq() {
+		return ChatServiceSearchColdMessagesArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceSearchColdMessagesArgs) SetReq(val *SearchColdMessagesReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceSearchColdMessagesArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceSearchColdMessagesArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSearchColdMessagesArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSearchColdMessagesArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceSearchColdMessagesResult struct {
+	Success *SearchColdMessagesRes `thrift:"success,0,optional" frugal:"0,optional,SearchColdMessagesRes" json:"success,omitempty"`
+}
+
+func NewChatServiceSearchColdMessagesResult() *ChatServiceSearchColdMessagesResult {
+	return &ChatServiceSearchColdMessagesResult{}
+}
+
+func (p *ChatServiceSearchColdMessagesResult) InitDefault() {
+}
+
+var ChatServiceSearchColdMessagesResult_Success_DEFAULT *SearchColdMessagesRes
+
+func (p *ChatServiceSearchColdMessagesResult) GetSuccess() (v *SearchColdMessagesRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceSearchColdMessagesResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceSearchColdMessagesResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SearchColdMessagesRes)
+}
+
+func (p *ChatServiceSearchColdMessagesResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceSearchColdMessagesResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceSearchColdMessagesResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceSearchColdMessagesResult = map[int16]string{
 	0: "success",
 }

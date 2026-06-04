@@ -29,6 +29,7 @@ type Client interface {
 	EditMessage(ctx context.Context, req *chat.EditMessageReq, callOptions ...callopt.Option) (r *chat.EditMessageRes, err error)
 	GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq, callOptions ...callopt.Option) (r *chat.GetEditHistoryRes, err error)
 	SyncMessages(ctx context.Context, req *chat.SyncMessagesReq, callOptions ...callopt.Option) (r *chat.SyncMessagesRes, err error)
+	SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq, callOptions ...callopt.Option) (r *chat.SearchColdMessagesRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -148,4 +149,9 @@ func (p *kChatServiceClient) GetEditHistory(ctx context.Context, req *chat.GetEd
 func (p *kChatServiceClient) SyncMessages(ctx context.Context, req *chat.SyncMessagesReq, callOptions ...callopt.Option) (r *chat.SyncMessagesRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SyncMessages(ctx, req)
+}
+
+func (p *kChatServiceClient) SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq, callOptions ...callopt.Option) (r *chat.SearchColdMessagesRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchColdMessages(ctx, req)
 }

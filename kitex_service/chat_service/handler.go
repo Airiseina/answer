@@ -315,3 +315,33 @@ func (s *ChatServiceImpl) SyncMessages(ctx context.Context, req *chat.SyncMessag
 		ConvMessages: convMessages,
 	}, nil
 }
+
+func (s *ChatServiceImpl) SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq) (resp *chat.SearchColdMessagesRes, err error) {
+	messages, err := s.chatService.SearchColdMessages(ctx, req.ConversationId, req.Keyword, req.UserId, req.Limit)
+	if err != nil {
+		klog.CtxErrorf(ctx, "用户[%d]搜索冷库消息失败: %v", req.UserId, err)
+		return &chat.SearchColdMessagesRes{Success: false}, nil
+	}
+	var list []*chat.Message
+	for _, m := range messages {
+		msg := &chat.Message{
+			MsgId:          m.MsgID,
+			ClientSeq:      m.ClientSeq,
+			SenderId:       m.SenderID,
+			ConversationId: m.ConversationID,
+			Content:        m.Content,
+			Timestamp:      m.Timestamp,
+			Seq:            &m.Seq,
+			Status:         &m.Status,
+			IsEdited:       &m.IsEdited,
+		}
+		if m.QuoteMsgID != 0 {
+			msg.QuoteMsgId = &m.QuoteMsgID
+		}
+		list = append(list, msg)
+	}
+	return &chat.SearchColdMessagesRes{
+		Success:  true,
+		Messages: list,
+	}, nil
+}

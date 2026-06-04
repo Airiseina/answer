@@ -144,11 +144,18 @@ services:
 #      - ETCD_ADDR=etcd:2379
 #      - OTEL_ADDR=otel-collector:4317
 #      - KITEX_IP_TO_REGISTRY=answer_chat_service
+#      - CLICKHOUSE_ADDR=clickhouse:9000
+#      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USER:-default}
+#      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+#      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DB:-answer_cold}
+#      - COLD_STORAGE_ENABLED=true
+#      - COLD_STORAGE_HOT_MONTHS=6
 #    networks:
 #      - answer-net
 #    depends_on:
 #      - postgres
 #      - garnet
+#      - clickhouse
 #      - etcd
 #      - otel-collector
 #
@@ -249,6 +256,32 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - answer-net
+
+  # ClickHouse 冷库：存储归档的历史消息
+  # 选择 ClickHouse 而非 SeaweedFS 的原因：
+  # 1. SeaweedFS 是文件存储，适合存图片/文件等二进制数据，不适合存结构化消息数据做查询
+  # 2. ClickHouse 是列式数据库，天然适合海量消息的存储和分析查询
+  # 3. 支持按月分区、TTL 自动过期，与 PostgreSQL 分区策略一致
+  # 4. Go 有成熟的 clickhouse-go/v2 客户端
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: answer_clickhouse
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-answer_cold}
+    ports:
+      - "8123:8123"   # HTTP 接口
+      - "9000:9000"   # Native TCP 接口（Go 客户端使用此端口）
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
     networks:
       - answer-net
 
@@ -592,6 +625,8 @@ volumes:
   seaweedfs_volume_data:
   seaweedfs_filer_data:
   mem0_postgres_data:
+  clickhouse_data:
+  clickhouse_logs:
 
 networks:
   answer-net:
