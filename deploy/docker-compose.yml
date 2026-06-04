@@ -160,33 +160,36 @@ services:
 #      - otel-collector
 #
 #  knowledge-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/knowledge_service/Dockerfile
-#    container_name: answer_knowledge_service
-#    restart: unless-stopped
-#    env_file: .env
-#    environment:
-#      - MYSQL_HOST=${MYSQL_HOST:-mysql}
-#      - MYSQL_PORT=${MYSQL_PORT:-3306}
-#      - MYSQL_USER=${MYSQL_USER:-root}
-#      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-#      - MYSQL_NAME=${MYSQL_NAME:-answer}
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - KITEX_IP_TO_REGISTRY=answer_knowledge_service
-#      - KAFKA_BROKERS=kafka-1:9092
-#      - QDRANT_HOST=answer_qdrant
-#      - QDRANT_PORT=6334
-#      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - mysql
-#      - etcd
-#      - kafka-1
-#      - qdrant
-#      - otel-collector
+    # build:
+    #   context: ..
+    #   dockerfile: kitex_service/knowledge_service/Dockerfile
+    # container_name: answer_knowledge_service
+    # restart: unless-stopped
+    # env_file: .env
+    # environment:
+    #   - MYSQL_HOST=${MYSQL_HOST:-mysql}
+    #   - MYSQL_PORT=${MYSQL_PORT:-3306}
+    #   - MYSQL_USER=${MYSQL_USER:-root}
+    #   - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+    #   - MYSQL_NAME=${MYSQL_NAME:-answer}
+    #   - ETCD_ADDR=etcd:2379
+    #   - OTEL_ADDR=otel-collector:4317
+    #   - KITEX_IP_TO_REGISTRY=answer_knowledge_service
+    #   - KAFKA_BROKERS=kafka-1:9092
+    #   - QDRANT_HOST=answer_qdrant
+    #   - QDRANT_PORT=6334
+    #   - MEILISEARCH_HOST=http://answer_meilisearch:7700
+    #   - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
+    #   - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+    # networks:
+    #   - answer-net
+    # depends_on:
+    #   - mysql
+    #   - etcd
+    #   - kafka-1
+    #   - qdrant
+    #   - meilisearch
+    #   - otel-collector
 #
 #  bot-service:
 #    build:
@@ -368,6 +371,20 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
+    networks:
+      - answer-net
+
+  # Meilisearch: BM25关键词检索引擎，与Qdrant向量检索配合实现RAG混合检索
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: answer_meilisearch
+    environment:
+      - MEILI_MASTER_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
+      - MEILI_ENV=production
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
     networks:
       - answer-net
 
@@ -554,12 +571,16 @@ services:
       - QDRANT_HOST=answer_qdrant
       - QDRANT_PORT=6334
       - QDRANT_HTTP_PORT=6333
+      - MEILISEARCH_HOST=http://answer_meilisearch:7700
+      - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
       - EMBEDDING_MODEL=${KNOWLEDGE_EMBEDDING_MODEL}
       - EMBEDDING_BASE_URL=${KNOWLEDGE_EMBEDDING_BASE_URL}
       - EMBEDDING_API_KEY=${KNOWLEDGE_DOUBAO_EMBEDDING_API_KEY}
       - EMBEDDING_DIMS=${KNOWLEDGE_EMBEDDING_DIMS}
     networks:
       - answer-net
+    depends_on:
+      - meilisearch
     restart: unless-stopped
 
   # ==========================================
@@ -621,6 +642,7 @@ volumes:
   kafka_1_data:
   kafka_2_data:
   qdrant_data:
+  meilisearch_data:
   seaweedfs_master_data:
   seaweedfs_volume_data:
   seaweedfs_filer_data:

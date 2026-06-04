@@ -26,6 +26,10 @@ qdrant:
   host: "localhost"
   port: 6334
 
+meilisearch:
+  host: "http://localhost:7700"
+  api_key: "Airiseina_answer_key"
+
 seaweedfs:
   filer_url: "http://127.0.0.1:8888"
   base_path: "/chat"

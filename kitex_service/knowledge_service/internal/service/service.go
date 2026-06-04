@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/parser"
 	"github.com/Airiseina/answer/pkg/ai"
+	"github.com/Airiseina/answer/pkg/infra/meilisearch"
 	"github.com/Airiseina/answer/pkg/snowflake"
 	"github.com/Airiseina/answer/pkg/storage"
 
@@ -27,6 +29,7 @@ type KnowledgeService struct {
 	docDao      dal.DocumentDao
 	bkDao       dal.BotKnowledgeDao
 	qdrant      *qdrant.Client
+	meilisearch *meilisearch.MeilisearchDao
 	snow        *snowflake.Node
 	kafkaBroker string
 	kafkaTopic  string
@@ -37,6 +40,7 @@ func NewKnowledgeService(
 	docDao dal.DocumentDao,
 	bkDao dal.BotKnowledgeDao,
 	qdrantClient *qdrant.Client,
+	meilisearchDao *meilisearch.MeilisearchDao,
 	kafkaBroker string,
 	kafkaTopic string,
 ) *KnowledgeService {
@@ -45,6 +49,7 @@ func NewKnowledgeService(
 		docDao:      docDao,
 		bkDao:       bkDao,
 		qdrant:      qdrantClient,
+		meilisearch: meilisearchDao,
 		snow:        snowflake.NewNode(6),
 		kafkaBroker: kafkaBroker,
 		kafkaTopic:  kafkaTopic,
@@ -335,6 +340,54 @@ func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) e
 }
 
 func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+	// 如果Meilisearch可用，使用混合检索（向量检索 + BM25关键词检索）+ RRF融合排序
+	if svc.meilisearch != nil {
+		return svc.hybridSearch(ctx, kbIDs, query, topK)
+	}
+	// 降级：仅使用向量检索
+	return svc.vectorSearch(ctx, kbIDs, query, topK)
+}
+
+// hybridSearch 混合检索：向量检索 + BM25关键词检索，使用RRF融合排序
+func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+	// 并行执行向量检索和BM25检索
+	vectorResults, vectorErr := svc.vectorSearch(ctx, kbIDs, query, topK)
+	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, kbIDs, query, topK)
+
+	if vectorErr != nil && bm25Err != nil {
+		return nil, fmt.Errorf("混合检索全部失败: 向量检索=%v, BM25检索=%v", vectorErr, bm25Err)
+	}
+	if vectorErr != nil {
+		klog.Warnf("向量检索失败，仅使用BM25结果: %v", vectorErr)
+		results := make([]SearchResult, 0, len(bm25Results))
+		for _, r := range bm25Results {
+			result := SearchResult{
+				Content:    r.Content,
+				Source:     r.Source,
+				DocID:      r.DocID,
+				KBID:       r.KBID,
+				ChunkIndex: r.ChunkIndex,
+				Score:      r.Score,
+			}
+			if r.PageNumber > 0 {
+				pageNum := r.PageNumber
+				result.PageNumber = &pageNum
+			}
+			results = append(results, result)
+		}
+		return results, nil
+	}
+	if bm25Err != nil {
+		klog.Warnf("BM25检索失败，仅使用向量检索结果: %v", bm25Err)
+		return vectorResults, nil
+	}
+
+	// RRF融合排序
+	return rrfFusion(vectorResults, bm25Results, topK), nil
+}
+
+// vectorSearch 纯向量检索（Qdrant）
+func (svc *KnowledgeService) vectorSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	queryVector, err := ai.GetEmbedding(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("查询向量化失败: %w", err)
@@ -354,7 +407,7 @@ func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, kbIDs []int64,
 		WithPayload:    qdrant.NewWithPayload(true),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("知识库检索失败: %w", err)
+		return nil, fmt.Errorf("向量检索失败: %w", err)
 	}
 	var results []SearchResult
 	for _, point := range searchResult {
@@ -383,6 +436,82 @@ func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, kbIDs []int64,
 		results = append(results, result)
 	}
 	return results, nil
+}
+
+// rrfFusion RRF（Reciprocal Rank Fusion）融合排序
+// 算法：对于每个文档，RRF得分 = Σ(1 / (k + rank_i))，其中k=60是平滑常数
+// 向量检索和BM25检索各贡献一个排名，最终按RRF得分降序排列
+func rrfFusion(vectorResults []SearchResult, bm25Results []meilisearch.BM25SearchResult, topK int) []SearchResult {
+	const k = 60 // RRF平滑常数，标准值60
+
+	// 使用 chunk 唯一标识：(doc_id, chunk_index) 作为去重键
+	type chunkKey struct {
+		DocID      int64
+		ChunkIndex int
+	}
+
+	type fusedResult struct {
+		SearchResult
+		rrfScore float64
+	}
+
+	fusedMap := make(map[chunkKey]*fusedResult)
+
+	// 向量检索结果贡献排名
+	for rank, r := range vectorResults {
+		key := chunkKey{DocID: r.DocID, ChunkIndex: r.ChunkIndex}
+		if _, exists := fusedMap[key]; !exists {
+			fusedMap[key] = &fusedResult{
+				SearchResult: r,
+				rrfScore:     0,
+			}
+		}
+		fusedMap[key].rrfScore += 1.0 / float64(k+rank+1)
+	}
+
+	// BM25检索结果贡献排名
+	for rank, r := range bm25Results {
+		key := chunkKey{DocID: r.DocID, ChunkIndex: r.ChunkIndex}
+		if _, exists := fusedMap[key]; !exists {
+			sr := SearchResult{
+				Content:    r.Content,
+				Source:     r.Source,
+				DocID:      r.DocID,
+				KBID:       r.KBID,
+				ChunkIndex: r.ChunkIndex,
+			}
+			if r.PageNumber > 0 {
+				pageNum := r.PageNumber
+				sr.PageNumber = &pageNum
+			}
+			fusedMap[key] = &fusedResult{
+				SearchResult: sr,
+				rrfScore:     0,
+			}
+		}
+		fusedMap[key].rrfScore += 1.0 / float64(k+rank+1)
+	}
+
+	// 收集并按RRF得分降序排列
+	allResults := make([]*fusedResult, 0, len(fusedMap))
+	for _, fr := range fusedMap {
+		fr.Score = fr.rrfScore
+		allResults = append(allResults, fr)
+	}
+	sort.Slice(allResults, func(i, j int) bool {
+		return allResults[i].rrfScore > allResults[j].rrfScore
+	})
+
+	// 截取topK
+	if len(allResults) > topK {
+		allResults = allResults[:topK]
+	}
+
+	results := make([]SearchResult, 0, len(allResults))
+	for _, fr := range allResults {
+		results = append(results, fr.SearchResult)
+	}
+	return results
 }
 
 type SearchResult struct {
@@ -450,6 +579,7 @@ func (svc *KnowledgeService) downloadDocument(ctx context.Context, doc model.KbD
 func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocument, chunks []chunker.Chunk, vectors [][]float32) error {
 	svc.ensureCollection(ctx)
 	points := make([]*qdrant.PointStruct, 0, len(chunks))
+	meiliDocs := make([]meilisearch.ChunkDocument, 0, len(chunks))
 	for i, c := range chunks {
 		chunkID := svc.snow.Generate()
 		payload := map[string]interface{}{
@@ -468,12 +598,34 @@ func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocum
 			Vectors: qdrant.NewVectors(vectors[i]...),
 			Payload: qdrant.NewValueMap(payload),
 		})
+		meiliDoc := meilisearch.ChunkDocument{
+			ChunkIDStr: fmt.Sprintf("%d", chunkID),
+			ChunkID:    chunkID,
+			KBID:       doc.KBID,
+			DocID:      doc.ID,
+			Content:    c.Content,
+			ChunkIndex: c.Index,
+			Source:     c.Source,
+		}
+		if c.PageNumber > 0 {
+			meiliDoc.PageNumber = c.PageNumber
+		}
+		meiliDocs = append(meiliDocs, meiliDoc)
 	}
 	_, err := svc.qdrant.Upsert(ctx, &qdrant.UpsertPoints{
 		CollectionName: KbChunksCollection,
 		Points:         points,
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("向量存储失败: %w", err)
+	}
+	// 同步索引到Meilisearch
+	if svc.meilisearch != nil {
+		if indexErr := svc.meilisearch.IndexChunks(ctx, meiliDocs); indexErr != nil {
+			klog.Warnf("文档[%d]Meilisearch索引失败(不影响向量存储): %v", doc.ID, indexErr)
+		}
+	}
+	return nil
 }
 
 func (svc *KnowledgeService) ensureCollection(ctx context.Context) {
@@ -505,6 +657,12 @@ func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, docID int64) 
 	})
 	if err != nil {
 		klog.Errorf("删除文档[%d]向量失败: %v", docID, err)
+	}
+	// 同步从Meilisearch删除
+	if svc.meilisearch != nil {
+		if delErr := svc.meilisearch.DeleteByDocID(ctx, docID); delErr != nil {
+			klog.Warnf("删除文档[%d]Meilisearch索引失败: %v", docID, delErr)
+		}
 	}
 }
 

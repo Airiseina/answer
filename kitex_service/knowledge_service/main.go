@@ -13,6 +13,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/kitex_gen/knowledge/knowledgeservice"
 	"github.com/Airiseina/answer/pkg/ai"
 	"github.com/Airiseina/answer/pkg/infra"
+	pkgmeilisearch "github.com/Airiseina/answer/pkg/infra/meilisearch"
 	"github.com/Airiseina/answer/pkg/observability/meter"
 	"github.com/Airiseina/answer/pkg/observability/tracer"
 	"github.com/Airiseina/answer/pkg/storage"
@@ -68,12 +69,16 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接Qdrant失败:%v", err)
 	}
+	meilisearchDao, err := initMeilisearch()
+	if err != nil {
+		klog.Warnf("连接Meilisearch失败(将降级为纯向量检索):%v", err)
+	}
 	kbDao := dal.NewKnowledgeBaseDao(db)
 	docDao := dal.NewDocumentDao(db)
 	bkDao := dal.NewBotKnowledgeDao(db)
 	kafkaBroker := v.GetString("kafka.brokers")
 	kafkaTopic := v.GetString("kafka.topic.doc_parse")
-	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, kafkaBroker, kafkaTopic)
+	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, meilisearchDao, kafkaBroker, kafkaTopic)
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4326")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
@@ -117,4 +122,19 @@ func initQdrant() (*qdrant.Client, error) {
 		Host: host,
 		Port: port,
 	})
+}
+
+func initMeilisearch() (*pkgmeilisearch.MeilisearchDao, error) {
+	v := config.V
+	host := v.GetString("meilisearch.host")
+	apiKey := v.GetString("meilisearch.api_key")
+	client, err := pkgmeilisearch.MeilisearchInit(host, apiKey)
+	if err != nil {
+		return nil, err
+	}
+	dao := pkgmeilisearch.NewMeilisearchDao(client)
+	if err := dao.EnsureIndex(context.Background()); err != nil {
+		klog.Warnf("Meilisearch索引初始化失败: %v", err)
+	}
+	return dao, nil
 }

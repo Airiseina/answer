@@ -34,6 +34,9 @@ _mysql_user = os.getenv("MYSQL_USER", "root")
 _mysql_password = os.getenv("MYSQL_PASSWORD", "123456")
 _mysql_db = os.getenv("MYSQL_DB", "answer")
 
+_meilisearch_host = os.getenv("MEILISEARCH_HOST", "http://answer_meilisearch:7700")
+_meilisearch_api_key = os.getenv("MEILISEARCH_API_KEY", "")
+
 logger.info("knowledge MCP Server 配置:")
 logger.info("  KnowledgeService: %s", _knowledge_service_addr)
 logger.info("  MySQL: %s:%d/%s", _mysql_host, _mysql_port, _mysql_db)
@@ -44,6 +47,7 @@ logger.info(
     _qdrant_host,
     _qdrant_http_port,
 )
+logger.info("  Meilisearch: %s", _meilisearch_host)
 logger.info(
     "  Embedding: model=%s, base_url=%s, dims=%d",
     _embedding_model,
@@ -160,13 +164,85 @@ async def _search_qdrant(kb_ids: list, query_vector: list, top_k: int = 5) -> li
     return chunks
 
 
+def _search_meilisearch(kb_ids: list, query: str, top_k: int = 5) -> list:
+    """使用Meilisearch进行BM25关键词检索"""
+    try:
+        import meilisearch
+
+        client = meilisearch.Client(_meilisearch_host, _meilisearch_api_key)
+        filter_strs = [f"kb_id = {kb_id}" for kb_id in kb_ids]
+        filter_str = " OR ".join(filter_strs) if len(filter_strs) > 1 else (
+            filter_strs[0] if filter_strs else ""
+        )
+        search_params = {
+            "limit": top_k,
+        }
+        if filter_str:
+            search_params["filter"] = f"({filter_str})" if len(filter_strs) > 1 else filter_str
+        result = client.index("kb_chunks").search(query, search_params)
+        chunks = []
+        for hit in result.get("hits", []):
+            chunk = {
+                "content": hit.get("content", ""),
+                "source": hit.get("source", ""),
+                "doc_id": hit.get("doc_id", 0),
+                "kb_id": hit.get("kb_id", 0),
+                "chunk_index": hit.get("chunk_index", 0),
+            }
+            if "page_number" in hit:
+                chunk["page_number"] = hit["page_number"]
+            chunks.append(chunk)
+        return chunks
+    except Exception as e:
+        logger.error("Meilisearch BM25检索失败: %s", e)
+        return []
+
+
+def _rrf_fusion(
+    vector_results: list, bm25_results: list, top_k: int = 5, k: int = 60
+) -> list:
+    """RRF（Reciprocal Rank Fusion）融合排序
+
+    算法：对于每个文档，RRF得分 = Σ(1 / (k + rank_i))，其中k=60是平滑常数
+    向量检索和BM25检索各贡献一个排名，最终按RRF得分降序排列
+    """
+    fused_map = {}
+
+    # 向量检索结果贡献排名
+    for rank, r in enumerate(vector_results):
+        key = (r.get("doc_id", 0), r.get("chunk_index", 0))
+        if key not in fused_map:
+            fused_map[key] = {"data": r, "rrf_score": 0.0}
+        fused_map[key]["rrf_score"] += 1.0 / (k + rank + 1)
+
+    # BM25检索结果贡献排名
+    for rank, r in enumerate(bm25_results):
+        key = (r.get("doc_id", 0), r.get("chunk_index", 0))
+        if key not in fused_map:
+            fused_map[key] = {"data": r, "rrf_score": 0.0}
+        fused_map[key]["rrf_score"] += 1.0 / (k + rank + 1)
+
+    # 按RRF得分降序排列
+    sorted_results = sorted(
+        fused_map.values(), key=lambda x: x["rrf_score"], reverse=True
+    )
+
+    # 截取topK并返回
+    results = []
+    for item in sorted_results[:top_k]:
+        result = dict(item["data"])
+        result["score"] = item["rrf_score"]
+        results.append(result)
+    return results
+
+
 @mcp.tool()
 def search_knowledge(
     query: str,
     kb_ids: str,
     top_k: int = 5,
 ) -> str:
-    """Search knowledge bases semantically. Use this when the user asks a question that might be answered by documents in their knowledge base.
+    """Search knowledge bases using hybrid retrieval (vector search + BM25 keyword search) with RRF fusion ranking. Use this when the user asks a question that might be answered by documents in their knowledge base.
 
     Args:
         query: The search query text
@@ -183,14 +259,26 @@ def search_knowledge(
         return results
 
     try:
+        # 向量检索
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
 
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                results = pool.submit(asyncio.run, _do_search()).result()
+                vector_results = pool.submit(asyncio.run, _do_search()).result()
         else:
-            results = loop.run_until_complete(_do_search())
+            vector_results = loop.run_until_complete(_do_search())
+
+        # BM25关键词检索
+        bm25_results = _search_meilisearch(ids, query, top_k)
+
+        # 如果BM25检索有结果，进行RRF融合排序
+        if bm25_results:
+            results = _rrf_fusion(vector_results, bm25_results, top_k)
+        else:
+            # BM25检索失败，降级使用向量检索结果
+            results = vector_results
+
         return json.dumps(results, ensure_ascii=False, default=str)
     except Exception as e:
         logger.error("search_knowledge 失败: %s", e)
