@@ -6,13 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/Airiseina/answer/pkg/observability/logger"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Airiseina/answer/pkg/observability/logger"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -65,10 +66,7 @@ func InitSeaweedFS(v *viper.Viper) {
 	logger.Info("SeaweedFS初始化成功", zap.String("filerURL", FilerURL), zap.String("basePath", BasePath))
 }
 
-func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, reader io.Reader, contentType string) error {
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, reader io.Reader, _ string) (err error) {
 	uploadURL := s.filerURL + s.basePath + "/" + objectName
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
@@ -81,7 +79,10 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 		logger.Error("写入文件数据失败", zap.Error(err))
 		return fmt.Errorf("写入文件数据失败: %w", err)
 	}
-	writer.Close()
+	if err = writer.Close(); err != nil {
+		logger.Error("关闭multipart writer失败", zap.Error(err))
+		return fmt.Errorf("关闭multipart writer失败: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, &buf)
 	if err != nil {
 		logger.Error("创建上传请求失败", zap.Error(err))
@@ -94,7 +95,11 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 		logger.Error("SeaweedFS上传文件失败", zap.Error(err))
 		return fmt.Errorf("上传文件失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		logger.Error("SeaweedFS上传失败", zap.Int("status", resp.StatusCode), zap.String("body", string(body)))
@@ -103,7 +108,7 @@ func (s *SeaweedFSClient) PutObject(ctx context.Context, objectName string, read
 	return nil
 }
 
-func (s *SeaweedFSClient) GetObject(ctx context.Context, objectName string) ([]byte, error) {
+func (s *SeaweedFSClient) GetObject(ctx context.Context, objectName string) (_ []byte, err error) {
 	downloadURL := s.filerURL + s.basePath + "/" + objectName
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -116,7 +121,11 @@ func (s *SeaweedFSClient) GetObject(ctx context.Context, objectName string) ([]b
 		logger.Error("SeaweedFS获取对象失败", zap.Error(err))
 		return nil, fmt.Errorf("获取对象失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("获取对象失败, status=%d", resp.StatusCode)
@@ -130,7 +139,7 @@ func (s *SeaweedFSClient) GetObject(ctx context.Context, objectName string) ([]b
 	return data, nil
 }
 
-func (s *SeaweedFSClient) DeleteObject(ctx context.Context, objectName string) error {
+func (s *SeaweedFSClient) DeleteObject(ctx context.Context, objectName string) (err error) {
 	deleteURL := s.filerURL + s.basePath + "/" + objectName
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
@@ -143,7 +152,11 @@ func (s *SeaweedFSClient) DeleteObject(ctx context.Context, objectName string) e
 		logger.Error("SeaweedFS删除对象失败", zap.Error(err))
 		return fmt.Errorf("删除对象失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
 		return fmt.Errorf("删除对象失败, status=%d", resp.StatusCode)

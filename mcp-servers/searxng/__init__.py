@@ -49,7 +49,13 @@ def web_search(query: str, max_results: int = 5) -> str:
         client = _get_http_client()
         resp = client.get(
             f"{_searxng_base_url}/search",
-            params={"q": query, "format": "json", "categories": "general", "language": "zh-CN", "pageno": 1},
+            params={
+                "q": query,
+                "format": "json",
+                "categories": "general",
+                "language": "zh-CN",
+                "pageno": 1,
+            },
         )
         resp.raise_for_status()
         data = resp.json()
@@ -89,7 +95,13 @@ def news_search(query: str, max_results: int = 5) -> str:
         client = _get_http_client()
         resp = client.get(
             f"{_searxng_base_url}/search",
-            params={"q": query, "format": "json", "categories": "news", "language": "zh-CN", "pageno": 1},
+            params={
+                "q": query,
+                "format": "json",
+                "categories": "news",
+                "language": "zh-CN",
+                "pageno": 1,
+            },
         )
         resp.raise_for_status()
         data = resp.json()

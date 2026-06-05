@@ -5,12 +5,11 @@ import os
 from typing import Optional
 
 import uvicorn
+from mem0 import Memory
 from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
-
-from mem0 import Memory
 
 logger = logging.getLogger("mem0_mcp_server")
 logging.basicConfig(
