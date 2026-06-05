@@ -23,4 +23,5 @@ func GetConfig() {
 	V.SetDefault("ai.system.bot_model", "glm-4.7-flash")
 	V.SetDefault("ai.system.bot_base_url", "https://open.bigmodel.cn/api/paas/v4")
 	V.SetDefault("ai.system.bot_api_key", "")
+	V.SetDefault("ai.user_bot.safety_prompt_file", "prompt/user_bot_safety_prompt.md")
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/config"
@@ -17,6 +18,90 @@ import (
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )
+
+// 安全提示词注入相关：用于对用户创建的Bot进行prompt审核和安全规则追加
+var (
+	userBotSafetyPrompt string // 用户Bot安全提示词模板，启动时加载
+	safetyPromptOnce    bool   // 是否已尝试加载
+)
+
+// loadUserBotSafetyPrompt 加载用户Bot安全提示词模板
+func loadUserBotSafetyPrompt() string {
+	if safetyPromptOnce {
+		return userBotSafetyPrompt
+	}
+	safetyPromptOnce = true
+	v := config.V
+	promptFile := v.GetString("ai.user_bot.safety_prompt_file")
+	if promptFile == "" {
+		klog.Warn("未配置ai.user_bot.safety_prompt_file，用户Bot安全提示词为空")
+		return ""
+	}
+	data, err := os.ReadFile(promptFile)
+	if err != nil {
+		klog.Warnf("读取用户Bot安全提示词文件[%s]失败: %v", promptFile, err)
+		return ""
+	}
+	userBotSafetyPrompt = strings.TrimSpace(string(data))
+	klog.Infof("用户Bot安全提示词加载成功，长度=%d", len(userBotSafetyPrompt))
+	return userBotSafetyPrompt
+}
+
+// 危险内容过滤正则：检测用户prompt中可能试图覆盖安全规则的模式
+var dangerousPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(忽略|忽略以上|ignore\s+(all\s+)?previous|ignore\s+above)\s*(指令|规则|prompt|instruction)`),
+	regexp.MustCompile(`(?i)(你是|你现在是|act\s+as|pretend\s+to\s+be|you\s+are\s+now)\s*(一个\s*)?(开发者|管理员|admin|developer|system)`),
+	regexp.MustCompile(`(?i)(system\s*prompt|系统提示词|原始指令|original\s+instruction).{0,20}(输出|显示|重复|reveal|show|repeat|output)`),
+	regexp.MustCompile(`(?i)(jailbreak|越狱|解除限制|remove\s+restrictions|bypass)`),
+	regexp.MustCompile(`(?i)(DAN\s+mode|developer\s+mode|开发者模式|god\s+mode)`),
+}
+
+// filterUserPrompt 对用户提供的系统提示词进行安全审核和过滤
+// 返回过滤后的安全prompt，如果检测到严重违规内容则返回错误
+func filterUserPrompt(prompt string) (string, error) {
+	if prompt == "" {
+		return "", nil
+	}
+	// 检测危险模式
+	for _, pattern := range dangerousPatterns {
+		if pattern.MatchString(prompt) {
+			klog.Warnf("用户Bot prompt包含危险模式[%s]，已拦截", pattern.String())
+			return "", fmt.Errorf("系统提示词包含不允许的内容，请修改后重试")
+		}
+	}
+	return prompt, nil
+}
+
+// sanitizeUserPrompt 对用户prompt进行清洗，移除可能干扰安全规则的内容
+func sanitizeUserPrompt(prompt string) string {
+	// 移除可能被用来注入分隔的标记
+	replacements := []struct {
+		pattern *regexp.Regexp
+		repl    string
+	}{
+		{regexp.MustCompile(`(?i)===+\s*system\s*===+`), "---"},
+		{regexp.MustCompile(`(?i)\[system\]`), ""},
+		{regexp.MustCompile(`(?i)<system>`), ""},
+		{regexp.MustCompile(`(?i)</system>`), ""},
+	}
+	result := prompt
+	for _, r := range replacements {
+		result = r.pattern.ReplaceAllString(result, r.repl)
+	}
+	return result
+}
+
+// buildSafeSystemPrompt 将用户prompt与安全提示词拼接，安全提示词始终追加在末尾（最高优先级）
+func buildSafeSystemPrompt(userPrompt string) string {
+	safety := loadUserBotSafetyPrompt()
+	if safety == "" {
+		return userPrompt
+	}
+	if userPrompt == "" {
+		return safety
+	}
+	return userPrompt + "\n\n" + safety
+}
 
 type BotService struct {
 	dao      dal.BotDao
@@ -31,6 +116,16 @@ func NewBotService(dao dal.BotDao) *BotService {
 }
 
 func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, systemPrompt, apiKey, model_, baseURL string) (int64, error) {
+	// 对用户提供的系统提示词进行安全审核
+	filtered, err := filterUserPrompt(systemPrompt)
+	if err != nil {
+		return 0, err
+	}
+	// 清洗用户prompt中的注入标记
+	cleaned := sanitizeUserPrompt(filtered)
+	// 拼接安全提示词（追加在末尾，确保最高优先级）
+	safePrompt := buildSafeSystemPrompt(cleaned)
+
 	botId := svc.snowNode.Generate()
 	userID, rpcErr := rpc.CreateBotUser(ctx, name, "")
 	if rpcErr != nil {
@@ -40,13 +135,13 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 		ID:           botId,
 		UserID:       userID,
 		CreatorID:    creatorId,
-		SystemPrompt: systemPrompt,
+		SystemPrompt: safePrompt,
 		ApiKey:       apiKey,
 		Model:        model_,
 		BaseURL:      baseURL,
 		IsSystem:     false,
 	}
-	err := svc.dao.CreateBot(bot)
+	err = svc.dao.CreateBot(bot)
 	if err != nil {
 		return 0, err
 	}
@@ -135,6 +230,20 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 	botUpdates := make(map[string]interface{})
 	for k, v := range updates {
 		if k == "name" || k == "avatar_url" {
+			continue
+		}
+		// 对用户更新的system_prompt进行安全审核和拼接
+		if k == "system_prompt" {
+			newPrompt, ok := v.(string)
+			if !ok {
+				continue
+			}
+			filtered, filterErr := filterUserPrompt(newPrompt)
+			if filterErr != nil {
+				return false, filterErr
+			}
+			cleaned := sanitizeUserPrompt(filtered)
+			botUpdates[k] = buildSafeSystemPrompt(cleaned)
 			continue
 		}
 		botUpdates[k] = v

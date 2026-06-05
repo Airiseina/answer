@@ -42,7 +42,7 @@ func CreateBot(ctx context.Context, c *app.RequestContext) {
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "创建Bot失败: %v", err)
-		response.Error(c, "创建Bot失败", nil)
+		response.Error(c, "创建Bot失败", err.Error())
 		return
 	}
 	response.Success(c, map[string]interface{}{"bot_id": fmt.Sprintf("%d", resp.BotId)})
@@ -93,7 +93,7 @@ func UpdateBot(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.UpdateBot(ctx, rpcReq)
 	if err != nil {
 		hlog.CtxErrorf(ctx, "更新Bot失败: %v", err)
-		response.Error(c, "更新Bot失败", nil)
+		response.Error(c, "更新Bot失败", err.Error())
 		return
 	}
 	response.Success(c, map[string]interface{}{"success": resp.Success})

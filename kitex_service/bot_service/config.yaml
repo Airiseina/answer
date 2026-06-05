@@ -21,3 +21,5 @@ ai:
     bot_model: "doubao-seed-1-8-251228"
     bot_base_url: "https://ark.cn-beijing.volces.com/api/v3"
     bot_api_key: "f5d13525-ce49-47ef-a26f-d42cf7cc0127"
+  user_bot:
+    safety_prompt_file: "prompt/user_bot_safety_prompt.md"  ## 用户Bot安全提示词模板，自动追加到用户prompt末尾
