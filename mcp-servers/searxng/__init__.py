@@ -78,7 +78,7 @@ def web_search(query: str, max_results: int = 5) -> str:
         return "搜索请求超时，请稍后再试或简化搜索词。"
     except Exception as e:
         logger.error("web_search 失败: %s", e)
-        return f"搜索时发生错误，请稍后再试。"
+        return "搜索时发生错误，请稍后再试。"
 
 
 @mcp.tool()
@@ -127,7 +127,7 @@ def news_search(query: str, max_results: int = 5) -> str:
         return "新闻搜索请求超时，请稍后再试或简化搜索词。"
     except Exception as e:
         logger.error("news_search 失败: %s", e)
-        return f"新闻搜索时发生错误，请稍后再试。"
+        return "新闻搜索时发生错误，请稍后再试。"
 
 
 def create_app():
