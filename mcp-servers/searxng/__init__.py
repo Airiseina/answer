@@ -20,7 +20,11 @@ mcp = FastMCP("searxng")
 _searxng_base_url = os.getenv("SEARXNG_BASE_URL", "http://answer_searxng:8080")
 _searxng_timeout = float(os.getenv("SEARXNG_TIMEOUT", "8.0"))
 
-logger.info("SearXNG MCP Server 配置: URL=%s, Timeout=%.1fs", _searxng_base_url, _searxng_timeout)
+logger.info(
+    "SearXNG MCP Server 配置: URL=%s, Timeout=%.1fs",
+    _searxng_base_url,
+    _searxng_timeout,
+)
 
 _http_client: Optional[httpx.Client] = None
 
@@ -62,13 +66,17 @@ def web_search(query: str, max_results: int = 5) -> str:
 
         results = []
         for item in data.get("results", [])[:max_results]:
-            results.append({
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "snippet": item.get("content", ""),
-            })
+            results.append(
+                {
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "snippet": item.get("content", ""),
+                }
+            )
 
-        return json.dumps({"results": results, "total": len(results)}, ensure_ascii=False)
+        return json.dumps(
+            {"results": results, "total": len(results)}, ensure_ascii=False
+        )
     except httpx.HTTPStatusError as e:
         logger.error("SearXNG HTTP错误: %s", e)
         return f"搜索服务暂时不可用(HTTP {e.response.status_code})，请稍后再试或换一种方式提问。"
@@ -117,7 +125,9 @@ def news_search(query: str, max_results: int = 5) -> str:
                 r["date"] = item["publishedDate"]
             results.append(r)
 
-        return json.dumps({"results": results, "total": len(results)}, ensure_ascii=False)
+        return json.dumps(
+            {"results": results, "total": len(results)}, ensure_ascii=False
+        )
     except httpx.HTTPStatusError as e:
         logger.error("SearXNG HTTP错误: %s", e)
         return f"新闻搜索服务暂时不可用(HTTP {e.response.status_code})，请稍后再试。"

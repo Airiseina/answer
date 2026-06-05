@@ -23,11 +23,13 @@ _embedding_api_key = os.getenv("EMBEDDING_API_KEY", "")
 
 if not _llm_api_key:
     raise ValueError(
-        "LLM_API_KEY environment variable is not set. Please set it before starting the server."
+        "LLM_API_KEY environment variable is not set."
+        " Please set it before starting the server."
     )
 if not _embedding_api_key:
     raise ValueError(
-        "EMBEDDING_API_KEY environment variable is not set. Please set it before starting the server."
+        "EMBEDDING_API_KEY environment variable is not set."
+        " Please set it before starting the server."
     )
 
 os.environ.setdefault("OPENAI_API_KEY", _llm_api_key)
@@ -49,7 +51,9 @@ _config = {
         "provider": "openai",
         "config": {
             "model": os.getenv("LLM_MODEL", "deepseek-v4-flash"),
-            "openai_base_url": os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1"),
+            "openai_base_url": os.getenv(
+                "LLM_BASE_URL", "https://api.deepseek.com/v1"
+            ),
             "api_key": _llm_api_key,
         },
     },
@@ -129,7 +133,8 @@ def add_memory(
     agent_id: Optional[str] = None,
     metadata: Optional[dict] = None,
 ) -> str:
-    """Add a memory for a user. Use this to store any information that should be remembered across conversations.
+    """Add a memory for a user. Use this to store any information that should be
+    remembered across conversations.
 
     Args:
         content: The text content to remember
@@ -159,7 +164,11 @@ def add_memory(
         result_list = result.get("results", []) if isinstance(result, dict) else result
         if not result_list:
             logger.info("add_memory infer=True返回空，回退到infer=False直接存储")
-            fallback_kwargs = {"messages": messages, "user_id": user_id, "infer": False}
+            fallback_kwargs = {
+                "messages": messages,
+                "user_id": user_id,
+                "infer": False,
+            }
             if run_id:
                 fallback_kwargs["run_id"] = run_id
             if agent_id:
@@ -202,7 +211,8 @@ def search_memories(
         filters["agent_id"] = agent_id
     try:
         logger.info(
-            "search_memories 调用: query=%s, user_id=%s, agent_id=%s, run_id=%s, limit=%d",
+            "search_memories 调用: query=%s, user_id=%s, agent_id=%s,"
+            " run_id=%s, limit=%d",
             query[:50],
             user_id,
             agent_id,

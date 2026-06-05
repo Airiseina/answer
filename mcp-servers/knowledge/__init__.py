@@ -128,7 +128,8 @@ async def _get_embedding(text: str) -> list:
         return resp.data[0].embedding
     else:
         raise ValueError(
-            f"Unexpected response format from Volcengine multimodal API: type={type(resp.data).__name__}"
+            f"Unexpected response format from Volcengine multimodal API:"
+            f" type={type(resp.data).__name__}"
         )
 
 
@@ -171,14 +172,18 @@ def _search_meilisearch(kb_ids: list, query: str, top_k: int = 5) -> list:
 
         client = meilisearch.Client(_meilisearch_host, _meilisearch_api_key)
         filter_strs = [f"kb_id = {kb_id}" for kb_id in kb_ids]
-        filter_str = " OR ".join(filter_strs) if len(filter_strs) > 1 else (
-            filter_strs[0] if filter_strs else ""
+        filter_str = (
+            " OR ".join(filter_strs)
+            if len(filter_strs) > 1
+            else (filter_strs[0] if filter_strs else "")
         )
         search_params = {
             "limit": top_k,
         }
         if filter_str:
-            search_params["filter"] = f"({filter_str})" if len(filter_strs) > 1 else filter_str
+            search_params["filter"] = (
+                f"({filter_str})" if len(filter_strs) > 1 else filter_str
+            )
         result = client.index("kb_chunks").search(query, search_params)
         chunks = []
         for hit in result.get("hits", []):
@@ -242,7 +247,9 @@ def search_knowledge(
     kb_ids: str,
     top_k: int = 5,
 ) -> str:
-    """Search knowledge bases using hybrid retrieval (vector search + BM25 keyword search) with RRF fusion ranking. Use this when the user asks a question that might be answered by documents in their knowledge base.
+    """Search knowledge bases using hybrid retrieval (vector search + BM25
+    keyword search) with RRF fusion ranking. Use this when the user asks a
+    question that might be answered by documents in their knowledge base.
 
     Args:
         query: The search query text
@@ -289,7 +296,8 @@ def search_knowledge(
 def list_knowledge_bases(
     owner_id: str,
 ) -> str:
-    """List all knowledge bases owned by a user. Use this to discover what knowledge bases are available.
+    """List all knowledge bases owned by a user. Use this to discover what
+    knowledge bases are available.
 
     Args:
         owner_id: The user identifier
@@ -299,7 +307,8 @@ def list_knowledge_bases(
         try:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, name, description, owner_id, doc_count, created_at, updated_at "
+                    "SELECT id, name, description, owner_id, doc_count,"
+                    " created_at, updated_at "
                     "FROM knowledge_base WHERE owner_id = %s",
                     (int(owner_id),),
                 )
@@ -318,7 +327,8 @@ def list_knowledge_bases(
 def get_bot_knowledge_bases(
     bot_id: str,
 ) -> str:
-    """Get all knowledge bases bound to a specific bot. Use this to find which knowledge bases a bot can access.
+    """Get all knowledge bases bound to a specific bot. Use this to find
+    which knowledge bases a bot can access.
 
     Args:
         bot_id: The bot identifier
@@ -328,7 +338,8 @@ def get_bot_knowledge_bases(
         try:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT kb.id, kb.name, kb.description, kb.owner_id, kb.doc_count, kb.created_at, kb.updated_at "
+                    "SELECT kb.id, kb.name, kb.description, kb.owner_id,"
+                    " kb.doc_count, kb.created_at, kb.updated_at "
                     "FROM knowledge_base kb "
                     "INNER JOIN bot_knowledge bk ON kb.id = bk.kb_id "
                     "WHERE bk.bot_id = %s",
