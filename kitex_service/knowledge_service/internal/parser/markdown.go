@@ -40,10 +40,19 @@ func (p *MarkdownParser) Parse(filePath string) (*ParsedDocument, error) {
 	}, nil
 }
 
+func nodeText(n ast.Node, source []byte) string {
+	var buf strings.Builder
+	for i := 0; i < n.Lines().Len(); i++ {
+		line := n.Lines().At(i)
+		buf.Write(line.Value(source))
+	}
+	return buf.String()
+}
+
 func (p *MarkdownParser) extractTitle(doc ast.Node, source []byte) string {
 	for child := doc.FirstChild(); child != nil; child = child.NextSibling() {
 		if heading, ok := child.(*ast.Heading); ok && heading.Level == 1 {
-			return strings.TrimSpace(string(heading.Text(source)))
+			return strings.TrimSpace(nodeText(heading, source))
 		}
 	}
 	return ""
@@ -58,7 +67,7 @@ func (p *MarkdownParser) walkAST(doc ast.Node, source []byte) []Section {
 			if current != nil && strings.TrimSpace(current.Content) != "" {
 				sections = append(sections, *current)
 			}
-			headingText := strings.TrimSpace(string(heading.Text(source)))
+			headingText := strings.TrimSpace(nodeText(heading, source))
 			current = &Section{
 				Heading:     headingText,
 				Level:       heading.Level,
@@ -66,7 +75,7 @@ func (p *MarkdownParser) walkAST(doc ast.Node, source []byte) []Section {
 				ContentType: "heading",
 			}
 		} else {
-			content := strings.TrimSpace(string(child.Text(source)))
+			content := strings.TrimSpace(nodeText(child, source))
 			if content == "" {
 				continue
 			}
@@ -92,20 +101,20 @@ func (p *MarkdownParser) walkAST(doc ast.Node, source []byte) []Section {
 func (p *MarkdownParser) renderNode(node ast.Node, source []byte) string {
 	switch node.Kind() {
 	case ast.KindCodeBlock:
-		code := string(node.Text(source))
+		code := nodeText(node, source)
 		return fmt.Sprintf("```\n%s\n```", code)
 	case ast.KindFencedCodeBlock:
 		var lang string
 		fenced := node.(*ast.FencedCodeBlock)
 		if fenced.Info != nil {
-			lang = string(fenced.Info.Text(source))
+			lang = nodeText(fenced.Info, source)
 		}
-		code := string(node.Text(source))
+		code := nodeText(node, source)
 		return fmt.Sprintf("```%s\n%s\n```", lang, code)
 	case east.KindTable:
 		return p.renderTable(node, source)
 	case ast.KindBlockquote:
-		lines := string(node.Text(source))
+		lines := nodeText(node, source)
 		var quoted strings.Builder
 		for _, line := range strings.Split(lines, "\n") {
 			quoted.WriteString("> ")
@@ -114,7 +123,7 @@ func (p *MarkdownParser) renderNode(node ast.Node, source []byte) string {
 		}
 		return strings.TrimSpace(quoted.String())
 	default:
-		return string(node.Text(source))
+		return nodeText(node, source)
 	}
 }
 
@@ -127,7 +136,7 @@ func (p *MarkdownParser) renderTable(node ast.Node, source []byte) string {
 		var cells []string
 		for cell := row.FirstChild(); cell != nil; cell = cell.NextSibling() {
 			if cell.Kind() == east.KindTableCell {
-				cells = append(cells, strings.TrimSpace(string(cell.Text(source))))
+				cells = append(cells, strings.TrimSpace(nodeText(cell, source)))
 			}
 		}
 		buf.WriteString("| ")

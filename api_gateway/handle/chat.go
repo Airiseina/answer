@@ -192,9 +192,7 @@ func GetConversations(ctx context.Context, c *app.RequestContext) {
 
 	var allMemberIDs []int64
 	for _, conv := range resp.Conversations {
-		for _, mid := range conv.MemberIds {
-			allMemberIDs = append(allMemberIDs, mid)
-		}
+		allMemberIDs = append(allMemberIDs, conv.MemberIds...)
 	}
 	accountMap := buildAccountMap(ctx, allMemberIDs)
 	nameMap := make(map[int64]string)
@@ -315,11 +313,9 @@ func GetOnlineStatus(ctx context.Context, c *app.RequestContext) {
 
 	userIdMap := buildUserIdMap(ctx, reqBody.Accounts)
 	userIDs := make([]int64, 0, len(reqBody.Accounts))
-	accountOrder := make([]string, 0, len(reqBody.Accounts))
 	for _, acc := range reqBody.Accounts {
 		if id, ok := userIdMap[acc]; ok && id != 0 {
 			userIDs = append(userIDs, id)
-			accountOrder = append(accountOrder, acc)
 		}
 	}
 	if len(userIDs) == 0 {

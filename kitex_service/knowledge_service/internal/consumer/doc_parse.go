@@ -119,7 +119,7 @@ func (c *DocParseConsumer) processDoc(ctx context.Context, docID int64) {
 }
 
 func (c *DocParseConsumer) Stop() {
-	c.reader.Close()
+	_ = c.reader.Close()
 	c.mu.Lock()
 	for _, q := range c.queues {
 		close(q)

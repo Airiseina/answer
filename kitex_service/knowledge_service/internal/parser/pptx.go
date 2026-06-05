@@ -21,7 +21,7 @@ func (p *PptxParser) Parse(filePath string) (*ParsedDocument, error) {
 	if err != nil {
 		return nil, fmt.Errorf("解析PPTX文件失败: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	slideTexts := p.extractAllSlideTexts(&rc.Reader)
 	title := ""
@@ -98,7 +98,7 @@ func (p *PptxParser) extractTextsFromSlideZip(f *zip.File) []string {
 	if err != nil {
 		return nil
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	data, err := io.ReadAll(rc)
 	if err != nil {
 		return nil

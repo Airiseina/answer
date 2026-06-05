@@ -92,19 +92,6 @@ func sanitizeUserPrompt(prompt string) string {
 	return result
 }
 
-// buildSafeSystemPrompt 将用户prompt与安全提示词拼接，安全提示词始终追加在末尾（最高优先级）
-// 注意：此函数仅用于work_service运行时拼接，不再用于数据库存储
-func buildSafeSystemPrompt(userPrompt string) string {
-	safety := loadUserBotSafetyPrompt()
-	if safety == "" {
-		return userPrompt
-	}
-	if userPrompt == "" {
-		return safety
-	}
-	return userPrompt + "\n\n" + safety
-}
-
 // stripSafetyPrompt 从prompt中剥离已拼接的安全提示词（兼容旧数据）
 func stripSafetyPrompt(prompt string) string {
 	safety := loadUserBotSafetyPrompt()

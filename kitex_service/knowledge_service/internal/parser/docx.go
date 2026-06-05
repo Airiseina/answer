@@ -19,7 +19,7 @@ func (p *DocxParser) Parse(filePath string) (*ParsedDocument, error) {
 	if err != nil {
 		return nil, fmt.Errorf("解析DOCX文件失败: %w", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	paragraphs := p.extractParagraphs(&rc.Reader)
 	title := ""
@@ -64,7 +64,7 @@ func (p *DocxParser) extractParagraphs(zr *zip.Reader) []docxParagraph {
 			if err != nil {
 				return nil
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 			data, err := io.ReadAll(rc)
 			if err != nil {
 				return nil

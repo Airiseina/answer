@@ -178,7 +178,7 @@ func (s *SeaweedFSClient) ObjectExists(ctx context.Context, objectName string) b
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
 
@@ -309,7 +309,7 @@ func HealthCheck() bool {
 	if err != nil {
 		return false
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
 }
 
@@ -324,7 +324,7 @@ func NormalizeContentURLs(content string) string {
 	if FilerURL == "" || PublicURL == "" {
 		return content
 	}
-	return strings.Replace(content, FilerURL, PublicURL, -1)
+	return strings.ReplaceAll(content, FilerURL, PublicURL)
 }
 
 var _ Storage = (*SeaweedFSClient)(nil)

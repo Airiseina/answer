@@ -57,7 +57,7 @@ func (dao *coldStorageDao) GetColdHistory(ctx context.Context, conversationID in
 	if err != nil {
 		return nil, fmt.Errorf("查询ClickHouse冷库失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var messages []model.ColdMessage
 	for rows.Next() {
@@ -93,7 +93,7 @@ func (dao *coldStorageDao) SearchMessages(ctx context.Context, conversationID in
 	if err != nil {
 		return nil, fmt.Errorf("搜索ClickHouse冷库失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var messages []model.ColdMessage
 	for rows.Next() {
@@ -141,7 +141,7 @@ func (dao *coldStorageDao) SearchMessagesByTimeRange(ctx context.Context, conver
 	if err != nil {
 		return nil, fmt.Errorf("搜索ClickHouse冷库失败: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var messages []model.ColdMessage
 	for rows.Next() {

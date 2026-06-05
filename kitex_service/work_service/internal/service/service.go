@@ -156,7 +156,7 @@ func downloadImageAsBase64(ctx context.Context, imageURL string) (*llm.ImageData
 	if err != nil {
 		return nil, fmt.Errorf("下载图片失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("下载图片失败, status=%d", resp.StatusCode)
@@ -257,8 +257,7 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	}
 	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
 	agentMcpServers := mcp.FilterAgentServers(append(mcp.GetBuiltinServerConfigs(), mcpServers...))
-	var result string
-	result = svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, isGroupChat, quoteMsgID)
+	result := svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, isGroupChat, quoteMsgID)
 	if ctx.Err() != nil {
 		return false, fmt.Errorf("bot[%d]处理消息超时，跳过发送", botId)
 	}
@@ -465,7 +464,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent, imageData)
 		if llmErr != nil {
 			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
-			return fmt.Sprint("抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?")
+			return "抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?"
 		}
 		go func() {
 			saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
@@ -535,7 +534,7 @@ func (svc *WorkService) formatHistoryMessages(ctx context.Context, userId, conve
 			senderName = fmt.Sprintf("用户%d", m.SenderId)
 		}
 		t := time.Unix(m.Timestamp, 0).Format("15:04:05")
-		sb.WriteString(fmt.Sprintf("[%d| %s] %s: %s\n", i+1, t, senderName, m.Content))
+		fmt.Fprintf(&sb, "[%d| %s] %s: %s\n", i+1, t, senderName, m.Content)
 	}
 	return sb.String(), nil
 }
@@ -605,7 +604,7 @@ func (svc *WorkService) SuggestReplies(ctx context.Context, conversationId, user
 	}
 	userNames, _ := rpc.GetUserNames(ctx, []int64{userId})
 	userName := fmt.Sprintf("用户%d", userId)
-	if userNames != nil && len(userNames) > 0 && userNames[0].Name != "" {
+	if len(userNames) > 0 && userNames[0].Name != "" {
 		userName = userNames[0].Name
 	}
 	systemPrompt := fmt.Sprintf(`你是一个聊天助手。根据以下对话上下文，为「%s」生成3条可能的回复。

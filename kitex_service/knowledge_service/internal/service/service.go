@@ -303,12 +303,11 @@ func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) e
 		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, err.Error())
 		return err
 	}
-	defer os.Remove(localPath)
+	defer func() { _ = os.Remove(localPath) }()
 	p := parser.GetParser(doc.FileType)
 	if p == nil {
-		errMsg := fmt.Sprintf("不支持的文件类型: %s", doc.FileType)
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, errMsg)
-		return fmt.Errorf(errMsg)
+		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, fmt.Sprintf("不支持的文件类型: %s", doc.FileType))
+		return fmt.Errorf("不支持的文件类型: %s", doc.FileType)
 	}
 	parsed, err := p.Parse(localPath)
 	if err != nil {
@@ -551,12 +550,8 @@ func (svc *KnowledgeService) chunkDocument(parsed *parser.ParsedDocument, doc mo
 
 func (svc *KnowledgeService) downloadDocument(ctx context.Context, doc model.KbDocument) (string, error) {
 	fileURL := doc.FileURL
-	if strings.HasPrefix(fileURL, storage.PublicURL) {
-		fileURL = strings.TrimPrefix(fileURL, storage.PublicURL)
-	}
-	if strings.HasPrefix(fileURL, storage.BasePath) {
-		fileURL = strings.TrimPrefix(fileURL, storage.BasePath)
-	}
+	fileURL = strings.TrimPrefix(fileURL, storage.PublicURL)
+	fileURL = strings.TrimPrefix(fileURL, storage.BasePath)
 	fileURL = strings.TrimPrefix(fileURL, "/")
 	data, err := storage.Client.GetObject(ctx, fileURL)
 	if err != nil {
@@ -568,11 +563,11 @@ func (svc *KnowledgeService) downloadDocument(ctx context.Context, doc model.KbD
 		return "", fmt.Errorf("创建临时文件失败: %w", err)
 	}
 	if _, err := tmpFile.Write(data); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("写入临时文件失败: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	return tmpFile.Name(), nil
 }
 
@@ -700,7 +695,7 @@ func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
 		Balancer:     &kafka.LeastBytes{},
 		BatchTimeout: 10 * time.Millisecond,
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 	type docParseMsg struct {
 		DocID int64 `json:"doc_id"`
 		KbID  int64 `json:"kb_id"`

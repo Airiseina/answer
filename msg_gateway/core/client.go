@@ -135,7 +135,7 @@ type ClientMessage struct {
 func (client *Client) ReadMessage() {
 	defer func() {
 		client.Manager.Unregister <- client
-		client.Socket.Close()
+		_ = client.Socket.Close()
 	}()
 	for {
 		_, message, err := client.Socket.ReadMessage()
@@ -148,7 +148,7 @@ func (client *Client) ReadMessage() {
 		if err := json.Unmarshal(message, &wsMsg); err != nil {
 			klog.Errorf("解析%d用户消息失败: %v", client.UserId, err)
 			meter.M.MessageReceivedTotal.Add(context.Background(), 1, metric.WithAttributes(attribute.String("status", "parse_error")))
-			client.Send(&WsMessage{
+			_ = client.Send(&WsMessage{
 				Type:    "system",
 				Reason:  "消息格式错误",
 				Success: false,

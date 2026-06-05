@@ -18,7 +18,7 @@ func (p *PDFParser) Parse(filePath string) (*ParsedDocument, error) {
 	if err != nil {
 		return nil, fmt.Errorf("打开PDF文件失败: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var allText strings.Builder
 	var sections []Section

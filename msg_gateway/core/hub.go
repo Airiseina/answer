@@ -77,7 +77,7 @@ func (manager *Manager) Start() {
 		case client := <-manager.Register:
 			manager.Lock.Lock()
 			if old, ok := manager.Clients[client.UserId]; ok {
-				old.Socket.Close()
+				_ = old.Socket.Close()
 				klog.Infof("用户%d重复连接，关闭旧连接", client.UserId)
 			}
 			manager.Clients[client.UserId] = client
@@ -218,7 +218,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		return
 	}
 	if wsMsg.Type != "chat" {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:      "system",
 			Reason:    "未知消息类型",
 			Success:   false,
@@ -227,7 +227,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		return
 	}
 	if wsMsg.Content == "" {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:           "system",
 			Reason:         "消息内容不能为空",
 			Success:        false,
@@ -237,7 +237,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		return
 	}
 	if wsMsg.ConversationID == 0 && wsMsg.PeerAccount == "" {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:           "system",
 			Reason:         "conversation_id和peer_account不能同时为空",
 			Success:        false,
@@ -265,7 +265,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 	})
 	if err != nil {
 		klog.Errorf("RPC SendMessage失败: %v", err)
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:           "system",
 			Reason:         "发送失败",
 			Success:        false,
@@ -275,7 +275,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		return
 	}
 	if !resp.Success {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:           "system",
 			Reason:         "发送失败",
 			Success:        false,
@@ -304,7 +304,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		Timestamp:        resp.Timestamp,
 		QuoteMsgId:       wsMsg.QuoteMsgId,
 	}
-	sender.Send(chatMsg)
+	_ = sender.Send(chatMsg)
 	meter.M.MessageSentTotal.Add(context.Background(), 1)
 	go manager.pushToMembers(resp.MemberIds, sender.UserId, chatMsg)
 	var mentionedUserIDs []int64
@@ -419,7 +419,7 @@ func pushToGateway(gatewayAddr string, msg *WsMessage, targetUserIDs []int64) {
 		klog.Errorf("推送消息到网关%s失败: %v", gatewayAddr, err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		klog.Errorf("推送消息到网关%s返回非200: %d, body: %s", gatewayAddr, resp.StatusCode, string(body))
@@ -485,7 +485,7 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 //  3. 向该用户的所有其他在线设备推送 read_receipt，实现多端同步
 func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 	if wsMsg.ConversationID == 0 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "conversation_id不能为空",
 			Success: false,
@@ -500,7 +500,7 @@ func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 	})
 	if err != nil {
 		klog.Errorf("RPC MarkRead失败: %v", err)
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "标记已读失败",
 			Success: false,
@@ -508,7 +508,7 @@ func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if !resp.Success {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "标记已读失败",
 			Success: false,
@@ -518,7 +518,7 @@ func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 
 	maxReadSeq := resp.GetMaxReadSeq()
 	// 向发送者返回已读确认
-	sender.Send(&WsMessage{
+	_ = sender.Send(&WsMessage{
 		Type:           "read_receipt",
 		ConversationID: wsMsg.ConversationID,
 		MaxReadSeq:     maxReadSeq,
@@ -608,7 +608,7 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 			client, localOnline := manager.Clients[uid]
 			manager.Lock.RUnlock()
 			if localOnline {
-				client.Send(typingMsg)
+				_ = client.Send(typingMsg)
 			} else if gatewayAddr != manager.GatewayAddr {
 				pushToGateway(gatewayAddr, typingMsg, []int64{uid})
 			}
@@ -629,7 +629,7 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 			client, localOnline := manager.Clients[status.UserId]
 			manager.Lock.RUnlock()
 			if localOnline {
-				client.Send(typingMsg)
+				_ = client.Send(typingMsg)
 			} else if status.GatewayAddr != manager.GatewayAddr {
 				pushToGateway(status.GatewayAddr, typingMsg, []int64{status.UserId})
 			}
@@ -644,7 +644,7 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 //  3. 构造 recall 推送消息，向会话中的所有在线成员推送
 func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 	if wsMsg.ConversationID == 0 || wsMsg.MsgID == 0 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "conversation_id和msg_id不能为空",
 			Success: false,
@@ -661,7 +661,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 	})
 	if err != nil {
 		klog.Errorf("RPC RecallMessage失败: %v", err)
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "撤回失败: " + err.Error(),
 			Success: false,
@@ -669,7 +669,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if !resp.Success {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "撤回失败，可能已超时或无权限",
 			Success: false,
@@ -678,7 +678,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 	}
 
 	// 向发送者返回撤回成功确认
-	sender.Send(&WsMessage{
+	_ = sender.Send(&WsMessage{
 		Type:           "recall",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
@@ -705,7 +705,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 //  3. 构造 edit 推送消息，向会话中的所有在线成员推送
 func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 	if wsMsg.ConversationID == 0 || wsMsg.MsgID == 0 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "conversation_id和msg_id不能为空",
 			Success: false,
@@ -713,7 +713,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if wsMsg.NewContent == "" {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "新消息内容不能为空",
 			Success: false,
@@ -731,7 +731,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 	})
 	if err != nil {
 		klog.Errorf("RPC EditMessage失败: %v", err)
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "编辑失败",
 			Success: false,
@@ -739,7 +739,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if !resp.Success {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "编辑失败，可能已撤回或无权限",
 			Success: false,
@@ -748,7 +748,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 	}
 
 	// 向发送者返回编辑成功确认
-	sender.Send(&WsMessage{
+	_ = sender.Send(&WsMessage{
 		Type:           "edit",
 		ConversationID: wsMsg.ConversationID,
 		MsgID:          wsMsg.MsgID,
@@ -777,7 +777,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 // 服务端对每个会话拉取 seq > last_seq 的消息返回
 func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 	if len(wsMsg.ConvSeqs) == 0 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:         "sync",
 			Success:      true,
 			ConvMessages: []ConvMessagesItem{},
@@ -785,7 +785,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if len(wsMsg.ConvSeqs) > 100 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "最多同步100个会话",
 			Success: false,
@@ -810,7 +810,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		})
 	}
 	if len(convSeqs) == 0 {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:         "sync",
 			Success:      true,
 			ConvMessages: []ConvMessagesItem{},
@@ -826,7 +826,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 	})
 	if err != nil {
 		klog.Errorf("RPC SyncMessages失败: %v", err)
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "同步消息失败",
 			Success: false,
@@ -834,7 +834,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		return
 	}
 	if !resp.Success {
-		sender.Send(&WsMessage{
+		_ = sender.Send(&WsMessage{
 			Type:    "system",
 			Reason:  "同步消息失败",
 			Success: false,
@@ -876,7 +876,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 	if convMessages == nil {
 		convMessages = []ConvMessagesItem{}
 	}
-	sender.Send(&WsMessage{
+	_ = sender.Send(&WsMessage{
 		Type:         "sync",
 		Success:      true,
 		ConvMessages: convMessages,
@@ -975,7 +975,7 @@ func StartBotReplyConsumer(reader *kafka.Reader) {
 			if err := json.Unmarshal(msg.Value, &reply); err != nil {
 				klog.Errorf("解析Bot回复消息失败[partition=%d,offset=%d]: %v", msg.Partition, msg.Offset, err)
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				reader.CommitMessages(ctx, msg)
+				_ = reader.CommitMessages(ctx, msg)
 				cancel()
 				continue
 			}
@@ -998,7 +998,7 @@ func StartBotReplyConsumer(reader *kafka.Reader) {
 			}
 			GlobalManager.pushToMembers(reply.MemberIDs, reply.SenderID, chatMsg)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			reader.CommitMessages(ctx, msg)
+			_ = reader.CommitMessages(ctx, msg)
 			cancel()
 		}
 	}()

@@ -45,10 +45,10 @@ func main() {
 	v := config.V
 	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("knowledge_service", otelAddr)
-	defer p.Shutdown(context.Background())
+	defer func() { _ = p.Shutdown(context.Background()) }()
 	meter.InitMeter("knowledge_service")
 	if os.Getenv("KITEX_IP_TO_REGISTRY") == "" {
-		os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
+		_ = os.Setenv("KITEX_IP_TO_REGISTRY", "127.0.0.1")
 	}
 	etcdAddr := v.GetString("etcd.Addr")
 	r, err := etcd.NewEtcdRegistry([]string{etcdAddr})

@@ -43,9 +43,7 @@ func (c *StructuralChunker) splitLongSection(sec parser.Section, opts ChunkOptio
 	content := sec.Content
 	if sec.Heading != "" {
 		prefix := strings.Repeat("#", sec.Level) + " " + sec.Heading + "\n"
-		if strings.HasPrefix(content, prefix) {
-			content = strings.TrimPrefix(content, prefix)
-		}
+		content = strings.TrimPrefix(content, prefix)
 	}
 	recursiveChunker := NewRecursiveChunker(WithChunkSize(opts.ChunkSize), WithChunkOverlap(opts.ChunkOverlap))
 	subChunks := recursiveChunker.Chunk(content, opts)

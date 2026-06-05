@@ -36,7 +36,7 @@ func Upload(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "系统繁忙", "请稍后重试")
 		return
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 	contentType := storage.GetContentType(file.Filename)
 	result, err := storage.UploadFile(ctx, userId, file.Filename, src, file.Size, contentType)
 	if err != nil {
@@ -78,7 +78,7 @@ func FileProxy(ctx context.Context, c *app.RequestContext) {
 		c.SetStatusCode(http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		hlog.CtxErrorf(ctx, "FileProxy读取响应体失败: url=%s, err=%v", targetURL, err)

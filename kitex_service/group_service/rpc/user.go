@@ -36,7 +36,6 @@ func ConnectUserService(r discovery.Resolver) {
 				if r, ok := resp.(*user.CheckUsersExistRes); ok {
 					if r == nil {
 						r = &user.CheckUsersExistRes{}
-						resp = r
 					}
 					r.AllExist = false
 					return r, nil

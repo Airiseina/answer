@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/Airiseina/answer/kitex_service/group_service/kitex_gen/group/groupservice"
-
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
 	"github.com/cloudwego/kitex/pkg/discovery"
@@ -13,8 +12,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/kitex-contrib/obs-opentelemetry/tracing"
 )
-
-var groupCli groupservice.Client
 
 func ConnectGroupService(r discovery.Resolver) {
 	fp := retry.NewFailurePolicy()
@@ -27,7 +24,7 @@ func ConnectGroupService(r discovery.Resolver) {
 	}
 	cbs := circuitbreak.NewCBSuite(circuitbreak.RPCInfo2Key)
 	cbs.UpdateServiceCBConfig("groupservice", cbConfig)
-	c, err := groupservice.NewClient("groupservice",
+	_, err := groupservice.NewClient("groupservice",
 		client.WithResolver(r),
 		client.WithSuite(tracing.NewClientSuite()),
 		client.WithFailureRetry(fp),
@@ -38,5 +35,4 @@ func ConnectGroupService(r discovery.Resolver) {
 	if err != nil {
 		klog.Fatalf("连接group_service失败: %v", err)
 	}
-	groupCli = c
 }

@@ -72,11 +72,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	klog.Infof("JWT 验证成功, userId: %d", userId)
 	userName := ""
 	userAccount := ""
-	if nameCtx, nameCancel := context.WithTimeout(context.Background(), 3*time.Second); nameCtx != nil {
-		userName = rpc.GetUserName(nameCtx, userId)
-		userAccount = rpc.GetUserAccount(nameCtx, userId)
-		nameCancel()
-	}
+	nameCtx, nameCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer nameCancel()
+	userName = rpc.GetUserName(nameCtx, userId)
+	userAccount = rpc.GetUserAccount(nameCtx, userId)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		klog.Errorf("WebSocket 升级失败: %v", err)
@@ -108,7 +107,7 @@ func main() {
 	v := config.V
 	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("msg_gateway", otelAddr)
-	defer p.Shutdown(context.Background())
+	defer func() { _ = p.Shutdown(context.Background()) }()
 	meter.InitMeter("msg_gateway")
 	meter.RegisterOnlineUsers(func(ctx context.Context, observer metric.Int64Observer) error {
 		core.GlobalManager.Lock.RLock()

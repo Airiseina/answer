@@ -39,7 +39,7 @@ func main() {
 	storage.Init(v)
 	otelAddr := v.GetString("otel.Addr")
 	p := tracer.InitTracer("api_gateway", otelAddr)
-	defer p.Shutdown(context.Background())
+	defer func() { _ = p.Shutdown(context.Background()) }()
 	meter.InitMeter("api_gateway")
 	rpc.Connect(v)
 	tracerOptions, cfg := hertztracing.NewServerTracer()

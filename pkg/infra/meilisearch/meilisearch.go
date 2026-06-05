@@ -130,7 +130,7 @@ func (m *MeilisearchDao) SearchBM25(ctx context.Context, kbIDs []int64, query st
 
 	resp, err := m.Client.Index(KbChunksIndex).Search(query, req)
 	if err != nil {
-		return nil, fmt.Errorf("Meilisearch BM25检索失败: %w", err)
+		return nil, fmt.Errorf("meilisearch BM25检索失败: %w", err)
 	}
 
 	var results []BM25SearchResult
