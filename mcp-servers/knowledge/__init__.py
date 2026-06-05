@@ -92,7 +92,7 @@ def _call_knowledge_service(method: str, endpoint: str, payload: dict = None) ->
         return {"error": str(e)}
 
 
-_ark_client: Optional = None
+_ark_client: Optional[object] = None
 
 
 def _get_ark_client():

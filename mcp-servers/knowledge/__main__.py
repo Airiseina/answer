@@ -1,6 +1,8 @@
-from knowledge import create_app, mcp
 import argparse
+
 import uvicorn
+
+from knowledge import create_app, mcp
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
