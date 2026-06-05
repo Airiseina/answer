@@ -13,13 +13,19 @@ type ChatMessage struct {
 	Content string
 }
 
+// ImageData 图片base64数据，用于多模态消息
+type ImageData struct {
+	Base64Data string
+	MIMEType   string
+}
+
 type Client struct{}
 
 func NewClient() *Client {
 	return &Client{}
 }
 
-func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt string, history []ChatMessage, userContent string) (string, error) {
+func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt string, history []ChatMessage, userContent string, imageData *ImageData) (string, error) {
 	var opts []option.RequestOption
 	if apiKey != "" {
 		opts = append(opts, option.WithAPIKey(apiKey))
@@ -45,7 +51,18 @@ func (c *Client) Chat(ctx context.Context, apiKey, baseURL, model, systemPrompt 
 			params.Messages = append(params.Messages, openai.SystemMessage(h.Content))
 		}
 	}
-	params.Messages = append(params.Messages, openai.UserMessage(userContent))
+	// 构造用户消息：有图片时使用多模态格式
+	if imageData != nil {
+		dataURL := fmt.Sprintf("data:%s;base64,%s", imageData.MIMEType, imageData.Base64Data)
+		params.Messages = append(params.Messages, openai.UserMessage([]openai.ChatCompletionContentPartUnionParam{
+			openai.TextContentPart(userContent),
+			openai.ImageContentPart(openai.ChatCompletionContentPartImageImageURLParam{
+				URL: dataURL,
+			}),
+		}))
+	} else {
+		params.Messages = append(params.Messages, openai.UserMessage(userContent))
+	}
 	resp, err := client.Chat.Completions.New(ctx, params)
 	if err != nil {
 		return "", fmt.Errorf("调用OpenAI失败: %w", err)

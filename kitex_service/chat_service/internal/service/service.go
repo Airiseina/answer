@@ -62,6 +62,11 @@ func NewChatService(dao dal.ChatDao, onlineDao dal.OnlineDao, conversationDao da
 	}
 }
 
+// IsColdEnabled 返回冷库归档是否启用
+func (svc *ChatService) IsColdEnabled() bool {
+	return svc.coldEnabled
+}
+
 // SendMessageResult 发送消息的返回结果
 type SendMessageResult struct {
 	MsgID            int64

@@ -12,242 +12,247 @@ services:
       - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - answer-net
-#
-#  frontend:
-#    build:
-#      context: ../web/test_frontend
-#      dockerfile: Dockerfile
-#    container_name: answer_frontend
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
-#      - "traefik.http.routers.frontend.entrypoints=web"
-#      - "traefik.http.routers.frontend.priority=1"
-#      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - api-gateway
-#
-#  api-gateway:
-#    build:
-#      context: ..
-#      dockerfile: api_gateway/Dockerfile
-#    container_name: answer_api_gateway
-#    restart: unless-stopped
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.api.rule=PathPrefix(`/login`) || PathPrefix(`/register`) || PathPrefix(`/api`)"
-#      - "traefik.http.routers.api.entrypoints=web"
-#      - "traefik.http.routers.api.priority=10"
-#      - "traefik.http.services.api.loadbalancer.server.port=1234"
-#    env_file: .env
-#    environment:
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - user-service
-#      - group-service
-#      - etcd
-#      - mysql
-#      - garnet
-#      - otel-collector
-#
-#  msg-gateway:
-#    build:
-#      context: ..
-#      dockerfile: msg_gateway/Dockerfile
-#    container_name: answer_msg_gateway
-#    restart: unless-stopped
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.ws.rule=PathPrefix(`/ws`)"
-#      - "traefik.http.routers.ws.entrypoints=web"
-#      - "traefik.http.routers.ws.priority=20"
-#      - "traefik.http.services.ws.loadbalancer.server.port=8081"
-#    env_file: .env
-#    environment:
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - GATEWAY_ADDR=answer_msg_gateway:8081
-#      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-#      - KAFKA_BROKERS=kafka-1:9092
-#      - REDIS_ADDR=garnet:6379
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - chat-service
-#      - etcd
-#      - otel-collector
-#
-#  user-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/user_service/Dockerfile
-#    container_name: answer_user_service
-#    env_file: .env
-#    environment:
-#      - MYSQL_HOST=${MYSQL_HOST:-mysql}
-#      - MYSQL_PORT=${MYSQL_PORT:-3306}
-#      - MYSQL_USER=${MYSQL_USER:-root}
-#      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-#      - MYSQL_NAME=${MYSQL_NAME:-answer}
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - KITEX_IP_TO_REGISTRY=answer_user_service
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - mysql
-#      - garnet
-#      - etcd
-#      - otel-collector
-#
-#  group-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/group_service/Dockerfile
-#    container_name: answer_group_service
-#    env_file: .env
-#    environment:
-#      - MYSQL_HOST=${MYSQL_HOST:-mysql}
-#      - MYSQL_PORT=${MYSQL_PORT:-3306}
-#      - MYSQL_USER=${MYSQL_USER:-root}
-#      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-#      - MYSQL_NAME=${MYSQL_NAME:-answer}
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - KITEX_IP_TO_REGISTRY=answer_group_service
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - mysql
-#      - etcd
-#      - otel-collector
-#
-#  chat-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/chat_service/Dockerfile
-#    container_name: answer_chat_service
-#    restart: unless-stopped
-#    env_file: .env
-#    environment:
-#      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
-#      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-#      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-#      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-123456}
-#      - POSTGRES_DBNAME=${POSTGRES_DBNAME:-answer_chat}
-#      - REDIS_ADDR=${REDIS_ADDR:-garnet:6379}
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - KITEX_IP_TO_REGISTRY=answer_chat_service
-#      - CLICKHOUSE_ADDR=clickhouse:9000
-#      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USER:-default}
-#      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
-#      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DB:-answer_cold}
-#      - COLD_STORAGE_ENABLED=true
-#      - COLD_STORAGE_HOT_MONTHS=6
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - postgres
-#      - garnet
-#      - clickhouse
-#      - etcd
-#      - otel-collector
-#
-#  knowledge-service:
-    # build:
-    #   context: ..
-    #   dockerfile: kitex_service/knowledge_service/Dockerfile
-    # container_name: answer_knowledge_service
-    # restart: unless-stopped
-    # env_file: .env
-    # environment:
-    #   - MYSQL_HOST=${MYSQL_HOST:-mysql}
-    #   - MYSQL_PORT=${MYSQL_PORT:-3306}
-    #   - MYSQL_USER=${MYSQL_USER:-root}
-    #   - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-    #   - MYSQL_NAME=${MYSQL_NAME:-answer}
-    #   - ETCD_ADDR=etcd:2379
-    #   - OTEL_ADDR=otel-collector:4317
-    #   - KITEX_IP_TO_REGISTRY=answer_knowledge_service
-    #   - KAFKA_BROKERS=kafka-1:9092
-    #   - QDRANT_HOST=answer_qdrant
-    #   - QDRANT_PORT=6334
-    #   - MEILISEARCH_HOST=http://answer_meilisearch:7700
-    #   - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
-    #   - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-    # networks:
-    #   - answer-net
-    # depends_on:
-    #   - mysql
-    #   - etcd
-    #   - kafka-1
-    #   - qdrant
-    #   - meilisearch
-    #   - otel-collector
-#
-#  bot-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/bot_service/Dockerfile
-#    container_name: answer_bot_service
-#    restart: unless-stopped
-#    env_file: .env
-#    environment:
-#      - MYSQL_HOST=${MYSQL_HOST:-mysql}
-#      - MYSQL_PORT=${MYSQL_PORT:-3306}
-#      - MYSQL_USER=${MYSQL_USER:-root}
-#      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-#      - MYSQL_NAME=${MYSQL_NAME:-answer}
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - KITEX_IP_TO_REGISTRY=answer_bot_service
-#      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - mysql
-#      - etcd
-#      - seaweedfs-filer
-#      - otel-collector
-#      - user-service
-#      - chat-service
-#
-#  work-service:
-#    build:
-#      context: ..
-#      dockerfile: kitex_service/work_service/Dockerfile
-#    container_name: answer_work_service
-#    restart: unless-stopped
-#    env_file: .env
-#    environment:
-#      - ETCD_ADDR=etcd:2379
-#      - OTEL_ADDR=otel-collector:4317
-#      - GATEWAY_ADDR=answer_msg_gateway:8081
-#      - KITEX_IP_TO_REGISTRY=answer_work_service
-#      - KAFKA_BROKERS=kafka-1:9092
-#      - MCP_MEM0_URL=http://answer_mcp_mem0:8000/sse
-#      - MCP_KNOWLEDGE_URL=http://answer_mcp_knowledge:8001/sse
-#      - MCP_SEARXNG_URL=http://answer_mcp_searxng:8001/sse
-#      - MCP_WEATHER_URL=http://answer_mcp_weather:8080/sse
-#      - MCP_TIMESERVER_URL=http://answer_mcp_timeserver:8000/sse
-#    networks:
-#      - answer-net
-#    depends_on:
-#      - etcd
-#      - kafka-1
-#      - otel-collector
-#      - mcp-mem0
-#      - mcp-knowledge
-#      - mcp-searxng
-#      - mcp-weather
-#      - mcp-timeserver
+
+  frontend:
+    build:
+      context: ../web/test_frontend
+      dockerfile: Dockerfile
+    container_name: answer_frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    networks:
+      - answer-net
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: api_gateway/Dockerfile
+    container_name: answer_api_gateway
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/login`) || PathPrefix(`/register`) || PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.priority=10"
+      - "traefik.http.services.api.loadbalancer.server.port=1234"
+    env_file: .env
+    environment:
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+    networks:
+      - answer-net
+    depends_on:
+      - user-service
+      - group-service
+      - etcd
+      - mysql
+      - garnet
+      - otel-collector
+
+  msg-gateway:
+    build:
+      context: ..
+      dockerfile: msg_gateway/Dockerfile
+    container_name: answer_msg_gateway
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ws.rule=PathPrefix(`/ws`)"
+      - "traefik.http.routers.ws.entrypoints=web"
+      - "traefik.http.routers.ws.priority=20"
+      - "traefik.http.services.ws.loadbalancer.server.port=8081"
+    env_file: .env
+    environment:
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - GATEWAY_ADDR=answer_msg_gateway:8081
+      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+      - KAFKA_BROKERS=kafka-1:9092
+      - REDIS_ADDR=garnet:6379
+    networks:
+      - answer-net
+    depends_on:
+      - chat-service
+      - etcd
+      - otel-collector
+
+  user-service:
+    build:
+      context: ..
+      dockerfile: kitex_service/user_service/Dockerfile
+    container_name: answer_user_service
+    env_file: .env
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+      - MYSQL_NAME=${MYSQL_NAME:-answer}
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - KITEX_IP_TO_REGISTRY=answer_user_service
+    networks:
+      - answer-net
+    depends_on:
+      - mysql
+      - garnet
+      - etcd
+      - otel-collector
+
+  group-service:
+    build:
+      context: ..
+      dockerfile: kitex_service/group_service/Dockerfile
+    container_name: answer_group_service
+    env_file: .env
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+      - MYSQL_NAME=${MYSQL_NAME:-answer}
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - KITEX_IP_TO_REGISTRY=answer_group_service
+    networks:
+      - answer-net
+    depends_on:
+      - mysql
+      - etcd
+      - otel-collector
+
+  chat-service:
+    build:
+      context: ..
+      dockerfile: kitex_service/chat_service/Dockerfile
+    container_name: answer_chat_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-123456}
+      - POSTGRES_DBNAME=${POSTGRES_DBNAME:-answer_chat}
+      - REDIS_ADDR=${REDIS_ADDR:-garnet:6379}
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - KITEX_IP_TO_REGISTRY=answer_chat_service
+      - CLICKHOUSE_ADDR=clickhouse:9000
+      - CLICKHOUSE_USERNAME=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_DATABASE=${CLICKHOUSE_DB:-answer_cold}
+      - COLD_STORAGE_ENABLED=true
+      - COLD_STORAGE_HOT_MONTHS=6
+    networks:
+      - answer-net
+    depends_on:
+      - postgres
+      - garnet
+      - clickhouse
+      - etcd
+      - otel-collector
+
+  knowledge-service:
+     build:
+       context: ..
+       dockerfile: kitex_service/knowledge_service/Dockerfile
+     container_name: answer_knowledge_service
+     restart: unless-stopped
+     env_file: .env
+     environment:
+       - MYSQL_HOST=${MYSQL_HOST:-mysql}
+       - MYSQL_PORT=${MYSQL_PORT:-3306}
+       - MYSQL_USER=${MYSQL_USER:-root}
+       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+       - MYSQL_NAME=${MYSQL_NAME:-answer}
+       - ETCD_ADDR=etcd:2379
+       - OTEL_ADDR=otel-collector:4317
+       - KITEX_IP_TO_REGISTRY=answer_knowledge_service
+       - KAFKA_BROKERS=kafka-1:9092
+       - QDRANT_HOST=answer_qdrant
+       - QDRANT_PORT=6334
+       - MEILISEARCH_HOST=http://answer_meilisearch:7700
+       - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
+       - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+     networks:
+       - answer-net
+     depends_on:
+       - mysql
+       - etcd
+       - kafka-1
+       - qdrant
+       - meilisearch
+       - otel-collector
+
+  bot-service:
+    build:
+      context: ..
+      dockerfile: kitex_service/bot_service/Dockerfile
+    container_name: answer_bot_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+      - MYSQL_NAME=${MYSQL_NAME:-answer}
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - KITEX_IP_TO_REGISTRY=answer_bot_service
+      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+    networks:
+      - answer-net
+    depends_on:
+      - mysql
+      - etcd
+      - seaweedfs-filer
+      - otel-collector
+      - user-service
+      - chat-service
+      - knowledge-service
+
+  work-service:
+    build:
+      context: ..
+      dockerfile: kitex_service/work_service/Dockerfile
+    container_name: answer_work_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - GATEWAY_ADDR=answer_msg_gateway:8081
+      - KITEX_IP_TO_REGISTRY=answer_work_service
+      - KAFKA_BROKERS=kafka-1:9092
+      - MCP_MEM0_URL=http://answer_mcp_mem0:8000/sse
+      - MCP_KNOWLEDGE_URL=http://answer_mcp_knowledge:8001/sse
+      - MCP_SEARXNG_URL=http://answer_mcp_searxng:8001/sse
+      - MCP_WEATHER_URL=http://answer_mcp_weather:8080/sse
+      - MCP_TIMESERVER_URL=http://answer_mcp_timeserver:8000/sse
+      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+      - SEAWEEDFS_BASE_PATH=/chat
+      - SEAWEEDFS_PUBLIC_URL=/files
+    networks:
+      - answer-net
+    depends_on:
+      - etcd
+      - kafka-1
+      - otel-collector
+      - mcp-mem0
+      - mcp-knowledge
+      - mcp-searxng
+      - mcp-weather
+      - mcp-timeserver
+      - seaweedfs-filer
 
   postgres:
     image: postgres:16
@@ -298,7 +303,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/connect
+      - mysql_data:/var/lib/mysql
     networks:
       - answer-net
 
@@ -564,11 +569,11 @@ services:
       - "9006:8001"
     environment:
       - KNOWLEDGE_SERVICE_ADDR=http://host.docker.internal:4326
-      - MYSQL_HOST=answer_mysql
-      - MYSQL_PORT=3306
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=123456
-      - MYSQL_DB=answer
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+      - MYSQL_DB=${MYSQL_NAME:-answer}
       - QDRANT_HOST=answer_qdrant
       - QDRANT_PORT=6334
       - QDRANT_HTTP_PORT=6333

@@ -22,6 +22,7 @@ RUN go mod tidy && go build -o /work_service .
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /work_service /work_service
+COPY --from=builder /app/kitex_service/work_service/prompt /prompt
 WORKDIR /
 EXPOSE 4324
 CMD ["/work_service"]

@@ -16,6 +16,7 @@ import (
 	template "github.com/cloudwego/eino/utils/callbacks"
 	"github.com/cloudwego/kitex/pkg/klog"
 
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 )
 
@@ -43,6 +44,7 @@ type AgentRunConfig struct {
 	SystemPrompt string
 	McpServers   []mcp.ServerConfig
 	UserContent  string
+	ImageData    *llm.ImageData // 图片数据，非nil时构造多模态消息
 }
 
 func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
@@ -125,10 +127,33 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 			Content: cfg.SystemPrompt,
 		})
 	}
-	messages = append(messages, &schema.Message{
-		Role:    schema.User,
-		Content: cfg.UserContent,
-	})
+	// 构造用户消息：有图片时使用多模态格式
+	if cfg.ImageData != nil {
+		userMsg := &schema.Message{
+			Role: schema.User,
+			UserInputMultiContent: []schema.MessageInputPart{
+				{
+					Type: schema.ChatMessagePartTypeText,
+					Text: cfg.UserContent,
+				},
+				{
+					Type: schema.ChatMessagePartTypeImageURL,
+					Image: &schema.MessageInputImage{
+						MessagePartCommon: schema.MessagePartCommon{
+							Base64Data: &cfg.ImageData.Base64Data,
+							MIMEType:   cfg.ImageData.MIMEType,
+						},
+					},
+				},
+			},
+		}
+		messages = append(messages, userMsg)
+	} else {
+		messages = append(messages, &schema.Message{
+			Role:    schema.User,
+			Content: cfg.UserContent,
+		})
+	}
 
 	start := time.Now()
 	result, err := reactAgent.Generate(ctx, messages, einoagent.WithComposeOptions(compose.WithCallbacks(cb)))

@@ -22,4 +22,9 @@ func GetConfig() {
 	V.SetDefault("mcp.retry.max_attempts", 2)     // MCP调用最大重试次数(不含首次调用)
 	V.SetDefault("mcp.retry.initial_interval", 1) // MCP重试初始间隔(秒)
 	V.SetDefault("mcp.fallback.enabled", true)    // MCP降级开关
+	V.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
+	V.SetDefault("seaweedfs.base_path", "/chat")
+	V.SetDefault("seaweedfs.public_url", "/files")
+	V.SetDefault("image.max_size", 5242880)                      // 图片最大5MB
+	V.SetDefault("ai.user_bot.safety_prompt_file", "prompt/user_bot_safety_prompt.md")
 }

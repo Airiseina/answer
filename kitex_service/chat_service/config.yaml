@@ -26,7 +26,7 @@ clickhouse:
 
 # 冷热分离配置
 cold_storage:
-  enabled: false          # 是否启用冷库归档（生产环境建议启用）
+  enabled: true          # 是否启用冷库归档（生产环境建议启用）
   hot_months: 6           # 热数据保留月数，超过此时间的消息将被归档到冷库
   archive_cron: "0 0 3 * * ?"  # 归档定时任务 cron 表达式（默认每天凌晨3点）
 

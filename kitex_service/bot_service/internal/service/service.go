@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/dal"
@@ -92,6 +93,7 @@ func sanitizeUserPrompt(prompt string) string {
 }
 
 // buildSafeSystemPrompt 将用户prompt与安全提示词拼接，安全提示词始终追加在末尾（最高优先级）
+// 注意：此函数仅用于work_service运行时拼接，不再用于数据库存储
 func buildSafeSystemPrompt(userPrompt string) string {
 	safety := loadUserBotSafetyPrompt()
 	if safety == "" {
@@ -101,6 +103,24 @@ func buildSafeSystemPrompt(userPrompt string) string {
 		return safety
 	}
 	return userPrompt + "\n\n" + safety
+}
+
+// stripSafetyPrompt 从prompt中剥离已拼接的安全提示词（兼容旧数据）
+func stripSafetyPrompt(prompt string) string {
+	safety := loadUserBotSafetyPrompt()
+	if safety == "" || prompt == "" {
+		return prompt
+	}
+	// 安全词以 "\n\n" + safety 拼接在末尾
+	suffix := "\n\n" + safety
+	if strings.HasSuffix(prompt, suffix) {
+		return strings.TrimSuffix(prompt, suffix)
+	}
+	// 兜底：直接匹配安全词
+	if strings.HasSuffix(prompt, safety) {
+		return strings.TrimSuffix(prompt, safety)
+	}
+	return prompt
 }
 
 type BotService struct {
@@ -121,10 +141,8 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 	if err != nil {
 		return 0, err
 	}
-	// 清洗用户prompt中的注入标记
+	// 清洗用户prompt中的注入标记（只存用户原始prompt，安全词在运行时动态拼接）
 	cleaned := sanitizeUserPrompt(filtered)
-	// 拼接安全提示词（追加在末尾，确保最高优先级）
-	safePrompt := buildSafeSystemPrompt(cleaned)
 
 	botId := svc.snowNode.Generate()
 	userID, rpcErr := rpc.CreateBotUser(ctx, name, "")
@@ -135,7 +153,7 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 		ID:           botId,
 		UserID:       userID,
 		CreatorID:    creatorId,
-		SystemPrompt: safePrompt,
+		SystemPrompt: cleaned,
 		ApiKey:       apiKey,
 		Model:        model_,
 		BaseURL:      baseURL,
@@ -168,7 +186,7 @@ func (svc *BotService) enrichBotInfo(ctx context.Context, info model.Bot) BotInf
 		UserId:       info.UserID,
 		CreatorId:    info.CreatorID,
 		ApiKey:       info.ApiKey,
-		SystemPrompt: info.SystemPrompt,
+		SystemPrompt: stripSafetyPrompt(info.SystemPrompt), // 剥离安全词，只返回用户原始prompt
 		Model:        info.Model,
 		BaseURL:      info.BaseURL,
 		IsSystem:     info.IsSystem,
@@ -232,7 +250,7 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 		if k == "name" || k == "avatar_url" {
 			continue
 		}
-		// 对用户更新的system_prompt进行安全审核和拼接
+		// 对用户更新的system_prompt进行安全审核（只存用户原始prompt，安全词在运行时动态拼接）
 		if k == "system_prompt" {
 			newPrompt, ok := v.(string)
 			if !ok {
@@ -242,8 +260,7 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 			if filterErr != nil {
 				return false, filterErr
 			}
-			cleaned := sanitizeUserPrompt(filtered)
-			botUpdates[k] = buildSafeSystemPrompt(cleaned)
+			botUpdates[k] = sanitizeUserPrompt(filtered)
 			continue
 		}
 		botUpdates[k] = v
@@ -462,9 +479,20 @@ func (svc *BotService) initSkillKnowledgeBase(ctx context.Context, botID int64) 
 		return
 	}
 
-	kbID, err := rpc.CreateKnowledgeBase(ctx, 0, "kiana角色Skill", "琪亚娜·卡斯兰娜角色扮演数据")
+	// 重试创建知识库，等待knowledge_service就绪
+	var kbID int64
+	var err error
+	maxRetries := 10
+	for i := 0; i < maxRetries; i++ {
+		kbID, err = rpc.CreateKnowledgeBase(ctx, 0, "kiana角色Skill", "琪亚娜·卡斯兰娜角色扮演数据")
+		if err == nil {
+			break
+		}
+		klog.Warnf("系统Bot[%d]创建Skill知识库失败(第%d次): %v，3秒后重试...", botID, i+1, err)
+		time.Sleep(3 * time.Second)
+	}
 	if err != nil {
-		klog.Errorf("系统Bot[%d]创建Skill知识库失败: %v", botID, err)
+		klog.Errorf("系统Bot[%d]创建Skill知识库失败(已重试%d次): %v", botID, maxRetries, err)
 		return
 	}
 	klog.Infof("系统Bot[%d]创建Skill知识库成功, KB ID: %d", botID, kbID)

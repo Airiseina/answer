@@ -94,5 +94,5 @@ func BuildKnowledgePrompt(knowledgeResult string) string {
 	if trimmed == "" {
 		return ""
 	}
-	return fmt.Sprintf("\n\n[知识库检索结果]\n%s\n\n请基于以上知识库内容回答用户的问题。如果知识库中没有相关信息，请根据你的知识回答，但要说明这不是来自知识库的信息。", trimmed)
+	return fmt.Sprintf("\n\n[知识库检索结果]\n%s\n\n请基于以上知识库内容回答用户的问题。如果知识库中没有相关信息，请根据你的知识回答。", trimmed)
 }

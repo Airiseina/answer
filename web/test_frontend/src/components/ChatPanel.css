@@ -754,6 +754,13 @@
   display: block;
 }
 
+.msg-image-desc {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
 .msg-file {
   display: flex;
   align-items: center;

@@ -12,6 +12,30 @@ interface PendingAttachment {
   fileSize: number
 }
 
+// escapeMisusedStrikethrough 转义Bot输出中被误用的删除线语法
+// GFM中 ~~文字~~ 会被渲染为删除线，但Bot常用~~表示语气（如害羞波浪线）
+// 只保留真正的删除线（~~包裹至少2个非空白字符），其余转义为\~~
+function escapeMisusedStrikethrough(text: string): string {
+  // 先用占位符保护真正的删除线（内部至少2个非空白字符）
+  const placeholders: string[] = []
+  let result = text.replace(/~~(.+?)~~/g, (match, inner: string) => {
+    const trimmed = inner.trim()
+    if (trimmed.length >= 2) {
+      const ph = `\x00PH${placeholders.length}\x00`
+      placeholders.push(match)
+      return ph
+    }
+    return match.replace(/~~/g, '\\~\\~')
+  })
+  // 剩余不成对的~~全部转义
+  result = result.replace(/~~/g, '\\~\\~')
+  // 还原占位符
+  placeholders.forEach((ph, i) => {
+    result = result.replace(`\x00PH${i}\x00`, ph)
+  })
+  return result
+}
+
 export default function ChatPanel() {
   const { conversations, messages, activeConvId, sendMessage, setActiveConvId, friends, openChatWith, auth, addConversation, loadConversations, onlineStatus, loadOnlineStatus, memberInfo, loadConversationMembers, typingStatus, sendTyping, recallMessage, editMessage, systemNotification, clearSystemNotification } = useApp()
   const [input, setInput] = useState('')
@@ -66,22 +90,23 @@ export default function ChatPanel() {
       const { url, mediaType, fileName, fileSize } = pendingAttachment
       let content: string
       if (mediaType === 'image') {
-        content = buildMediaContent('image', url, { size: fileSize })
+        // 图片消息支持携带文字描述
+        const extra: Record<string, any> = { size: fileSize }
+        if (input.trim()) {
+          extra.text = input.trim()
+        }
+        content = buildMediaContent('image', url, extra)
       } else if (mediaType === 'voice') {
         content = buildMediaContent('voice', url, { size: fileSize })
       } else {
         content = buildMediaContent('file', url, { filename: fileName, size: fileSize })
       }
-      sendMessage(activeConvId, content)
+      const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
+      sendMessage(activeConvId, content, mentionsToSend?.map(m => m.user_id), quotingMsg?.id)
       setPendingAttachment(null)
-
-      if (input.trim()) {
-        const mentionsToSend = pendingMentions.length > 0 ? pendingMentions : undefined
-        sendMessage(activeConvId, buildTextContent(input.trim(), mentionsToSend), mentionsToSend?.map(m => m.user_id), quotingMsg?.id)
-        setInput('')
-        setPendingMentions([])
-        setQuotingMsg(null)
-      }
+      setInput('')
+      setPendingMentions([])
+      setQuotingMsg(null)
       return
     }
 
@@ -499,6 +524,7 @@ export default function ChatPanel() {
         return (
           <div className="msg-image">
             <img src={parsed.url} alt="图片" loading="lazy" onClick={() => window.open(parsed.url, '_blank')} />
+            {parsed.text && <div className="msg-image-desc">{parsed.text}</div>}
           </div>
         )
       case 'file':
@@ -524,7 +550,7 @@ export default function ChatPanel() {
           return (
             <div className="msg-text msg-markdown">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {parsed.text || content}
+                {escapeMisusedStrikethrough(parsed.text || content)}
               </ReactMarkdown>
             </div>
           )

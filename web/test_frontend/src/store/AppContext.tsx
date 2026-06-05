@@ -133,7 +133,7 @@ export function useApp() {
 function extractDisplayText(content: string): string {
   const parsed = parseMessageContent(content);
   switch (parsed.type) {
-    case 'image': return '[图片]';
+    case 'image': return parsed.text ? `[图片] ${parsed.text}` : '[图片]';
     case 'file': return `[文件] ${parsed.filename || ''}`;
     case 'voice': return `[语音] ${parsed.duration || 0}s`;
     default: return parsed.text || content;

@@ -23,3 +23,11 @@ mcp:
     initial_interval: 1   # MCP重试初始间隔(秒)
   fallback:
     enabled: true         # MCP降级开关
+
+seaweedfs:
+  filer_url: "http://127.0.0.1:8888"   # SeaweedFS Filer内网地址
+  base_path: "/chat"                    # 存储基础路径
+  public_url: "/files"                  # 公开访问URL前缀
+
+image:
+  max_size: 5242880                     # 图片最大5MB，超出则不识图

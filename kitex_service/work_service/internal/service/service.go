@@ -2,14 +2,21 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/agent"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
@@ -24,11 +31,179 @@ import (
 const botReplyTopic = "bot-reply-topic"
 
 const (
-	mcpTimeout        = 60 * time.Second
-	llmTimeout        = 120 * time.Second
-	agentTimeout      = 180 * time.Second // Agent需要多轮ChatModel+工具调用, 给更充裕的时间
-	memorySaveTimeout = 60 * time.Second
+	mcpTimeout           = 60 * time.Second
+	llmTimeout           = 120 * time.Second
+	agentTimeout         = 180 * time.Second // Agent需要多轮ChatModel+工具调用, 给更充裕的时间
+	memorySaveTimeout    = 60 * time.Second
+	imageDownloadTimeout = 30 * time.Second
 )
+
+// messageContent 消息内容的基础结构
+
+// 安全提示词：运行时动态加载，不存入数据库
+var (
+	userBotSafetyPrompt string
+	safetyPromptOnce    sync.Once
+)
+
+// loadUserBotSafetyPrompt 加载用户Bot安全提示词模板
+func loadUserBotSafetyPrompt() string {
+	safetyPromptOnce.Do(func() {
+		promptFile := config.V.GetString("ai.user_bot.safety_prompt_file")
+		if promptFile == "" {
+			klog.Warn("未配置ai.user_bot.safety_prompt_file，用户Bot安全提示词为空")
+			return
+		}
+		data, err := os.ReadFile(promptFile)
+		if err != nil {
+			klog.Warnf("读取用户Bot安全提示词文件[%s]失败: %v", promptFile, err)
+			return
+		}
+		userBotSafetyPrompt = strings.TrimSpace(string(data))
+		klog.Infof("用户Bot安全提示词加载成功，长度=%d", len(userBotSafetyPrompt))
+	})
+	return userBotSafetyPrompt
+}
+
+// buildSafeSystemPrompt 将用户prompt与安全提示词拼接，安全提示词始终追加在末尾（最高优先级）
+// 兼容旧数据：如果prompt中已包含安全词，先剥离再重新拼接
+func buildSafeSystemPrompt(userPrompt string) string {
+	safety := loadUserBotSafetyPrompt()
+	if safety == "" {
+		return userPrompt
+	}
+	// 剥离旧数据中可能已拼接的安全词，避免重复
+	cleaned := stripSafetyPrompt(userPrompt, safety)
+	if cleaned == "" {
+		return safety
+	}
+	return cleaned + "\n\n" + safety
+}
+
+// stripSafetyPrompt 从prompt中剥离已拼接的安全提示词
+func stripSafetyPrompt(prompt string, safety string) string {
+	if safety == "" || prompt == "" {
+		return prompt
+	}
+	suffix := "\n\n" + safety
+	if strings.HasSuffix(prompt, suffix) {
+		return strings.TrimSuffix(prompt, suffix)
+	}
+	if strings.HasSuffix(prompt, safety) {
+		return strings.TrimSuffix(prompt, safety)
+	}
+	return prompt
+}
+
+type messageContent struct {
+	Type string `json:"type"`
+}
+
+// imageContent 图片消息内容
+type imageContent struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+	Text string `json:"text,omitempty"` // 用户附带的文字描述
+}
+
+// parseImageContent 解析消息内容，如果是图片消息则返回图片信息
+func parseImageContent(content string) (img *imageContent, isImage bool) {
+	var base messageContent
+	if err := json.Unmarshal([]byte(content), &base); err != nil {
+		return nil, false
+	}
+	if base.Type != "image" {
+		return nil, false
+	}
+	var imgContent imageContent
+	if err := json.Unmarshal([]byte(content), &imgContent); err != nil {
+		return nil, false
+	}
+	if imgContent.URL == "" {
+		return nil, false
+	}
+	return &imgContent, true
+}
+
+// downloadImageAsBase64 从SeaweedFS下载图片并转为base64
+// 返回 base64编码数据、MIME类型、错误信息（如图片过大）
+func downloadImageAsBase64(ctx context.Context, imageURL string) (*llm.ImageData, error) {
+	v := config.V
+	filerURL := v.GetString("seaweedfs.filer_url")
+	publicURL := v.GetString("seaweedfs.public_url")
+	maxSize := v.GetInt64("image.max_size")
+	if maxSize <= 0 {
+		maxSize = 5 * 1024 * 1024 // 默认5MB
+	}
+
+	// 将公开URL转换为SeaweedFS内部URL
+	// 公开URL格式: /files/chat/data/ab/cd123.png
+	// 内部URL格式: http://127.0.0.1:8888/chat/data/ab/cd123.png
+	internalURL := imageURL
+	if publicURL != "" && strings.HasPrefix(imageURL, publicURL) {
+		internalURL = filerURL + strings.TrimPrefix(imageURL, publicURL)
+	}
+
+	downloadCtx, cancel := context.WithTimeout(ctx, imageDownloadTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, internalURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建图片下载请求失败: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("下载图片失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("下载图片失败, status=%d", resp.StatusCode)
+	}
+
+	// 检查Content-Length（如果有的话）
+	if resp.ContentLength > maxSize {
+		return nil, fmt.Errorf("图片大小(%d字节)超过限制(%d字节)，无法识别", resp.ContentLength, maxSize)
+	}
+
+	// 限制读取大小，防止读取超大文件
+	limitedReader := io.LimitReader(resp.Body, maxSize+1)
+	data, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return nil, fmt.Errorf("读取图片数据失败: %w", err)
+	}
+
+	if int64(len(data)) > maxSize {
+		return nil, fmt.Errorf("图片大小超过限制(%d字节)，无法识别", maxSize)
+	}
+
+	// 根据文件扩展名推断MIME类型
+	ext := strings.ToLower(filepath.Ext(internalURL))
+	mimeType := "image/png" // 默认
+	switch ext {
+	case ".jpg", ".jpeg":
+		mimeType = "image/jpeg"
+	case ".png":
+		mimeType = "image/png"
+	case ".gif":
+		mimeType = "image/gif"
+	case ".webp":
+		mimeType = "image/webp"
+	case ".bmp":
+		mimeType = "image/bmp"
+	}
+
+	// 如果响应头有Content-Type，优先使用
+	if ct := resp.Header.Get("Content-Type"); ct != "" && strings.HasPrefix(ct, "image/") {
+		mimeType = ct
+	}
+
+	return &llm.ImageData{
+		Base64Data: base64.StdEncoding.EncodeToString(data),
+		MIMEType:   mimeType,
+	}, nil
+}
 
 type WorkService struct {
 	llmClient   *llm.Client
@@ -133,7 +308,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	memoryCtx, memoryCancel := context.WithTimeout(ctx, mcpTimeout)
 	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, botID, searchRunID, 3)
 	memoryCancel()
-	enhancedPrompt := botCfg.SystemPrompt + mcp.BuildMemoryPrompt(memories)
+	enhancedPrompt := buildSafeSystemPrompt(botCfg.SystemPrompt) + mcp.BuildMemoryPrompt(memories)
 	knowledgeCtx, knowledgeCancel := context.WithTimeout(ctx, mcpTimeout)
 	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, botID)
 	knowledgeCancel()
@@ -175,6 +350,25 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		enhancedPrompt += "\n\n你可以使用以下工具来获取实时信息，请在需要时主动调用，不要凭记忆回答不确定的内容：\n" + strings.Join(toolHints, "\n")
 	}
 	userContent := content
+	var imageData *llm.ImageData // 图片base64数据，用于多模态消息
+
+	// 解析图片消息：如果是图片则下载转base64，否则当纯文本处理
+	if imgInfo, isImage := parseImageContent(content); isImage {
+		imgData, imgErr := downloadImageAsBase64(ctx, imgInfo.URL)
+		if imgErr != nil {
+			klog.CtxWarnf(ctx, "Bot[%d]下载图片失败: %v，将作为文本处理", botId, imgErr)
+			userContent = fmt.Sprintf("[图片加载失败: %s]", imgErr.Error())
+		} else {
+			imageData = imgData
+			// 使用用户附带的文字描述，没有则用默认提示
+			if imgInfo.Text != "" {
+				userContent = imgInfo.Text
+			} else {
+				userContent = "用户发送了一张图片，请根据图片内容进行回复。"
+			}
+		}
+	}
+
 	if quoteMsgID > 0 {
 		quoteMsgs, quoteErr := rpc.GetHistory(ctx, botCfg.UserID, conversationId, 50)
 		if quoteErr != nil {
@@ -197,7 +391,21 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 						quoteSenderName = names[0].Name
 					}
 				}
-				userContent = fmt.Sprintf("[引用 %s 的消息]: %s\n\n%s", quoteSenderName, quoteMsg.Content, content)
+				// 解析引用消息：如果是图片则下载转base64，否则当纯文本
+				quoteText := quoteMsg.Content
+				if quoteImgInfo, isQuoteImage := parseImageContent(quoteMsg.Content); isQuoteImage {
+					quoteImgData, quoteImgErr := downloadImageAsBase64(ctx, quoteImgInfo.URL)
+					if quoteImgErr != nil {
+						quoteText = fmt.Sprintf("[图片加载失败: %s]", quoteImgErr.Error())
+					} else {
+						// 引用的图片优先作为主图片数据传给LLM（如果当前消息没有图片）
+						if imageData == nil {
+							imageData = quoteImgData
+						}
+						quoteText = "[图片]"
+					}
+				}
+				userContent = fmt.Sprintf("[引用 %s 的消息]: %s\n\n%s", quoteSenderName, quoteText, userContent)
 			}
 		}
 	}
@@ -210,6 +418,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		SystemPrompt: enhancedPrompt,
 		McpServers:   mcpServers,
 		UserContent:  userContent,
+		ImageData:    imageData,
 	})
 	if err != nil {
 		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)
@@ -253,7 +462,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 				chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: msgContent})
 			}
 		}
-		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent)
+		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent, imageData)
 		if llmErr != nil {
 			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
 			return fmt.Sprint("抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?")
@@ -261,7 +470,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		go func() {
 			saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 			defer cancel()
-			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, llmResult)
+			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, llmResult)
 			saveRunID := ""
 			if isGroupChat {
 				saveRunID = runID
@@ -273,7 +482,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	go func() {
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 		defer cancel()
-		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", content, agentResult)
+		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, agentResult)
 		saveRunID := ""
 		if isGroupChat {
 			saveRunID = runID
@@ -361,7 +570,7 @@ func (svc *WorkService) SummarizeConversation(ctx context.Context, conversationI
 	userContent := fmt.Sprintf("请总结以下聊天记录：\n\n%s", formattedHistory)
 	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
 	defer cancel()
-	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent)
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent, nil)
 	if llmErr != nil {
 		return "", fmt.Errorf("生成总结失败: %w", llmErr)
 	}
@@ -410,7 +619,7 @@ func (svc *WorkService) SuggestReplies(ctx context.Context, conversationId, user
 	userContent := fmt.Sprintf("对话上下文（按时间顺序排列，序号越大越新）：\n%s\n\n请为「%s」针对最新消息生成3条回复候选：", formattedHistory, userName)
 	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
 	defer cancel()
-	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent)
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, userContent, nil)
 	if llmErr != nil {
 		return nil, fmt.Errorf("生成回复候选失败: %w", llmErr)
 	}
@@ -447,7 +656,7 @@ func (svc *WorkService) TranslateMessage(ctx context.Context, content, targetLan
 4. 如果原文包含多种语言，将所有内容统一翻译为目标语言`, targetLang)
 	llmCtx, cancel := context.WithTimeout(ctx, llmTimeout)
 	defer cancel()
-	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, content)
+	result, llmErr := svc.llmClient.Chat(llmCtx, apiKey, baseURL, model, systemPrompt, nil, content, nil)
 	if llmErr != nil {
 		return "", fmt.Errorf("翻译失败: %w", llmErr)
 	}
