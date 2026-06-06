@@ -51,9 +51,7 @@ _config = {
         "provider": "openai",
         "config": {
             "model": os.getenv("LLM_MODEL", "deepseek-v4-flash"),
-            "openai_base_url": os.getenv(
-                "LLM_BASE_URL", "https://api.deepseek.com/v1"
-            ),
+            "openai_base_url": os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1"),
             "api_key": _llm_api_key,
         },
     },
@@ -223,11 +221,13 @@ def search_memories(
         if isinstance(results, dict) and "results" in results:
             results = results["results"]
         results.sort(
-            key=lambda m: 1
-            if isinstance(m, dict)
-            and isinstance(m.get("metadata"), dict)
-            and m["metadata"].get("source") == "fallback"
-            else 0
+            key=lambda m: (
+                1
+                if isinstance(m, dict)
+                and isinstance(m.get("metadata"), dict)
+                and m["metadata"].get("source") == "fallback"
+                else 0
+            )
         )
         logger.info("search_memories 结果数: %d", len(results))
         return json.dumps(results, ensure_ascii=False, default=str)
