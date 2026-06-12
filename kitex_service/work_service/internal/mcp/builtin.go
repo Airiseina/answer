@@ -58,9 +58,10 @@ func GetBuiltinServerConfigs() []ServerConfig {
 }
 
 func FilterAgentServers(servers []ServerConfig) []ServerConfig {
+	// 不再过滤knowledge，让Eino Agent可以直接调用search_knowledge工具
+	// 实现Self-RAG：Agent自行决定是否检索知识库、是否需要重新检索
 	internalNames := map[string]bool{
-		"mem0":      true,
-		"knowledge": true,
+		"mem0": true,
 	}
 	filtered := make([]ServerConfig, 0, len(servers))
 	for _, s := range servers {

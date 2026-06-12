@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -33,6 +35,7 @@ type KnowledgeService struct {
 	snow        *snowflake.Node
 	kafkaBroker string
 	kafkaTopic  string
+	rerank      *Reranker
 }
 
 func NewKnowledgeService(
@@ -43,6 +46,7 @@ func NewKnowledgeService(
 	meilisearchDao *meilisearch.MeilisearchDao,
 	kafkaBroker string,
 	kafkaTopic string,
+	reranker *Reranker,
 ) *KnowledgeService {
 	return &KnowledgeService{
 		kbDao:       kbDao,
@@ -53,6 +57,7 @@ func NewKnowledgeService(
 		snow:        snowflake.NewNode(6),
 		kafkaBroker: kafkaBroker,
 		kafkaTopic:  kafkaTopic,
+		rerank:      reranker,
 	}
 }
 
@@ -382,7 +387,19 @@ func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, qu
 	}
 
 	// RRF融合排序
-	return rrfFusion(vectorResults, bm25Results, topK), nil
+	rrfResults := rrfFusion(vectorResults, bm25Results, topK)
+
+	// Rerank精排：对RRF粗排结果进行二次精排，只保留最相关的Top-N
+	if svc.rerank != nil && svc.rerank.Enabled() {
+		reranked, rerankErr := svc.rerank.Rerank(ctx, query, rrfResults)
+		if rerankErr != nil {
+			klog.Warnf("Rerank精排失败，降级使用RRF结果: %v", rerankErr)
+			return rrfResults, nil
+		}
+		return reranked, nil
+	}
+
+	return rrfResults, nil
 }
 
 // vectorSearch 纯向量检索（Qdrant）
@@ -712,4 +729,227 @@ func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
 
 func (svc *KnowledgeService) RepublishDocParse(docID int64, kbID int64) error {
 	return svc.publishDocParse(docID, kbID)
+}
+
+// Reranker Rerank精排模型客户端
+// 支持两种模式:
+//   - jina: 调用Jina Reranker API（云端，无需下载模型，适合开发环境）
+//   - vllm: 调用vLLM部署的BGE-Reranker /score API（本地GPU，适合生产环境）
+//
+// 在RRF粗排后对候选文档进行精准打分精排，只保留最相关的Top-N结果
+type Reranker struct {
+	baseURL string
+	model   string
+	topN    int
+	enabled bool
+	mode    string // "jina" 或 "vllm"
+	apiKey  string // Jina API Key（jina模式必填）
+	client  *http.Client
+}
+
+func NewReranker(baseURL, model string, topN int, enabled bool, mode, apiKey string) *Reranker {
+	if !enabled {
+		return &Reranker{enabled: false}
+	}
+	// 默认使用jina模式
+	if mode == "" {
+		mode = "jina"
+	}
+	return &Reranker{
+		baseURL: baseURL,
+		model:   model,
+		topN:    topN,
+		enabled: true,
+		mode:    mode,
+		apiKey:  apiKey,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+func (r *Reranker) Enabled() bool {
+	return r != nil && r.enabled
+}
+
+// rerankVLLMRequest vLLM /score API请求体
+type rerankVLLMRequest struct {
+	Model string   `json:"model"`
+	Text1 string   `json:"text_1"`
+	Text2 []string `json:"text_2"`
+}
+
+// rerankVLLMResponse vLLM /score API响应体
+type rerankVLLMResponse struct {
+	ID   string `json:"id"`
+	Data []struct {
+		Index int     `json:"index"`
+		Score float64 `json:"score"`
+	} `json:"data"`
+}
+
+// rerankJinaRequest Jina Reranker API请求体
+type rerankJinaRequest struct {
+	Model     string   `json:"model"`
+	Query     string   `json:"query"`
+	Documents []string `json:"documents"`
+	TopN      int      `json:"top_n"`
+}
+
+// rerankJinaResponse Jina Reranker API响应体
+type rerankJinaResponse struct {
+	Model   string `json:"model"`
+	Results []struct {
+		Index          int     `json:"index"`
+		RelevanceScore float64 `json:"relevance_score"`
+	} `json:"results"`
+}
+
+// Rerank 对RRF粗排结果进行精排，返回Top-N最相关结果
+func (r *Reranker) Rerank(ctx context.Context, query string, results []SearchResult) ([]SearchResult, error) {
+	if len(results) == 0 {
+		return results, nil
+	}
+
+	// 构建候选文档列表
+	documents := make([]string, 0, len(results))
+	for _, res := range results {
+		documents = append(documents, res.Content)
+	}
+
+	var scoreMap map[int]float64
+	var err error
+
+	switch r.mode {
+	case "jina":
+		scoreMap, err = r.rerankJina(ctx, query, documents)
+	case "vllm":
+		scoreMap, err = r.rerankVLLM(ctx, query, documents)
+	default:
+		return nil, fmt.Errorf("不支持的rerank模式: %s (支持: jina, vllm)", r.mode)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 按rerank得分降序排列
+	type scoredResult struct {
+		SearchResult
+		rerankScore float64
+	}
+	scored := make([]scoredResult, 0, len(results))
+	for i, res := range results {
+		score := scoreMap[i] // 未返回的默认0分
+		scored = append(scored, scoredResult{
+			SearchResult: res,
+			rerankScore:  score,
+		})
+	}
+	sort.Slice(scored, func(i, j int) bool {
+		return scored[i].rerankScore > scored[j].rerankScore
+	})
+
+	// 截取Top-N
+	topN := r.topN
+	if topN > len(scored) {
+		topN = len(scored)
+	}
+	scored = scored[:topN]
+
+	// 更新Score为rerank得分
+	finalResults := make([]SearchResult, 0, topN)
+	for _, s := range scored {
+		s.Score = s.rerankScore
+		finalResults = append(finalResults, s.SearchResult)
+	}
+
+	klog.Infof("Rerank精排完成(mode=%s): 输入%d条, 输出%d条", r.mode, len(results), topN)
+	return finalResults, nil
+}
+
+// rerankVLLM 调用vLLM部署的BGE-Reranker /score API
+func (r *Reranker) rerankVLLM(ctx context.Context, query string, documents []string) (map[int]float64, error) {
+	reqBody := rerankVLLMRequest{
+		Model: r.model,
+		Text1: query,
+		Text2: documents,
+	}
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("序列化rerank请求失败: %w", err)
+	}
+
+	url := strings.TrimRight(r.baseURL, "/") + "/score"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(body)))
+	if err != nil {
+		return nil, fmt.Errorf("创建rerank请求失败: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("调用rerank服务失败: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("rerank服务返回非200状态码: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var rerankResp rerankVLLMResponse
+	if err := json.NewDecoder(resp.Body).Decode(&rerankResp); err != nil {
+		return nil, fmt.Errorf("解析rerank响应失败: %w", err)
+	}
+
+	scoreMap := make(map[int]float64)
+	for _, item := range rerankResp.Data {
+		scoreMap[item.Index] = item.Score
+	}
+	return scoreMap, nil
+}
+
+// rerankJina 调用Jina Reranker API（云端，无需本地部署模型）
+func (r *Reranker) rerankJina(ctx context.Context, query string, documents []string) (map[int]float64, error) {
+	reqBody := rerankJinaRequest{
+		Model:     r.model,
+		Query:     query,
+		Documents: documents,
+		TopN:      r.topN,
+	}
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("序列化jina rerank请求失败: %w", err)
+	}
+
+	url := strings.TrimRight(r.baseURL, "/") + "/rerank"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(body)))
+	if err != nil {
+		return nil, fmt.Errorf("创建jina rerank请求失败: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.apiKey)
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("调用jina rerank服务失败: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("jina rerank服务返回非200状态码: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var jinaResp rerankJinaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&jinaResp); err != nil {
+		return nil, fmt.Errorf("解析jina rerank响应失败: %w", err)
+	}
+
+	scoreMap := make(map[int]float64)
+	for _, item := range jinaResp.Results {
+		scoreMap[item.Index] = item.RelevanceScore
+	}
+	return scoreMap, nil
 }

@@ -38,3 +38,14 @@ seaweedfs:
 embedding:
   api_key: ""
   model: "doubao-embedding-vision-251215"
+
+rerank:
+  enabled: true
+  # 模式: jina(云端API,免下载模型) 或 vllm(本地GPU部署)
+  mode: "jina"
+  # jina模式: base_url=https://api.jina.ai/v1, model=jina-reranker-v2-base-multilingual
+  # vllm模式: base_url=http://localhost:8010/v1, model=BAAI/bge-reranker-v2-m3
+  base_url: "https://api.jina.ai/v1"
+  model: "jina-reranker-v2-base-multilingual"
+  top_n: 3
+  api_key: ""

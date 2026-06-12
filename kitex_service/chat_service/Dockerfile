@@ -15,7 +15,7 @@ COPY kitex_service/chat_service/ kitex_service/chat_service/
 WORKDIR /app/kitex_service/chat_service
 RUN go mod tidy && go build -o /chat_service .
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /chat_service /chat_service
 EXPOSE 4322

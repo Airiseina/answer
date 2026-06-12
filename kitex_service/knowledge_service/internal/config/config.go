@@ -29,4 +29,10 @@ func GetConfig() {
 	V.SetDefault("embedding.api_key", "")
 	V.SetDefault("embedding.base_url", "https://ark.cn-beijing.volces.com/api/v3")
 	V.SetDefault("embedding.model", "doubao-embedding-vision-251215")
+	V.SetDefault("rerank.enabled", false)
+	V.SetDefault("rerank.mode", "jina")
+	V.SetDefault("rerank.base_url", "https://api.jina.ai/v1")
+	V.SetDefault("rerank.model", "jina-reranker-v2-base-multilingual")
+	V.SetDefault("rerank.top_n", 3)
+	V.SetDefault("rerank.api_key", "")
 }

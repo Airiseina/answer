@@ -78,7 +78,15 @@ func main() {
 	bkDao := dal.NewBotKnowledgeDao(db)
 	kafkaBroker := v.GetString("kafka.brokers")
 	kafkaTopic := v.GetString("kafka.topic.doc_parse")
-	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, meilisearchDao, kafkaBroker, kafkaTopic)
+	reranker := service.NewReranker(
+		v.GetString("rerank.base_url"),
+		v.GetString("rerank.model"),
+		v.GetInt("rerank.top_n"),
+		v.GetBool("rerank.enabled"),
+		v.GetString("rerank.mode"),
+		v.GetString("rerank.api_key"),
+	)
+	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, meilisearchDao, kafkaBroker, kafkaTopic, reranker)
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4326")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)

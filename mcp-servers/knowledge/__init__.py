@@ -37,6 +37,13 @@ _mysql_db = os.getenv("MYSQL_DB", "answer")
 _meilisearch_host = os.getenv("MEILISEARCH_HOST", "http://answer_meilisearch:7700")
 _meilisearch_api_key = os.getenv("MEILISEARCH_API_KEY", "")
 
+_rerank_enabled = os.getenv("RERANK_ENABLED", "false").lower() == "true"
+_rerank_mode = os.getenv("RERANK_MODE", "jina")  # jina(云端API) 或 vllm(本地GPU)
+_rerank_base_url = os.getenv("RERANK_BASE_URL", "https://api.jina.ai/v1")
+_rerank_model = os.getenv("RERANK_MODEL", "jina-reranker-v2-base-multilingual")
+_rerank_top_n = int(os.getenv("RERANK_TOP_N", "3"))
+_rerank_api_key = os.getenv("RERANK_API_KEY", "")
+
 logger.info("knowledge MCP Server 配置:")
 logger.info("  KnowledgeService: %s", _knowledge_service_addr)
 logger.info("  MySQL: %s:%d/%s", _mysql_host, _mysql_port, _mysql_db)
@@ -53,6 +60,14 @@ logger.info(
     _embedding_model,
     _embedding_base_url,
     _embedding_dims,
+)
+logger.info(
+    "  Rerank: enabled=%s, mode=%s, base_url=%s, model=%s, top_n=%d",
+    _rerank_enabled,
+    _rerank_mode,
+    _rerank_base_url,
+    _rerank_model,
+    _rerank_top_n,
 )
 
 _http_client: Optional[httpx.Client] = None
@@ -241,6 +256,85 @@ def _rrf_fusion(
     return results
 
 
+def _rerank(query: str, results: list, top_n: int = 3) -> list:
+    """Rerank精排：对RRF粗排结果进行精准打分精排
+
+    支持两种模式:
+    - jina: 调用Jina Reranker API（云端，无需下载模型，适合开发环境）
+    - vllm: 调用vLLM部署的BGE-Reranker /score API（本地GPU，适合生产环境）
+    """
+    if not _rerank_enabled or not results:
+        return results
+
+    documents = [r.get("content", "") for r in results]
+    if not any(documents):
+        return results
+
+    try:
+        client = _get_http_client()
+
+        if _rerank_mode == "jina":
+            # Jina Reranker API模式
+            url = f"{_rerank_base_url.rstrip('/')}/rerank"
+            payload = {
+                "model": _rerank_model,
+                "query": query,
+                "documents": documents,
+                "top_n": top_n,
+            }
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {_rerank_api_key}",
+            }
+            resp = client.post(url, json=payload, headers=headers, timeout=30.0)
+            resp.raise_for_status()
+            data = resp.json()
+
+            scored_results = []
+            for item in data.get("results", []):
+                idx = item.get("index", 0)
+                score = item.get("relevance_score", 0.0)
+                if idx < len(results):
+                    result = dict(results[idx])
+                    result["score"] = score
+                    scored_results.append(result)
+        else:
+            # vLLM /score API模式
+            url = f"{_rerank_base_url.rstrip('/')}/score"
+            payload = {
+                "model": _rerank_model,
+                "text_1": query,
+                "text_2": documents,
+            }
+            resp = client.post(url, json=payload, timeout=30.0)
+            resp.raise_for_status()
+            data = resp.json()
+
+            scored_results = []
+            for item in data.get("data", []):
+                idx = item.get("index", 0)
+                score = item.get("score", 0.0)
+                if idx < len(results):
+                    result = dict(results[idx])
+                    result["score"] = score
+                    scored_results.append(result)
+
+        scored_results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+
+        # 截取Top-N
+        final = scored_results[:top_n]
+        logger.info(
+            "Rerank精排完成(mode=%s): 输入%d条, 输出%d条",
+            _rerank_mode,
+            len(results),
+            len(final),
+        )
+        return final
+    except Exception as e:
+        logger.error("Rerank精排失败，降级使用RRF结果: %s", e)
+        return results
+
+
 @mcp.tool()
 def search_knowledge(
     query: str,
@@ -285,6 +379,10 @@ def search_knowledge(
         else:
             # BM25检索失败，降级使用向量检索结果
             results = vector_results
+
+        # Rerank精排：对RRF粗排结果进行二次精排，只保留最相关的Top-N
+        if _rerank_enabled and results:
+            results = _rerank(query, results, _rerank_top_n)
 
         return json.dumps(results, ensure_ascii=False, default=str)
     except Exception as e:

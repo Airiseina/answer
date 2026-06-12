@@ -300,6 +300,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	userID := fmt.Sprintf("%d", senderId)
 	botID := fmt.Sprintf("%d", botId)
 	runID := fmt.Sprintf("%d", conversationId)
+	var kbIDs []string // 知识库ID列表，用于RAGAS评估
 	searchRunID := ""
 	if isGroupChat {
 		searchRunID = runID
@@ -308,24 +309,44 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	memories := mcp.SearchMemories(memoryCtx, svc.mcpPool, content, userID, botID, searchRunID, 3)
 	memoryCancel()
 	enhancedPrompt := buildSafeSystemPrompt(botCfg.SystemPrompt) + mcp.BuildMemoryPrompt(memories)
+
+	// Self-RAG架构：不再预检索知识库拼入system prompt
+	// 而是将知识库检索作为MCP工具暴露给Eino Agent，让Agent自行决定：
+	// 1. 是否需要检索（Retrieve决策）
+	// 2. 检索结果是否相关（IS_REL判断）
+	// 3. 是否需要重新检索（重新检索决策）
+	// 4. 答案是否被知识库支撑（IS_SUP自检）
 	knowledgeCtx, knowledgeCancel := context.WithTimeout(ctx, mcpTimeout)
 	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, botID)
 	knowledgeCancel()
+	klog.Infof("MCP知识库: GetBotKnowledgeBases(botID=%s) 返回长度=%d, 内容前200字符=%q", botID, len(kbResult), truncateStr(kbResult, 200))
 	if kbResult != "" {
 		var kbList struct {
 			KnowledgeBases []struct {
-				Id int64 `json:"id"`
+				Id   int64  `json:"id"`
+				Name string `json:"name"`
 			} `json:"knowledge_bases"`
 		}
-		if err := json.Unmarshal([]byte(kbResult), &kbList); err == nil && len(kbList.KnowledgeBases) > 0 {
-			var kbIDs []string
+		if err := json.Unmarshal([]byte(kbResult), &kbList); err != nil {
+			klog.Warnf("MCP知识库: 解析kbResult失败: %v, 原始内容=%q", err, truncateStr(kbResult, 200))
+		} else if len(kbList.KnowledgeBases) > 0 {
+			var kbInfo []string
+			for _, kb := range kbList.KnowledgeBases {
+				kbInfo = append(kbInfo, fmt.Sprintf("知识库「%s」(ID: %d)", kb.Name, kb.Id))
+			}
 			for _, kb := range kbList.KnowledgeBases {
 				kbIDs = append(kbIDs, fmt.Sprintf("%d", kb.Id))
 			}
-			searchCtx, searchCancel := context.WithTimeout(ctx, mcpTimeout)
-			knowledgeResult := mcp.SearchKnowledge(searchCtx, svc.mcpPool, content, strings.Join(kbIDs, ","), 5)
-			searchCancel()
-			enhancedPrompt += mcp.BuildKnowledgePrompt(knowledgeResult)
+			enhancedPrompt += fmt.Sprintf(
+				"\n\n[知识库信息]\n你可以访问以下知识库：%s\n知识库ID列表：%s\n\n"+
+					"Self-RAG检索策略：\n"+
+					"1. 当用户的问题可能涉及知识库中的内容时，请使用search_knowledge工具检索，不要凭记忆猜测\n"+
+					"2. 如果检索结果与问题不相关，可以尝试换一个关键词重新检索\n"+
+					"3. 如果知识库中没有相关信息，请根据你的知识回答，并说明信息来源\n"+
+					"4. 如果检索结果足够回答问题，请基于检索结果回答，不要添加未在检索结果中出现的信息",
+				strings.Join(kbInfo, "、"),
+				strings.Join(kbIDs, ","),
+			)
 		}
 	}
 	if botCfg.Name != "" {
@@ -481,14 +502,26 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	go func() {
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 		defer cancel()
-		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, agentResult)
+		memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, agentResult.Content)
 		saveRunID := ""
 		if isGroupChat {
 			saveRunID = runID
 		}
 		mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
 	}()
-	return agentResult
+
+	// 异步提交RAGAS评估：当Agent使用了知识库检索时，自动评估回答质量
+	ragasURL := config.V.GetString("ragas_eval.url")
+	klog.Infof("RAGAS评估检查: Contexts数量=%d, ragas_eval.url=%s", len(agentResult.Contexts), ragasURL)
+	if len(agentResult.Contexts) > 0 && ragasURL != "" {
+		go func() {
+			evalCtx, evalCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer evalCancel()
+			SubmitRAGASEvaluation(evalCtx, ragasURL, userContent, agentResult.Content, agentResult.Contexts, kbIDs)
+		}()
+	}
+
+	return agentResult.Content
 }
 
 func (svc *WorkService) getSystemBotLLMConfig(ctx context.Context) (apiKey, baseURL, model string, err error) {
@@ -660,4 +693,103 @@ func (svc *WorkService) TranslateMessage(ctx context.Context, content, targetLan
 		return "", fmt.Errorf("翻译失败: %w", llmErr)
 	}
 	return result, nil
+}
+
+// SubmitRAGASEvaluation 异步提交RAGAS评估请求
+// 当Agent使用了知识库检索时，自动将(question, answer, contexts)提交给RAGAS评估服务
+// 提交后自动轮询评估结果并打印到日志
+func SubmitRAGASEvaluation(ctx context.Context, ragasURL, question, answer string, contexts []string, kbIDs []string) {
+	// 构建评估请求体
+	reqBody := map[string]interface{}{
+		"dataset": map[string]interface{}{
+			"samples": []map[string]interface{}{
+				{
+					"question":     question,
+					"answer":       answer,
+					"contexts":     contexts,
+					"ground_truth": "", // 自动评估时无ground_truth，仅评估faithfulness
+				},
+			},
+			"kb_ids": strings.Join(kbIDs, ","),
+		},
+		"metrics": []string{"faithfulness"}, // 自动评估仅用faithfulness（不需要ground_truth）
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		klog.Warnf("RAGAS评估: 序列化请求体失败: %v", err)
+		return
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), "POST", ragasURL+"/evaluate", strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		klog.Warnf("RAGAS评估: 创建请求失败: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		klog.Warnf("RAGAS评估: 提交评估请求失败: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		klog.Warnf("RAGAS评估: 提交失败, status=%d, response=%s", resp.StatusCode, string(respBody))
+		return
+	}
+
+	// 解析eval_id
+	var evalResp struct {
+		EvalID string `json:"eval_id"`
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(respBody, &evalResp); err != nil || evalResp.EvalID == "" {
+		klog.Warnf("RAGAS评估: 解析响应失败: %v, body=%s", err, string(respBody))
+		return
+	}
+	klog.Infof("RAGAS评估: 提交成功, eval_id=%s, question=%q", evalResp.EvalID, truncateStr(question, 50))
+
+	// 轮询评估结果（最多等待120秒）
+	for i := 0; i < 24; i++ {
+		time.Sleep(5 * time.Second)
+		resultReq, _ := http.NewRequestWithContext(context.Background(), "GET", ragasURL+"/evaluate/"+evalResp.EvalID, nil)
+		resultResp, err := http.DefaultClient.Do(resultReq)
+		if err != nil {
+			klog.Warnf("RAGAS评估: 查询结果失败: %v", err)
+			continue
+		}
+		resultBody, _ := io.ReadAll(resultResp.Body)
+		resultResp.Body.Close()
+
+		var result struct {
+			EvalID  string             `json:"eval_id"`
+			Status  string             `json:"status"`
+			Metrics map[string]float64 `json:"metrics"`
+			Error   string             `json:"error"`
+		}
+		if err := json.Unmarshal(resultBody, &result); err != nil {
+			klog.Warnf("RAGAS评估: 解析结果失败: %v", err)
+			continue
+		}
+
+		if result.Status == "completed" {
+			klog.Infof("RAGAS评估: 评估完成, eval_id=%s, metrics=%v", result.EvalID, result.Metrics)
+			return
+		} else if result.Status == "failed" {
+			klog.Warnf("RAGAS评估: 评估失败, eval_id=%s, error=%s", result.EvalID, result.Error)
+			return
+		}
+		// status == "running", 继续轮询
+	}
+	klog.Warnf("RAGAS评估: 轮询超时, eval_id=%s", evalResp.EvalID)
+}
+
+func truncateStr(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }

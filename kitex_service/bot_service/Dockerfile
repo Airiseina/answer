@@ -19,7 +19,7 @@ COPY kitex_service/bot_service/ kitex_service/bot_service/
 WORKDIR /app/kitex_service/bot_service
 RUN go mod tidy && go build -o /bot_service .
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /bot_service /bot_service
 COPY --from=builder /app/kitex_service/bot_service/avatar/ /avatar/

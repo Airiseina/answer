@@ -182,6 +182,12 @@ services:
        - MEILISEARCH_HOST=http://answer_meilisearch:7700
        - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
        - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+       - RERANK_ENABLED=${RERANK_ENABLED:-false}
+       - RERANK_MODE=${RERANK_MODE:-jina}
+       - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.jina.ai/v1}
+       - RERANK_MODEL=${RERANK_MODEL:-jina-reranker-v2-base-multilingual}
+       - RERANK_TOP_N=${RERANK_TOP_N:-3}
+       - RERANK_API_KEY=${RERANK_API_KEY:-}
      networks:
        - answer-net
      depends_on:
@@ -241,6 +247,7 @@ services:
       - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
       - SEAWEEDFS_BASE_PATH=/chat
       - SEAWEEDFS_PUBLIC_URL=/files
+      - RAGAS_EVAL_URL=http://answer_ragas_eval:8090
     networks:
       - answer-net
     depends_on:
@@ -583,10 +590,54 @@ services:
       - EMBEDDING_BASE_URL=${KNOWLEDGE_EMBEDDING_BASE_URL}
       - EMBEDDING_API_KEY=${KNOWLEDGE_DOUBAO_EMBEDDING_API_KEY}
       - EMBEDDING_DIMS=${KNOWLEDGE_EMBEDDING_DIMS}
+      - RERANK_ENABLED=${RERANK_ENABLED:-false}
+      - RERANK_MODE=${RERANK_MODE:-jina}
+      - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.jina.ai/v1}
+      - RERANK_MODEL=${RERANK_MODEL:-jina-reranker-v2-base-multilingual}
+      - RERANK_TOP_N=${RERANK_TOP_N:-3}
+      - RERANK_API_KEY=${RERANK_API_KEY:-}
     networks:
       - answer-net
     depends_on:
       - meilisearch
+    restart: unless-stopped
+
+  # ==========================================
+  # Rerank 精排服务 (vLLM + BGE-Reranker)
+  # 通过vLLM部署BGE-Reranker，提供/score API进行精准打分精排
+  # 仅在生产环境GPU可用时启用，开发环境使用Jina API模式
+  # 启用方式: 设置 RERANK_MODE=vllm 并 docker compose --profile rerank up -d
+  # ==========================================
+  rerank:
+    image: vllm/vllm-openai:latest
+    container_name: answer_rerank
+    profiles:
+      - rerank
+    ports:
+      - "8010:8000"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    command:
+      - serve
+      - ${RERANK_MODEL:-BAAI/bge-reranker-v2-m3}
+      - --task
+      - score
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --trust-remote-code
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - rerank_model_cache:/root/.cache/huggingface
+    networks:
+      - answer-net
     restart: unless-stopped
 
   # ==========================================
@@ -641,6 +692,36 @@ services:
     depends_on:
       - prometheus
 
+  # ==========================================
+  # RAGAS 评估服务 (Docker化)
+  # 提供REST API对RAG系统进行自动化评估
+  # 评估指标: faithfulness, answer_relevance, context_precision, context_recall
+  # ==========================================
+  ragas-eval:
+    build:
+      context: ../mcp-servers/ragas-eval
+      dockerfile: Dockerfile
+    container_name: answer_ragas_eval
+    profiles:
+      - eval
+    ports:
+      - "8090:8090"
+    environment:
+      - KNOWLEDGE_RPC_ADDR=http://answer_knowledge_service:4326
+      - KNOWLEDGE_SERVICE_ADDR=http://answer_mcp_knowledge:8001
+      - LLM_API_KEY=${RAGAS_LLM_API_KEY}
+      - LLM_BASE_URL=${RAGAS_LLM_BASE_URL:-https://api.openai.com/v1}
+      - LLM_MODEL=${RAGAS_LLM_MODEL:-gpt-4o-mini}
+      - EMBEDDING_API_KEY=${RAGAS_EMBEDDING_API_KEY}
+      - EMBEDDING_BASE_URL=${RAGAS_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      - EMBEDDING_MODEL=${RAGAS_EMBEDDING_MODEL:-text-embedding-3-small}
+    networks:
+      - answer-net
+    depends_on:
+      - knowledge-service
+      - mcp-knowledge
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   mysql_data:
@@ -655,6 +736,7 @@ volumes:
   mem0_postgres_data:
   clickhouse_data:
   clickhouse_logs:
+  rerank_model_cache:
 
 networks:
   answer-net:

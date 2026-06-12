@@ -17,7 +17,7 @@ COPY kitex_service/group_service/ kitex_service/group_service/
 WORKDIR /app/kitex_service/group_service
 RUN go mod tidy && go build -o /group_service .
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /group_service /group_service
 EXPOSE 4321

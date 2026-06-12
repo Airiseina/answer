@@ -20,9 +20,10 @@ import (
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 )
 
-// MaxStep=8: 一次循环=ChatModel+Tools=2步, 8步最多3个循环(3次工具调用), 最后一步ChatModel返回结果
-// 对于聊天场景, 3次工具调用足够(搜索+查询+总结), 避免Agent陷入无限循环
-const maxReActSteps = 8
+// MaxStep=12: Self-RAG架构下Agent需要更多步骤进行多轮检索决策
+// 一次循环=ChatModel+Tools=2步, 12步最多5个循环(5次工具调用)
+// Self-RAG可能需要: 检索知识库→判断相关性→重新检索→生成答案, 需要更多步骤
+const maxReActSteps = 12
 
 const (
 	llmTimeout = 120 * time.Second
@@ -47,7 +48,13 @@ type AgentRunConfig struct {
 	ImageData    *llm.ImageData // 图片数据，非nil时构造多模态消息
 }
 
-func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
+// AgentResult Agent执行结果
+type AgentResult struct {
+	Content  string   // Agent生成的回答
+	Contexts []string // search_knowledge工具返回的检索上下文
+}
+
+func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, error) {
 	chatModel, err := einomodel.NewChatModel(ctx, &einomodel.ChatModelConfig{
 		APIKey:  cfg.APIKey,
 		BaseURL: cfg.BaseURL,
@@ -55,7 +62,7 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 		Timeout: llmTimeout,
 	})
 	if err != nil {
-		return "", fmt.Errorf("创建ChatModel失败: %w", err)
+		return nil, fmt.Errorf("创建ChatModel失败: %w", err)
 	}
 
 	toolsConfig := compose.ToolsNodeConfig{}
@@ -97,11 +104,18 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 			OnEnd: func(ctx context.Context, info *callbacks.RunInfo, output *tool.CallbackOutput) context.Context {
 				stepCounter.toolCalls++
 				toolName := info.Name
+				toolType := info.Type
 				outputLen := 0
 				if output != nil {
 					outputLen = len(output.Response)
+					// 捕获所有工具输出，用于RAGAS评估
+					// 注意: info.Name在ReAct Agent中可能是节点名(如"Tools")而非工具名
+					if output.Response != "" {
+						stepCounter.knowledgeContexts = append(stepCounter.knowledgeContexts, output.Response)
+						klog.Infof("Agent工具输出: Name=%s, Type=%s, 长度=%d, 前300字符=%q", toolName, toolType, outputLen, truncateStr(output.Response, 300))
+					}
 				}
-				klog.Infof("Agent步骤[%d]: 工具[%s]执行完成, 输出长度=%d", stepCounter.toolCalls, toolName, outputLen)
+				klog.Infof("Agent步骤[%d]: 工具执行完成(Name=%s, Type=%s), 输出长度=%d", stepCounter.toolCalls, toolName, toolType, outputLen)
 				return ctx
 			},
 			OnError: func(ctx context.Context, info *callbacks.RunInfo, err error) context.Context {
@@ -118,7 +132,7 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 		MaxStep:          maxReActSteps,
 	})
 	if err != nil {
-		return "", fmt.Errorf("创建ReAct Agent失败: %w", err)
+		return nil, fmt.Errorf("创建ReAct Agent失败: %w", err)
 	}
 	var messages []*schema.Message
 	if cfg.SystemPrompt != "" {
@@ -161,17 +175,28 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (string, error) {
 		klog.Errorf("Agent执行失败(耗时%v, 模型调用%d次(错误%d次), 工具调用%d次(错误%d次)): %v",
 			time.Since(start), stepCounter.modelCalls, stepCounter.modelErrors,
 			stepCounter.toolCalls, stepCounter.toolErrors, err)
-		return "", fmt.Errorf("ReAct Agent执行失败: %w", err)
+		return nil, fmt.Errorf("ReAct Agent执行失败: %w", err)
 	}
 
 	klog.Infof("Agent执行完成(耗时%v, 模型调用%d次, 工具调用%d次)",
 		time.Since(start), stepCounter.modelCalls, stepCounter.toolCalls)
-	return result.Content, nil
+	return &AgentResult{
+		Content:  result.Content,
+		Contexts: stepCounter.knowledgeContexts,
+	}, nil
 }
 
 type agentStepCounter struct {
-	modelCalls  int
-	modelErrors int
-	toolCalls   int
-	toolErrors  int
+	modelCalls        int
+	modelErrors       int
+	toolCalls         int
+	toolErrors        int
+	knowledgeContexts []string // search_knowledge工具返回的上下文
+}
+
+func truncateStr(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }

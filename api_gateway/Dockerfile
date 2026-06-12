@@ -25,7 +25,7 @@ COPY api_gateway/ api_gateway/
 WORKDIR /app/api_gateway
 RUN go mod tidy && go build -o /api_gateway ./cmd/
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /api_gateway /api_gateway
 EXPOSE 1234

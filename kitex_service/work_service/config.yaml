@@ -31,3 +31,6 @@ seaweedfs:
 
 image:
   max_size: 5242880                     # 图片最大5MB，超出则不识图
+
+ragas_eval:
+  url: "http://localhost:8090"          # RAGAS评估服务地址，留空则禁用自动评估

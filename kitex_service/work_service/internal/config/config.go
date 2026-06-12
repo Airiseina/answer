@@ -27,4 +27,5 @@ func GetConfig() {
 	V.SetDefault("seaweedfs.public_url", "/files")
 	V.SetDefault("image.max_size", 5242880)                      // 图片最大5MB
 	V.SetDefault("ai.user_bot.safety_prompt_file", "prompt/user_bot_safety_prompt.md")
+	V.SetDefault("ragas_eval.url", "http://localhost:8090") // RAGAS评估服务地址
 }

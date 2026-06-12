@@ -19,7 +19,7 @@ COPY kitex_service/work_service/ kitex_service/work_service/
 WORKDIR /app/kitex_service/work_service
 RUN go mod tidy && go build -o /work_service .
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /work_service /work_service
 COPY --from=builder /app/kitex_service/work_service/prompt /prompt

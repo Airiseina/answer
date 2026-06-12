@@ -13,7 +13,7 @@ COPY kitex_service/user_service/ kitex_service/user_service/
 WORKDIR /app/kitex_service/user_service
 RUN go mod tidy && go build -o /user_service .
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /user_service /user_service
 EXPOSE 4320

@@ -21,7 +21,7 @@ COPY msg_gateway/ msg_gateway/
 WORKDIR /app/msg_gateway
 RUN go mod tidy && go build -o /msg_gateway ./cmd/
 
-FROM alpine:latest
+FROM alpine:3.21
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /msg_gateway /msg_gateway
 EXPOSE 8081
