@@ -14,7 +14,7 @@ func GetConfig() {
 	V.SetDefault("gateway.addr", "127.0.0.1:8082")
 	V.SetDefault("kafka.brokers", "127.0.0.1:9094")
 	V.SetDefault("mcp.mem0_url", "http://localhost:9004/sse")
-	V.SetDefault("mcp.knowledge_url", "http://localhost:9006/sse")
+	// knowledge已从MCP改为直接RPC调用knowledge_service
 	V.SetDefault("mcp.searxng_url", "http://localhost:9008/sse")
 	V.SetDefault("mcp.weather_url", "http://localhost:9001/sse")
 	V.SetDefault("mcp.timeserver_url", "http://localhost:9005/sse")
@@ -25,7 +25,7 @@ func GetConfig() {
 	V.SetDefault("seaweedfs.filer_url", "http://127.0.0.1:8888")
 	V.SetDefault("seaweedfs.base_path", "/chat")
 	V.SetDefault("seaweedfs.public_url", "/files")
-	V.SetDefault("image.max_size", 5242880)                      // 图片最大5MB
+	V.SetDefault("image.max_size", 5242880) // 图片最大5MB
 	V.SetDefault("ai.user_bot.safety_prompt_file", "prompt/user_bot_safety_prompt.md")
 	V.SetDefault("ragas_eval.url", "http://localhost:8090") // RAGAS评估服务地址
 }

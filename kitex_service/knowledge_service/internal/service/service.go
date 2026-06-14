@@ -11,9 +11,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/chunker"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/graph"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/parser"
 	"github.com/Airiseina/answer/pkg/ai"
@@ -32,6 +34,7 @@ type KnowledgeService struct {
 	bkDao       dal.BotKnowledgeDao
 	qdrant      *qdrant.Client
 	meilisearch *meilisearch.MeilisearchDao
+	neo4jGraph  *graph.Neo4jGraph
 	snow        *snowflake.Node
 	kafkaBroker string
 	kafkaTopic  string
@@ -44,6 +47,7 @@ func NewKnowledgeService(
 	bkDao dal.BotKnowledgeDao,
 	qdrantClient *qdrant.Client,
 	meilisearchDao *meilisearch.MeilisearchDao,
+	neo4jGraph *graph.Neo4jGraph,
 	kafkaBroker string,
 	kafkaTopic string,
 	reranker *Reranker,
@@ -54,6 +58,7 @@ func NewKnowledgeService(
 		bkDao:       bkDao,
 		qdrant:      qdrantClient,
 		meilisearch: meilisearchDao,
+		neo4jGraph:  neo4jGraph,
 		snow:        snowflake.NewNode(6),
 		kafkaBroker: kafkaBroker,
 		kafkaTopic:  kafkaTopic,
@@ -344,17 +349,67 @@ func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) e
 }
 
 func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
-	// 如果Meilisearch可用，使用混合检索（向量检索 + BM25关键词检索）+ RRF融合排序
-	if svc.meilisearch != nil {
+	// 三路混合检索：向量检索 + BM25关键词检索 + 图谱检索
+	// 优先级：三路 > 两路(向量+BM25) > 纯向量
+	if svc.meilisearch != nil && svc.neo4jGraph != nil {
 		return svc.hybridSearch(ctx, kbIDs, query, topK)
+	}
+	if svc.meilisearch != nil {
+		return svc.hybridSearchTwoWay(ctx, kbIDs, query, topK)
 	}
 	// 降级：仅使用向量检索
 	return svc.vectorSearch(ctx, kbIDs, query, topK)
 }
 
-// hybridSearch 混合检索：向量检索 + BM25关键词检索，使用RRF融合排序
+// hybridSearch 三路混合检索：向量检索 + BM25关键词检索 + 图谱检索，使用RRF融合排序
 func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
-	// 并行执行向量检索和BM25检索
+	klog.Infof("混合检索开始: kb_ids=%v, top_k=%d, 图谱=%v", kbIDs, topK, svc.neo4jGraph != nil)
+
+	// 并行执行三路检索
+	vectorResults, vectorErr := svc.vectorSearch(ctx, kbIDs, query, topK)
+	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, kbIDs, query, topK)
+	graphResults, graphErr := svc.graphSearch(ctx, kbIDs, query, topK)
+
+	if vectorErr != nil && bm25Err != nil && graphErr != nil {
+		return nil, fmt.Errorf("三路混合检索全部失败: 向量检索=%v, BM25检索=%v, 图谱检索=%v", vectorErr, bm25Err, graphErr)
+	}
+
+	// 降级处理：某路失败时使用可用结果
+	if vectorErr != nil {
+		klog.Warnf("向量检索失败: %v", vectorErr)
+	} else {
+		klog.Infof("向量检索返回%d条结果", len(vectorResults))
+	}
+	if bm25Err != nil {
+		klog.Warnf("BM25检索失败: %v", bm25Err)
+	} else {
+		klog.Infof("BM25检索返回%d条结果", len(bm25Results))
+	}
+	if graphErr != nil {
+		klog.Warnf("图谱检索失败: %v", graphErr)
+	} else {
+		klog.Infof("图谱检索返回%d条结果", len(graphResults))
+	}
+
+	// RRF三路融合排序
+	rrfResults := rrfFusionThree(vectorResults, bm25Results, graphResults, topK)
+	klog.Infof("RRF融合后%d条结果", len(rrfResults))
+
+	// Rerank精排：对RRF粗排结果进行二次精排，只保留最相关的Top-N
+	if svc.rerank != nil && svc.rerank.Enabled() {
+		reranked, rerankErr := svc.rerank.Rerank(ctx, query, rrfResults)
+		if rerankErr != nil {
+			klog.Warnf("Rerank精排失败，降级使用RRF结果: %v", rerankErr)
+			return rrfResults, nil
+		}
+		return reranked, nil
+	}
+
+	return rrfResults, nil
+}
+
+// hybridSearchTwoWay 两路混合检索：向量检索 + BM25关键词检索（无图谱时降级）
+func (svc *KnowledgeService) hybridSearchTwoWay(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	vectorResults, vectorErr := svc.vectorSearch(ctx, kbIDs, query, topK)
 	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, kbIDs, query, topK)
 
@@ -386,10 +441,8 @@ func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, qu
 		return vectorResults, nil
 	}
 
-	// RRF融合排序
 	rrfResults := rrfFusion(vectorResults, bm25Results, topK)
 
-	// Rerank精排：对RRF粗排结果进行二次精排，只保留最相关的Top-N
 	if svc.rerank != nil && svc.rerank.Enabled() {
 		reranked, rerankErr := svc.rerank.Rerank(ctx, query, rrfResults)
 		if rerankErr != nil {
@@ -400,6 +453,287 @@ func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, qu
 	}
 
 	return rrfResults, nil
+}
+
+// graphSearch 图谱检索：通过关键词在Neo4j中检索相关Chunk
+func (svc *KnowledgeService) graphSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+	if svc.neo4jGraph == nil {
+		klog.Debugf("图谱未初始化，跳过图谱检索")
+		return nil, fmt.Errorf("图谱未初始化")
+	}
+
+	// 将查询分词为关键词
+	keywords := extractKeywords(query)
+	if len(keywords) == 0 {
+		klog.Debugf("查询无有效关键词，跳过图谱检索: query=%q", query)
+		return nil, nil
+	}
+	klog.Infof("图谱检索: keywords=%v, kb_ids=%v, top_k=%d", keywords, kbIDs, topK)
+
+	graphResults, err := svc.neo4jGraph.SearchByKeywords(ctx, kbIDs, keywords, topK)
+	if err != nil {
+		return nil, fmt.Errorf("图谱检索失败: %w", err)
+	}
+
+	klog.Infof("图谱检索完成: 返回%d条结果", len(graphResults))
+
+	results := make([]SearchResult, 0, len(graphResults))
+	for _, r := range graphResults {
+		results = append(results, SearchResult{
+			Content:    r.Content,
+			Source:     r.Source,
+			DocID:      r.DocID,
+			KBID:       r.KBID,
+			ChunkIndex: r.ChunkIndex,
+			Score:      r.Score,
+		})
+	}
+	return results, nil
+}
+
+// indexEntitiesFromChunks 从Chunk内容中提取实体并索引到Neo4j图谱
+// 基于规则的实体提取：提取高频N-gram作为实体，同一文档内共享N-gram的Chunk建立关联
+func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc model.KbDocument, chunks []graph.ChunkData) {
+	if svc.neo4jGraph == nil {
+		return
+	}
+
+	// 统计文档内各N-gram出现的Chunk列表
+	keywordChunks := make(map[string][]string) // keyword -> []chunkID
+	for _, chunk := range chunks {
+		keywords := extractNgrams(chunk.Content)
+		seen := make(map[string]bool)
+		for _, kw := range keywords {
+			if !seen[kw] {
+				seen[kw] = true
+				keywordChunks[kw] = append(keywordChunks[kw], chunk.ChunkID)
+			}
+		}
+	}
+
+	// 只保留出现2次以上的N-gram作为实体（高频词更有可能是实体）
+	var entities []graph.EntityData
+	var relations []graph.RelationData
+	entityNames := make(map[string]bool)
+
+	for kw, chunkIDs := range keywordChunks {
+		if len(chunkIDs) < 3 {
+			continue
+		}
+		entityNames[kw] = true
+		entities = append(entities, graph.EntityData{
+			Name:        kw,
+			Type:        "Keyword",
+			Description: fmt.Sprintf("文档[%d]中的高频关键词", doc.ID),
+			ChunkIDs:    chunkIDs,
+		})
+	}
+
+	// 在同一文档内，共享3个以上Chunk的实体之间建立关联
+	entityList := make([]string, 0, len(entityNames))
+	for name := range entityNames {
+		entityList = append(entityList, name)
+	}
+	for i := 0; i < len(entityList); i++ {
+		for j := i + 1; j < len(entityList); j++ {
+			e1, e2 := entityList[i], entityList[j]
+			overlapCount := overlapSize(keywordChunks[e1], keywordChunks[e2])
+			if overlapCount >= 3 {
+				relations = append(relations, graph.RelationData{
+					SourceEntity: e1,
+					TargetEntity: e2,
+					RelationType: "CO_OCCURS",
+				})
+			}
+		}
+	}
+
+	if len(entities) == 0 {
+		klog.Infof("文档[%d]未提取到有效实体", doc.ID)
+		return
+	}
+
+	klog.Infof("文档[%d]提取到%d个实体, %d个关系", doc.ID, len(entities), len(relations))
+	if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
+		klog.Warnf("文档[%d]实体索引失败(不影响Chunk索引): %v", doc.ID, err)
+	}
+}
+
+// extractNgrams 从文本中提取N-gram关键词
+// 对中文使用2-4字的N-gram，对英文使用空格分词
+func extractNgrams(text string) []string {
+	var keywords []string
+
+	// 先按标点分句
+	separators := []string{"，", "。", "、", "？", "！", "；", "：", "\"", "'", "\n", "\t",
+		",", ".", "?", "!", ";", ":", "(", ")", "（", "）", "【", "】", "[", "]", " ",
+		"#", "*", "_", "-", "=", "|", ">", "<", "/", "\\", "~", "`", "^", "&", "%", "$", "@"}
+	sentences := []string{text}
+	for _, sep := range separators {
+		var newSentences []string
+		for _, s := range sentences {
+			parts := strings.Split(s, sep)
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if p != "" {
+					newSentences = append(newSentences, p)
+				}
+			}
+		}
+		sentences = newSentences
+	}
+
+	// 停用词
+	stopWords := map[string]bool{
+		"的": true, "了": true, "在": true, "是": true, "我": true, "有": true, "和": true,
+		"就": true, "不": true, "人": true, "都": true, "一": true, "一个": true, "上": true,
+		"也": true, "很": true, "到": true, "说": true, "要": true, "去": true, "你": true,
+		"会": true, "着": true, "没有": true, "看": true, "好": true, "自己": true, "这": true,
+		"他": true, "她": true, "它": true, "们": true, "那": true, "个": true, "下": true,
+		"里": true, "中": true, "来": true, "得": true, "地": true, "把": true, "被": true,
+		"从": true, "而": true, "且": true, "但": true, "与": true, "或": true, "以": true,
+		"为": true, "于": true, "及": true, "等": true, "之": true, "其": true, "所": true,
+		"the": true, "a": true, "an": true, "is": true, "are": true, "was": true, "were": true,
+		"be": true, "been": true, "being": true, "have": true, "has": true, "had": true,
+		"do": true, "does": true, "did": true, "will": true, "would": true, "could": true,
+		"should": true, "may": true, "might": true, "can": true, "shall": true,
+		"what": true, "how": true, "why": true, "when": true, "where": true, "who": true,
+		"which": true, "that": true, "this": true, "it": true, "of": true, "for": true,
+		"in": true, "on": true, "at": true, "to": true, "from": true, "with": true,
+		"and": true, "or": true, "but": true, "not": true, "if": true, "then": true,
+	}
+
+	seen := make(map[string]bool)
+	for _, sentence := range sentences {
+		runes := []rune(sentence)
+		length := len(runes)
+
+		// 提取2-gram、3-gram、4-gram
+		for n := 2; n <= 4; n++ {
+			for i := 0; i <= length-n; i++ {
+				ngram := string(runes[i : i+n])
+				// 过滤：纯停用词组合
+				if isStopwordNgram(ngram, stopWords) {
+					continue
+				}
+				// 过滤：纯数字
+				if isPureDigit(ngram) {
+					continue
+				}
+				// 过滤：包含特殊字符(#、*、-、=、|等)
+				if hasSpecialChar(ngram) {
+					continue
+				}
+				// 过滤：2-gram中任一字是停用词（2-gram太短，要求两个字都有实质含义）
+				if n == 2 {
+					runes2 := []rune(ngram)
+					if stopWords[string(runes2[0])] || stopWords[string(runes2[1])] {
+						continue
+					}
+				}
+				if !seen[ngram] {
+					seen[ngram] = true
+					keywords = append(keywords, ngram)
+				}
+			}
+		}
+	}
+
+	return keywords
+}
+
+// isPureDigit 检查字符串是否全为数字
+func isPureDigit(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// hasSpecialChar 检查是否包含特殊字符
+func hasSpecialChar(s string) bool {
+	specialChars := "#*-=|<>{}[]()_+/\\~`@#$%^&"
+	for _, r := range s {
+		if strings.ContainsRune(specialChars, r) {
+			return true
+		}
+	}
+	return false
+}
+
+// isStopwordNgram 检查N-gram是否全部由停用词组成
+func isStopwordNgram(ngram string, stopWords map[string]bool) bool {
+	runes := []rune(ngram)
+	allStop := true
+	for _, r := range runes {
+		if !stopWords[string(r)] {
+			allStop = false
+			break
+		}
+	}
+	return allStop
+}
+
+// overlapSize 计算两个字符串切片的交集大小
+func overlapSize(a, b []string) int {
+	set := make(map[string]bool, len(a))
+	for _, s := range a {
+		set[s] = true
+	}
+	count := 0
+	for _, s := range b {
+		if set[s] {
+			count++
+		}
+	}
+	return count
+}
+
+// extractKeywords 从查询文本中提取关键词
+// 简单实现：按空格和标点分词，过滤停用词
+func extractKeywords(query string) []string {
+	// 按空格、标点分词
+	separators := []string{" ", "，", "。", "、", "？", "！", "；", "：", "\"", "'", "\n", "\t", ",", ".", "?", "!", ";", ":", "(", ")", "（", "）", "【", "】", "[", "]"}
+	tokens := []string{query}
+	for _, sep := range separators {
+		var newTokens []string
+		for _, t := range tokens {
+			parts := strings.Split(t, sep)
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if p != "" {
+					newTokens = append(newTokens, p)
+				}
+			}
+		}
+		tokens = newTokens
+	}
+
+	// 过滤停用词
+	stopWords := map[string]bool{
+		"的": true, "了": true, "在": true, "是": true, "我": true, "有": true, "和": true,
+		"就": true, "不": true, "人": true, "都": true, "一": true, "一个": true, "上": true,
+		"也": true, "很": true, "到": true, "说": true, "要": true, "去": true, "你": true,
+		"会": true, "着": true, "没有": true, "看": true, "好": true, "自己": true, "这": true,
+		"the": true, "a": true, "an": true, "is": true, "are": true, "was": true, "were": true,
+		"be": true, "been": true, "being": true, "have": true, "has": true, "had": true,
+		"do": true, "does": true, "did": true, "will": true, "would": true, "could": true,
+		"should": true, "may": true, "might": true, "can": true, "shall": true,
+		"what": true, "how": true, "why": true, "when": true, "where": true, "who": true,
+		"which": true, "that": true, "this": true, "it": true, "of": true, "for": true,
+		"in": true, "on": true, "at": true, "to": true, "from": true, "with": true,
+		"and": true, "or": true, "but": true, "not": true, "if": true, "then": true,
+	}
+
+	var keywords []string
+	for _, t := range tokens {
+		if !stopWords[strings.ToLower(t)] && len(t) > 0 {
+			keywords = append(keywords, t)
+		}
+	}
+	return keywords
 }
 
 // vectorSearch 纯向量检索（Qdrant）
@@ -502,6 +836,91 @@ func rrfFusion(vectorResults []SearchResult, bm25Results []meilisearch.BM25Searc
 			}
 			fusedMap[key] = &fusedResult{
 				SearchResult: sr,
+				rrfScore:     0,
+			}
+		}
+		fusedMap[key].rrfScore += 1.0 / float64(k+rank+1)
+	}
+
+	// 收集并按RRF得分降序排列
+	allResults := make([]*fusedResult, 0, len(fusedMap))
+	for _, fr := range fusedMap {
+		fr.Score = fr.rrfScore
+		allResults = append(allResults, fr)
+	}
+	sort.Slice(allResults, func(i, j int) bool {
+		return allResults[i].rrfScore > allResults[j].rrfScore
+	})
+
+	// 截取topK
+	if len(allResults) > topK {
+		allResults = allResults[:topK]
+	}
+
+	results := make([]SearchResult, 0, len(allResults))
+	for _, fr := range allResults {
+		results = append(results, fr.SearchResult)
+	}
+	return results
+}
+
+// rrfFusionThree 三路RRF融合排序：向量检索 + BM25检索 + 图谱检索
+func rrfFusionThree(vectorResults []SearchResult, bm25Results []meilisearch.BM25SearchResult, graphResults []SearchResult, topK int) []SearchResult {
+	const k = 60 // RRF平滑常数
+
+	type chunkKey struct {
+		DocID      int64
+		ChunkIndex int
+	}
+
+	type fusedResult struct {
+		SearchResult
+		rrfScore float64
+	}
+
+	fusedMap := make(map[chunkKey]*fusedResult)
+
+	// 向量检索结果贡献排名
+	for rank, r := range vectorResults {
+		key := chunkKey{DocID: r.DocID, ChunkIndex: r.ChunkIndex}
+		if _, exists := fusedMap[key]; !exists {
+			fusedMap[key] = &fusedResult{
+				SearchResult: r,
+				rrfScore:     0,
+			}
+		}
+		fusedMap[key].rrfScore += 1.0 / float64(k+rank+1)
+	}
+
+	// BM25检索结果贡献排名
+	for rank, r := range bm25Results {
+		key := chunkKey{DocID: r.DocID, ChunkIndex: r.ChunkIndex}
+		if _, exists := fusedMap[key]; !exists {
+			sr := SearchResult{
+				Content:    r.Content,
+				Source:     r.Source,
+				DocID:      r.DocID,
+				KBID:       r.KBID,
+				ChunkIndex: r.ChunkIndex,
+			}
+			if r.PageNumber > 0 {
+				pageNum := r.PageNumber
+				sr.PageNumber = &pageNum
+			}
+			fusedMap[key] = &fusedResult{
+				SearchResult: sr,
+				rrfScore:     0,
+			}
+		}
+		fusedMap[key].rrfScore += 1.0 / float64(k+rank+1)
+	}
+
+	// 图谱检索结果贡献排名
+	for rank, r := range graphResults {
+		key := chunkKey{DocID: r.DocID, ChunkIndex: r.ChunkIndex}
+		if _, exists := fusedMap[key]; !exists {
+			fusedMap[key] = &fusedResult{
+				SearchResult: r,
 				rrfScore:     0,
 			}
 		}
@@ -637,6 +1056,26 @@ func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocum
 			klog.Warnf("文档[%d]Meilisearch索引失败(不影响向量存储): %v", doc.ID, indexErr)
 		}
 	}
+	// 同步索引到Neo4j知识图谱
+	if svc.neo4jGraph != nil {
+		chunkData := make([]graph.ChunkData, 0, len(chunks))
+		for i, c := range chunks {
+			chunkData = append(chunkData, graph.ChunkData{
+				ChunkID:    fmt.Sprintf("%d", meiliDocs[i].ChunkID),
+				KBID:       doc.KBID,
+				DocID:      doc.ID,
+				Content:    c.Content,
+				ChunkIndex: c.Index,
+				Source:     c.Source,
+			})
+		}
+		if graphErr := svc.neo4jGraph.IndexChunks(ctx, chunkData); graphErr != nil {
+			klog.Warnf("文档[%d]Neo4j图谱索引失败(不影响向量存储): %v", doc.ID, graphErr)
+		} else {
+			// 从Chunk内容中提取实体并索引到图谱
+			svc.indexEntitiesFromChunks(ctx, doc, chunkData)
+		}
+	}
 	return nil
 }
 
@@ -660,6 +1099,123 @@ func (svc *KnowledgeService) ensureCollection(ctx context.Context) {
 	}
 }
 
+// BackfillEntities 回填已有Chunk的实体到Neo4j图谱
+// 用于在服务启动时为历史数据补充实体提取
+func (svc *KnowledgeService) BackfillEntities(ctx context.Context) {
+	if svc.neo4jGraph == nil {
+		return
+	}
+
+	// 检查是否已有实体，如果已有则跳过
+	cnt, err := svc.neo4jGraph.GetEntityCount(ctx)
+	if err != nil {
+		klog.Warnf("检查实体数量失败: %v", err)
+		return
+	}
+	if cnt > 0 {
+		klog.Infof("图谱已有%d个实体，跳过回填", cnt)
+		return
+	}
+
+	// 获取所有按文档分组的Chunk
+	docChunks, err := svc.neo4jGraph.GetAllChunksByDoc(ctx)
+	if err != nil {
+		klog.Warnf("获取已有Chunk失败: %v", err)
+		return
+	}
+
+	if len(docChunks) == 0 {
+		klog.Info("图谱中无Chunk数据，尝试重新触发文档解析以重建图谱")
+		svc.reparseAllDocs(ctx)
+		return
+	}
+
+	klog.Infof("开始回填实体: 共%d个文档需要处理", len(docChunks))
+	totalEntities := 0
+	totalRelations := 0
+
+	for docID, chunks := range docChunks {
+		// 统计文档内各N-gram出现的Chunk列表
+		keywordChunks := make(map[string][]string)
+		for _, chunk := range chunks {
+			keywords := extractNgrams(chunk.Content)
+			seen := make(map[string]bool)
+			for _, kw := range keywords {
+				if !seen[kw] {
+					seen[kw] = true
+					keywordChunks[kw] = append(keywordChunks[kw], chunk.ChunkID)
+				}
+			}
+		}
+
+		var entities []graph.EntityData
+		var relations []graph.RelationData
+		entityNames := make(map[string]bool)
+
+		for kw, chunkIDs := range keywordChunks {
+			if len(chunkIDs) < 3 {
+				continue
+			}
+			entityNames[kw] = true
+			entities = append(entities, graph.EntityData{
+				Name:        kw,
+				Type:        "Keyword",
+				Description: fmt.Sprintf("文档[%d]中的高频关键词", docID),
+				ChunkIDs:    chunkIDs,
+			})
+		}
+
+		entityList := make([]string, 0, len(entityNames))
+		for name := range entityNames {
+			entityList = append(entityList, name)
+		}
+		for i := 0; i < len(entityList); i++ {
+			for j := i + 1; j < len(entityList); j++ {
+				e1, e2 := entityList[i], entityList[j]
+				if overlapSize(keywordChunks[e1], keywordChunks[e2]) >= 3 {
+					relations = append(relations, graph.RelationData{
+						SourceEntity: e1,
+						TargetEntity: e2,
+						RelationType: "CO_OCCURS",
+					})
+				}
+			}
+		}
+
+		if len(entities) > 0 {
+			if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
+				klog.Warnf("文档[%d]实体回填失败: %v", docID, err)
+			} else {
+				totalEntities += len(entities)
+				totalRelations += len(relations)
+				klog.Infof("文档[%d]回填%d个实体, %d个关系", docID, len(entities), len(relations))
+			}
+		}
+	}
+
+	klog.Infof("实体回填完成: 共回填%d个实体, %d个关系", totalEntities, totalRelations)
+}
+
+// reparseAllDocs 重新触发所有已解析文档的解析，以重建Neo4j图谱数据
+func (svc *KnowledgeService) reparseAllDocs(ctx context.Context) {
+	docs, err := svc.docDao.GetParsedDocuments()
+	if err != nil {
+		klog.Warnf("获取已解析文档失败: %v", err)
+		return
+	}
+	if len(docs) == 0 {
+		klog.Info("无已解析文档可重新解析")
+		return
+	}
+
+	klog.Infof("开始重新解析%d个文档以重建图谱", len(docs))
+	for _, doc := range docs {
+		_ = svc.docDao.UpdateStatus(doc.ID, model.DocStatusPending, 0, "")
+		_ = svc.RepublishDocParse(doc.ID, doc.KBID)
+	}
+	klog.Infof("已重新发布%d个文档的解析任务", len(docs))
+}
+
 func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, docID int64) {
 	_, err := svc.qdrant.Delete(ctx, &qdrant.DeletePoints{
 		CollectionName: KbChunksCollection,
@@ -674,6 +1230,12 @@ func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, docID int64) 
 	if svc.meilisearch != nil {
 		if delErr := svc.meilisearch.DeleteByDocID(ctx, docID); delErr != nil {
 			klog.Warnf("删除文档[%d]Meilisearch索引失败: %v", docID, delErr)
+		}
+	}
+	// 同步从Neo4j知识图谱删除
+	if svc.neo4jGraph != nil {
+		if delErr := svc.neo4jGraph.DeleteByDocID(ctx, docID); delErr != nil {
+			klog.Warnf("删除文档[%d]Neo4j图谱数据失败: %v", docID, delErr)
 		}
 	}
 }

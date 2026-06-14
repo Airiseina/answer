@@ -31,7 +31,18 @@ func main() {
 	switch cmd {
 	// Docker
 	case "infra-up":
-		dockerCompose("up", "-d", "mysql", "postgres", "qdrant", "garnet", "kafka-1", "kafka-2", "etcd", "seaweedfs-master", "seaweedfs-volume", "seaweedfs-filer", "traefik", "jaeger", "otel-collector", "prometheus", "grafana", "searxng", "clickhouse", "meilisearch", "mem0-postgres")
+		// 基础设施 + MCP服务 + RAGAS评估（Go业务服务除外）
+		dockerComposeWithProfile("eval", "up", "-d",
+			// 基础设施
+			"mysql", "postgres", "qdrant", "garnet", "kafka-1", "kafka-2", "etcd",
+			"seaweedfs-master", "seaweedfs-volume", "seaweedfs-filer",
+			"traefik", "jaeger", "otel-collector", "prometheus", "grafana",
+			"searxng", "clickhouse", "meilisearch", "mem0-postgres", "neo4j",
+			// MCP服务（非Go业务服务）
+			"mcp-mem0", "mcp-weather", "mcp-timeserver", "mcp-searxng",
+			// RAGAS评估
+			"ragas-eval",
+		)
 	case "infra-down":
 		dockerCompose("down")
 	case "docker-up":
@@ -96,16 +107,12 @@ func main() {
 	// MCP Server
 	case "mcp-install":
 		pipInstall(filepath.Join("mcp-servers", "mem0"), "requirements.txt")
-		pipInstall(filepath.Join("mcp-servers", "knowledge"), "requirements.txt")
-		pipInstall(filepath.Join("mcp-servers", "searxng"), "requirements.txt")
 		run("pip", "install", "mcp_weather_server")
 		run("pip", "install", "MCP-timeserver")
 	case "mcp-run-mem0":
 		runInDir(filepath.Join(projectRoot, "mcp-servers", "mem0"), "python", "-m", "mem0_mcp_server", "--mode", "sse", "--host", "0.0.0.0", "--port", "8000")
-	case "mcp-run-knowledge":
-		runInDir(filepath.Join(projectRoot, "mcp-servers", "knowledge"), "python", "-m", "knowledge", "--mode", "sse", "--host", "0.0.0.0", "--port", "8001")
 	case "mcp-run-searxng":
-		runInDir(filepath.Join(projectRoot, "mcp-servers", "searxng"), "python", "-m", "searxng", "--mode", "sse", "--host", "0.0.0.0", "--port", "8001")
+		runGoInDir(filepath.Join(projectRoot, "mcp-servers", "searxng-go"), "run", "main.go")
 	case "mcp-run-weather":
 		run("python", "-m", "mcp_weather_server", "--mode", "sse", "--host", "0.0.0.0", "--port", "8080")
 	case "mcp-run-timeserver":
@@ -134,6 +141,19 @@ func dockerCompose(args ...string) {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("docker compose %s 失败: %v\n", strings.Join(args, " "), err)
+		os.Exit(1)
+	}
+}
+
+func dockerComposeWithProfile(profile string, args ...string) {
+	dockerArgs := []string{"compose", "--profile", profile}
+	dockerArgs = append(dockerArgs, args...)
+	cmd := exec.Command("docker", dockerArgs...)
+	cmd.Dir = filepath.Join(projectRoot, "deploy")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("docker compose --profile %s %s 失败: %v\n", profile, strings.Join(args, " "), err)
 		os.Exit(1)
 	}
 }
@@ -263,7 +283,7 @@ func printHelp() {
 	fmt.Println("用法: go run build.go <命令>")
 	fmt.Println()
 	fmt.Println("Docker:")
-	fmt.Println("  infra-up              仅启动基础设施 (DB/Kafka/Qdrant/etcd/ClickHouse/Meilisearch/…)")
+	fmt.Println("  infra-up              启动基础设施+MCP服务+RAGAS评估 (不含Go业务服务)")
 	fmt.Println("  infra-down            停止基础设施")
 	fmt.Println("  docker-up             启动完整 Docker 环境")
 	fmt.Println("  docker-down           停止 Docker 环境")
@@ -297,8 +317,7 @@ func printHelp() {
 	fmt.Println("MCP:")
 	fmt.Println("  mcp-install           安装所有 MCP Server 依赖")
 	fmt.Println("  mcp-run-mem0          启动 Mem0 记忆服务")
-	fmt.Println("  mcp-run-knowledge     启动知识库 MCP")
-	fmt.Println("  mcp-run-searxng       启动 SearXNG MCP")
+	fmt.Println("  mcp-run-searxng       启动 SearXNG MCP (Go版)")
 	fmt.Println("  mcp-run-weather       启动天气服务")
 	fmt.Println("  mcp-run-timeserver    启动时间服务")
 	fmt.Println()

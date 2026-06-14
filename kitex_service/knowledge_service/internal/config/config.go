@@ -35,4 +35,8 @@ func GetConfig() {
 	V.SetDefault("rerank.model", "jina-reranker-v2-base-multilingual")
 	V.SetDefault("rerank.top_n", 3)
 	V.SetDefault("rerank.api_key", "")
+	V.SetDefault("neo4j.uri", "bolt://localhost:7687")
+	V.SetDefault("neo4j.username", "neo4j")
+	V.SetDefault("neo4j.password", "password")
+	V.SetDefault("neo4j.max_connections", 10)
 }

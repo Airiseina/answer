@@ -8,6 +8,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/consumer"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/dal"
+	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/graph"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/model"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/kitex_gen/knowledge/knowledgeservice"
@@ -73,6 +74,15 @@ func main() {
 	if err != nil {
 		klog.Warnf("连接Meilisearch失败(将降级为纯向量检索):%v", err)
 	}
+	neo4jGraph, err := initNeo4j()
+	if err != nil {
+		klog.Warnf("连接Neo4j失败(将降级为两路检索):%v", err)
+	} else {
+		klog.Infof("Neo4j知识图谱连接成功")
+	}
+	if neo4jGraph != nil {
+		defer neo4jGraph.Close()
+	}
 	kbDao := dal.NewKnowledgeBaseDao(db)
 	docDao := dal.NewDocumentDao(db)
 	bkDao := dal.NewBotKnowledgeDao(db)
@@ -86,7 +96,7 @@ func main() {
 		v.GetString("rerank.mode"),
 		v.GetString("rerank.api_key"),
 	)
-	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, meilisearchDao, kafkaBroker, kafkaTopic, reranker)
+	knowledgeService := service.NewKnowledgeService(kbDao, docDao, bkDao, qdrantClient, meilisearchDao, neo4jGraph, kafkaBroker, kafkaTopic, reranker)
 	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:4326")
 	if err != nil {
 		klog.Fatalf("监听地址出错:%v", err)
@@ -105,6 +115,10 @@ func main() {
 	}
 	go docConsumer.Start()
 	defer docConsumer.Stop()
+
+	// 启动后回填已有Chunk的实体到Neo4j图谱
+	go knowledgeService.BackfillEntities(context.Background())
+
 	svr := knowledgeservice.NewServer(
 		&KnowledgeServiceImpl{knowledgeService: knowledgeService},
 		server.WithSuite(tracing.NewServerSuite()),
@@ -145,4 +159,23 @@ func initMeilisearch() (*pkgmeilisearch.MeilisearchDao, error) {
 		klog.Warnf("Meilisearch索引初始化失败: %v", err)
 	}
 	return dao, nil
+}
+
+func initNeo4j() (*graph.Neo4jGraph, error) {
+	v := config.V
+	uri := v.GetString("neo4j.uri")
+	username := v.GetString("neo4j.username")
+	password := v.GetString("neo4j.password")
+	maxConns := v.GetInt("neo4j.max_connections")
+	if maxConns <= 0 {
+		maxConns = 10
+	}
+	g, err := graph.NewNeo4jGraph(uri, username, password, maxConns)
+	if err != nil {
+		return nil, err
+	}
+	if err := g.EnsureConstraints(context.Background()); err != nil {
+		klog.Warnf("Neo4j约束初始化失败: %v", err)
+	}
+	return g, nil
 }

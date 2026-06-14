@@ -13,7 +13,7 @@ kafka:
 
 mcp:
   mem0_url: "http://localhost:9004/sse"
-  knowledge_url: "http://localhost:9006/sse"
+  # knowledge已从MCP改为直接RPC调用knowledge_service，不再需要MCP中间层
   searxng_url: "http://localhost:9008/sse"
   weather_url: "http://localhost:9001/sse"
   timeserver_url: "http://localhost:9005/sse"

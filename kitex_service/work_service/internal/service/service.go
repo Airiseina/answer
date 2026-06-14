@@ -300,7 +300,8 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	userID := fmt.Sprintf("%d", senderId)
 	botID := fmt.Sprintf("%d", botId)
 	runID := fmt.Sprintf("%d", conversationId)
-	var kbIDs []string // 知识库ID列表，用于RAGAS评估
+	var kbIDs []string     // 知识库ID列表，用于RAGAS评估
+	var kbIDsInt64 []int64 // 知识库ID列表(int64)，用于Agent内置知识库检索工具
 	searchRunID := ""
 	if isGroupChat {
 		searchRunID = runID
@@ -316,10 +317,12 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	// 2. 检索结果是否相关（IS_REL判断）
 	// 3. 是否需要重新检索（重新检索决策）
 	// 4. 答案是否被知识库支撑（IS_SUP自检）
+	//
+	// 知识库检索已从MCP改为直接RPC调用knowledge_service，消除Python中间层
 	knowledgeCtx, knowledgeCancel := context.WithTimeout(ctx, mcpTimeout)
-	kbResult := mcp.GetBotKnowledgeBases(knowledgeCtx, svc.mcpPool, botID)
+	kbResult := mcp.GetBotKnowledgeBasesViaRPC(knowledgeCtx, botId)
 	knowledgeCancel()
-	klog.Infof("MCP知识库: GetBotKnowledgeBases(botID=%s) 返回长度=%d, 内容前200字符=%q", botID, len(kbResult), truncateStr(kbResult, 200))
+	klog.Infof("知识库: GetBotKnowledgeBases(botID=%d) 返回长度=%d, 内容前200字符=%q", botId, len(kbResult), truncateStr(kbResult, 200))
 	if kbResult != "" {
 		var kbList struct {
 			KnowledgeBases []struct {
@@ -336,6 +339,7 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 			}
 			for _, kb := range kbList.KnowledgeBases {
 				kbIDs = append(kbIDs, fmt.Sprintf("%d", kb.Id))
+				kbIDsInt64 = append(kbIDsInt64, kb.Id)
 			}
 			enhancedPrompt += fmt.Sprintf(
 				"\n\n[知识库信息]\n你可以访问以下知识库：%s\n知识库ID列表：%s\n\n"+
@@ -439,6 +443,8 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		McpServers:   mcpServers,
 		UserContent:  userContent,
 		ImageData:    imageData,
+		KBIDs:        kbIDsInt64,
+		BotID:        botId,
 	})
 	if err != nil {
 		klog.Errorf("Agent执行失败，降级为普通LLM调用: %v", err)

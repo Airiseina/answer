@@ -28,28 +28,28 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 │  ┌──────────────────┐  ┌──────────────────┐                         │
 │  │  Knowledge        │  │  Work (Eino)     │                         │
 │  │  :4326            │  │  :4324            │                         │
+│  │  +Neo4j 知识图谱  │  │                   │                         │
 │  └──────────────────┘  └──────────────────┘                         │
 └────────────────────────────────┬────────────────────────────────────┘
                                  │ Kafka / SSE
 ┌────────────────────────────────┼────────────────────────────────────┐
 │                     AI (智能能力层)                                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
-│  │ mcp-mem0 │  │mcp-know- │  │mcp-sear- │  │mcp-wea-  │            │
-│  │ (记忆)   │  │ ledge    │  │ xng      │  │ ther     │            │
-│  │  :8000   │  │  :8001   │  │  :8001   │  │  :8080   │            │
+│  │ mcp-mem0 │  │mcp-sear- │  │mcp-wea-  │  │mcp-time- │            │
+│  │ (记忆)   │  │ xng (Go) │  │ ther     │  │ server   │            │
+│  │  :8000   │  │  :8001   │  │  :8080   │  │  :8000   │            │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘            │
-│  ┌──────────┐                                                       │
-│  │mcp-time- │                                                       │
-│  │ server   │                                                       │
-│  │  :8000   │                                                       │
-│  └──────────┘                                                       │
+│  ┌──────────────────┐  ┌──────────────────┐                         │
+│  │  RAGAS 评估       │  │  Rerank 精排     │                         │
+│  │  :8090 (Profile) │  │  :8010 (Profile) │                         │
+│  └──────────────────┘  └──────────────────┘                         │
 └─────────────────────────────────────────────────────────────────────┘
                                  │
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        基础设施层                                    │
 │  MySQL 8.0 │ PostgreSQL 16 │ ClickHouse │ Qdrant │ Kafka │ Etcd     │
 │  Garnet(Redis) │ Meilisearch │ SeaweedFS │ Traefik v3 │ Prometheus  │
-│  Grafana │ Jaeger │ SearXNG │ OTEL Collector                         │
+│  Grafana │ Jaeger │ SearXNG │ OTEL Collector │ Neo4j 5.26           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -76,12 +76,16 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 - **Eino ReAct Agent**：自动工具编排，MaxStep=8（最多 3 轮工具调用）
 - **MCP 连接池**：健康检查（60s 间隔）+ 断线自动重连 + 指数退避重试
 - **超时控制**：Agent 总 180s / LLM 120s / MCP 20s / 记忆 60s
-- **可扩展插件体系**：内置 5 个 MCP Server，支持用户自定义扩展
+- **可扩展插件体系**：内置 4 个 MCP Server（Mem0 / SearXNG / Weather / Timeserver），支持用户自定义扩展
+- **Go 原生 MCP Server**：SearXNG 搜索服务使用 Go 实现，无需 Python 运行时
 
-### 知识库 (RAG)
+### 知识库 (RAG + Knowledge Graph)
 - **多格式文档上传**：支持 PDF / Markdown / DOCX / PPTX
 - **异步文档解析**：Kafka 驱动的解析 → 分块 → 向量化流水线
 - **Qdrant 语义检索**：Top-K 向量检索，对话自动注入知识库上下文
+- **Meilisearch BM25 检索**：关键词检索 + RRF 融合排序，双路混合检索
+- **Neo4j 知识图谱**：N-gram 实体提取 → 图谱索引 → 图谱遍历增强检索
+- **Rerank 精排**：BGE-Reranker 重排序，提升检索精度（vLLM GPU 部署 / Jina API）
 - **Bot 绑定知识库**：对话时自动检索关联知识库内容
 
 ### 长期记忆 (Mem0)
@@ -108,6 +112,7 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 | 关系数据库 | MySQL 8.0 + GORM | 用户/群组/Bot/知识库元数据持久化 |
 | 关系数据库 | PostgreSQL 16 + GORM | 消息/会话持久化 (JSONB) |
 | 向量数据库 | Qdrant | 语义检索 / 记忆 / 知识库向量化 |
+| 图数据库 | Neo4j 5.26 | 知识图谱 / 实体关系 / 图谱增强检索 |
 | 列式数据库 | ClickHouse | 冷库存储 / 历史消息归档 |
 | 全文检索引擎 | Meilisearch | BM25 关键词检索 / RRF 融合排序 |
 | 缓存 | Garnet (Redis 兼容) | 在线状态 / 已读序号 / 限流 / 消息缓存 |
@@ -116,7 +121,9 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 | 反向代理 | Traefik v3 | HTTP/WebSocket 路由 + 自动服务发现 |
 | 可观测性 | OpenTelemetry + Prometheus + Grafana + Jaeger | 链路追踪 / 指标 / 可视化 |
 | MCP 协议 | [MCP Go SDK](https://github.com/mark3labs/mcp-go) | SSE 传输 / 工具调用 |
-| MCP Server | Python 3.11+ (Starlette + Uvicorn) | 记忆 / 知识库 / 搜索 / 天气 / 时间 |
+| MCP Server | Go (SearXNG) + Python (Mem0/Weather/Timeserver) | 搜索 / 记忆 / 天气 / 时间 |
+| RAG 评估 | RAGAS | 知识库检索质量评估 (Profile: eval) |
+| 精排模型 | BGE-Reranker (vLLM / Jina API) | 检索结果重排序 (Profile: rerank) |
 | 前端 | React 19 + TypeScript + Vite 8 | 用户界面 |
 | Embedding 模型 | 豆包多模态 Embedding | 知识库向量化 / 语义检索 |
 | 文档解析 | pdf/DOCX/Markdown/PPTX parser | 知识库文档内容提取 |
@@ -172,21 +179,23 @@ answer/
 │   │       ├── llm/                      #     LLM 客户端封装
 │   │       ├── service/service.go        #     Bot 消息处理 / 总结 / 翻译 / 回复候选
 │   │       └── consumer/bot_task.go      #     Kafka 消费者
-│   └── knowledge_service/                # 文档解析/向量化/检索 (MySQL + Qdrant + Meilisearch)
-│       ├── main.go                       #   :4326
+│   └── knowledge_service/                # 文档解析/向量化/检索/知识图谱 (MySQL + Qdrant + Meilisearch + Neo4j)
+│       ├── main.go                       #   :4326 (启动时自动回填实体)
 │       └── internal/
 │           ├── service/                  #   知识库 CRUD / 文档管理 / 混合检索
-│           │   └── service.go            #     RRF 融合排序 / 向量存储双索引
+│           │   └── service.go            #     RRF 融合排序 / N-gram 实体提取 / 图谱回填
+│           ├── graph/                    #   Neo4j 知识图谱
+│           │   └── neo4j.go              #     实体索引 / 关系建立 / 图谱遍历 / Chunk 查询
 │           ├── parser/                   #   文档解析 (PDF/DOCX/MD/PPTX)
 │           ├── chunker/                  #   智能分块 (结构化/递归/Overlap)
 │           │   ├── structural.go         #     按标题层级分块
 │           │   └── recursive.go          #     分隔符递归降级分块
 │           ├── consumer/doc_parse.go     #   Kafka 驱动的异步文档解析
 │           └── dal/                      #   数据访问层
-├── mcp-servers/                          # MCP Server (Python)
-│   ├── mem0/                             #   长期/短期记忆 (Qdrant + Mem0)
-│   ├── knowledge/                        #   知识库语义检索
-│   └── searxng/                          #   Web 搜索代理 (SearXNG)
+├── mcp-servers/                          # MCP Server
+│   ├── mem0/                             #   长期/短期记忆 (Python, Qdrant + Mem0)
+│   ├── searxng-go/                       #   Web 搜索代理 (Go, SearXNG)
+│   └── ragas-eval/                       #   RAG 检索质量评估 (Python, RAGAS)
 ├── pkg/                                  # 跨服务公共包
 │   ├── infra/                            #   MySQL/PostgreSQL/ClickHouse/Kafka 连接封装
 │   │   ├── connect.go                    #     GORM 连接池 (MaxOpen=100, MaxIdle=10)
@@ -231,12 +240,13 @@ answer/
 | Business | chat_service | 4322 | 消息收发/会话管理 |
 | Business | bot_service | 4323 | Bot 配置/MCP 绑定 |
 | Business | work_service | 4324 | Eino Agent + MCP 调度 |
-| Business | knowledge_service | 4326 | 文档解析/向量化/检索 |
+| Business | knowledge_service | 4326 | 文档解析/向量化/检索/知识图谱 |
 | AI | mcp-mem0 | 8000 | 长期/短期记忆 |
-| AI | mcp-knowledge | 8001 | 知识库语义检索 |
-| AI | mcp-searxng | 8001 | Web 搜索代理 |
+| AI | mcp-searxng | 8001 | Web 搜索代理 (Go) |
 | AI | mcp-weather | 8080 | 天气查询 |
 | AI | mcp-timeserver | 8000 | 时间服务 |
+| AI | ragas-eval | 8090 | RAG 检索质量评估 (Profile: eval) |
+| AI | rerank | 8010 | BGE-Reranker 精排 (Profile: rerank) |
 | Infra | Traefik | 80/443 | 反向代理 |
 | Infra | Grafana | 3000 | 监控仪表盘 |
 | Infra | Jaeger | 16686 | 链路追踪 |
@@ -244,6 +254,7 @@ answer/
 | Infra | Qdrant | 6333 | 向量数据库 |
 | Infra | Meilisearch | 7700 | 全文检索引擎 |
 | Infra | ClickHouse | 9000 | 冷库列式数据库 |
+| Infra | Neo4j | 7474/7687 | 知识图谱 (Browser/Bolt) |
 
 ## 快速开始 (Docker)
 
@@ -317,7 +328,14 @@ docker compose down -v
 
 ```bash
 cd deploy
-docker compose up -d mysql postgres qdrant garnet kafka-1 kafka-2 etcd seaweedfs-master seaweedfs-volume seaweedfs-filer traefik jaeger otel-collector prometheus grafana clickhouse meilisearch mem0-postgres
+
+# 启动基础设施 + MCP 服务 + RAGAS 评估（不含 Go 业务服务）
+go run ../build.go infra-up
+
+# 或使用 docker compose 直接启动
+docker compose up -d  # 仅基础设施
+docker compose --profile eval up -d  # 含 RAGAS 评估
+docker compose --profile rerank up -d  # 含 Rerank 精排 (需 GPU)
 ```
 
 等基础设施就绪后启动 SearXNG：
@@ -330,8 +348,8 @@ docker compose up -d searxng
 
 ```bash
 cd mcp-servers/mem0 && pip install -r requirements.txt
-cd ../knowledge && pip install -r requirements.txt
-cd ../searxng && pip install -r requirements.txt
+# searxng-go 无需 pip 安装，Go 编译即可
+cd mcp-servers/ragas-eval && pip install -r requirements.txt
 ```
 
 或用 pip 直接安装公共 MCP Server：
@@ -396,7 +414,7 @@ npm run dev
 # 查看所有可用命令
 go run build.go help
 
-# 启动全部基础设施（不含业务服务）
+# 启动基础设施 + MCP 服务 + RAGAS 评估（不含 Go 业务服务）
 go run build.go infra-up
 
 # 启动完整 Docker 环境
@@ -537,9 +555,9 @@ go run build.go lint
 - Redis List 未命中时自动回源 PostgreSQL
 - 成员缓存过期时直接查询数据库
 
-### 混合检索引擎 (RAG)
+### 混合检索引擎 (RAG + Knowledge Graph)
 
-知识库检索采用**向量检索 + 关键词检索双路并行 + RRF 融合排序**的混合检索策略。
+知识库检索采用**向量检索 + 关键词检索 + 知识图谱三路并行 + RRF 融合排序 + Rerank 精排**的混合检索策略。
 
 ```
 用户查询: "如何配置 Kafka 集群？"
@@ -562,6 +580,13 @@ Score: 0.92                   Score: 0.85
    1. Chunk A (RRF: 0.032)
    2. Chunk B (RRF: 0.028)
    3. Chunk C (RRF: 0.021)
+                  │
+                  ▼
+         Rerank 精排 (BGE-Reranker)
+   按查询-文档相关性重排序
+                  │
+                  ▼
+        精排结果 Top-K
 ```
 
 **向量检索（Qdrant + 豆包多模态 Embedding）**：
@@ -574,15 +599,29 @@ Score: 0.92                   Score: 0.85
 - 使用 BM25 算法计算关键词相关性分数
 - 可搜索字段：`content`、`source`；可过滤字段：`kb_id`、`doc_id`
 
+**知识图谱检索（Neo4j）**：
+- 文档解析时自动提取 N-gram 实体（2-4 字组合），过滤停用词/数字/特殊字符
+- 实体阈值：出现在 3 个以上 Chunk 中的 N-gram 才作为实体
+- 实体关系：共享 3 个以上 Chunk 的实体间建立 CO_OCCURS 关系
+- 查询时通过图谱遍历扩展关联实体，增强检索召回
+- 启动时自动回填：检测到图谱无实体时，自动重新解析文档并提取实体
+
 **RRF 融合排序**：
 - 算法公式：`RRF_score = Σ 1/(k + rank_i)`，其中 `k=60`（平滑常数）
 - 向量检索排名 + BM25 检索排名各自贡献权重
 - 使用 `(doc_id, chunk_index)` 作为去重键合并两路结果
 - 按 RRF 分数降序排列后截取 Top-K 返回
 
+**Rerank 精排**：
+- 支持 vLLM 本地部署（BGE-Reranker-v2-m3，需 GPU，Profile: rerank）和 Jina API 两种模式
+- 对 RRF 融合后的 Top-K 结果按查询-文档相关性重排序
+- 开发环境默认使用 Jina API 模式，生产环境可切换 vLLM 模式
+
 **降级策略**：
 - Meilisearch 不可用时，自动降级为纯向量检索
 - 向量检索不可用时，自动降级为纯 BM25 检索
+- Neo4j 不可用时，跳过图谱增强，不影响基本检索
+- Rerank 不可用时，直接返回 RRF 融合结果
 - 两路均失败时，返回错误信息
 
 ### RAG 文档处理管道
@@ -620,7 +659,14 @@ Score: 0.92                   Score: 0.85
     └─ Meilisearch Index (倒排)
     │
     ▼
-[6] 状态更新 (status=done, doc_count++, chunk_count++)
+[6] 知识图谱实体提取
+    ├─ N-gram 提取 (2-4字组合，过滤停用词/数字/特殊字符)
+    ├─ 高频实体筛选 (出现≥3个Chunk)
+    ├─ Neo4j Entity + MENTIONED_IN 关系
+    └─ CO_OCCURS 关系 (共享≥3个Chunk的实体间)
+    │
+    ▼
+[7] 状态更新 (status=done, doc_count++, chunk_count++)
 ```
 
 **异步处理与容错**：
@@ -657,8 +703,9 @@ Score: 0.92                   Score: 0.85
 | 缓存降级 | Redis List 未命中 | 回源 PostgreSQL 查询 |
 
 **内置工具过滤**：
-- 5 个内置 Server：mem0（记忆）、knowledge（知识库检索）、searxng（Web 搜索）、weather（天气）、timeserver（时间）
-- mem0 和 knowledge 为内部 Server，Agent 工具列表中自动过滤，通过专用方法调用
+- 4 个内置 Server：mem0（记忆）、searxng（Web 搜索，Go 实现）、weather（天气）、timeserver（时间）
+- mem0 为内部 Server，Agent 工具列表中自动过滤，通过专用方法调用
+- 知识库检索已从 MCP 改为直接 RPC 调用 knowledge_service，减少网络跳转
 - 外部 Server（searxng/weather/timeserver）作为通用工具暴露给 ReAct Agent
 
 ### Agent 上下文增强流程
@@ -754,20 +801,113 @@ Score: 0.92                   Score: 0.85
 
 ## 压力测试
 
-### 预期指标
+### 测试环境
 
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| WebSocket 并发连接 | 1,000+ | 单网关实例 |
-| HTTP API QPS | 5,000+ | 会话列表等读接口 |
-| 消息投递延迟 P50 | < 50ms | 本地网关直连 |
-| 消息投递延迟 P95 | < 200ms | 含跨网关推送 |
-| 消息投递延迟 P99 | < 500ms | 极端场景 |
-| Bot 响应延迟 P50 | < 3s | 含 LLM 推理 |
-| Bot 响应延迟 P95 | < 10s | 含 MCP 工具调用 |
-| MCP 工具调用延迟 P95 | < 5s | 单次工具调用 |
-| Kafka 消息吞吐 | 10,000+ msg/s | 2 Broker 集群 |
-| 数据库连接池利用率 | < 80% | MaxOpen=100 |
+| 项目 | 配置 |
+|------|------|
+| OS | Windows (Docker Desktop) |
+| CPU | 宿主机 |
+| 部署方式 | docker compose (单机全量部署) |
+| 压测工具 | hey v0.1.5 / 自定义 Go WebSocket 压测脚本 |
+| Kafka | 2 Broker (KRaft 模式) |
+
+### 预期指标 vs 实测结果
+
+| 指标 | 目标值 | 实测值 | 是否达标 |
+|------|--------|--------|----------|
+| WebSocket 并发连接 | 1,000+ | 1,000 (100% 成功) | ✅ |
+| HTTP API QPS (会话列表) | 5,000+ | 8,315 | ✅ |
+| HTTP API QPS (历史消息) | 5,000+ | 9,969 | ✅ |
+| HTTP API QPS (登录) | - | 7,034 | - |
+| 消息投递延迟 P50 | < 50ms | 0.61ms | ✅ |
+| 消息投递延迟 P95 | < 200ms | 1.10ms | ✅ |
+| 消息投递延迟 P99 | < 500ms | 1.41ms | ✅ |
+| Bot 响应延迟 (平均) | < 3s | 7.59s (含 LLM 推理) | ⚠️ |
+| MCP 工具调用延迟 (mem0/add_memory) | < 5s | 3.06s | ✅ |
+| MCP 工具调用延迟 (mem0/search_memories) | < 5s | 0.90s | ✅ |
+| Kafka 消息吞吐 | 10,000+ msg/s | 46,083 msg/s (256B/msg) | ✅ |
+| 数据库连接池利用率 | < 80% | 未暴露 SQL 连接池指标 | - |
+
+### 详细测试数据
+
+#### HTTP API 压测 (hey)
+
+**会话列表 GET /api/chat/conversations** (5000 请求, 100 并发):
+- QPS: 8,314.71
+- P10: 1.1ms / P50: 2.4ms / P90: 8.9ms / P95: 13.5ms / P99: 322.3ms
+- 平均响应: 10.9ms
+
+**历史消息 GET /api/chat/messages** (5000 请求, 100 并发):
+- QPS: 9,969.40
+- P10: 1.6ms / P50: 3.1ms / P90: 5.9ms / P95: 7.2ms / P99: 319.4ms
+- 平均响应: 9.8ms
+
+**登录 POST /login** (3000 请求, 100 并发):
+- QPS: 7,034.23
+- P10: 1.5ms / P50: 2.8ms / P90: 5.0ms / P95: 6.3ms / P99: 329.7ms
+- 平均响应: 13.8ms
+
+#### WebSocket 并发连接测试
+
+- 总连接数: 1,000 / 成功: 1,000 / 失败: 0
+- 总耗时: 7.23s
+- 连接延迟: Min 304.6ms / Avg 319.7ms / Max 392.4ms
+- Prometheus 确认 `aim_ws_connect_total` = 1,003
+
+#### 消息投递延迟测试 (WS → 服务端 → WS 回显)
+
+- 50 条消息全部成功投递
+- 延迟: Min 0ms / Avg 0.67ms / Max 1.41ms
+- P50: 0.61ms / P95: 1.10ms / P99: 1.41ms
+
+#### Kafka 吞吐量测试 (kafka-producer-perf-test)
+
+- 50,000 条消息, 256 bytes/条
+- 吞吐量: 46,083 msg/s (11.25 MB/s)
+- 延迟: Avg 442.5ms / P50 479ms / P95 663ms / P99 680ms
+
+#### Bot 响应延迟 (Prometheus 指标)
+
+- 样本数: 1 次 (bot_id: 338383118278873088)
+- 总延迟: 7,585ms (含 LLM 推理 + MCP 工具调用)
+- 注: 样本量不足，P50/P95 暂无法计算；平均延迟偏高受 LLM API 响应时间影响
+
+#### MCP 工具调用延迟 (Prometheus 指标)
+
+| 工具 | 调用次数 | 总延迟 | 平均延迟 |
+|------|----------|--------|----------|
+| mem0/add_memory | 1 | 3,063ms | 3,063ms |
+| mem0/search_memories | 1 | 895ms | 895ms |
+
+### 压测脚本
+
+压测脚本位于 `deploy/stress_test/`，运行方式：
+
+```bash
+cd deploy/stress_test
+go run main.go
+```
+
+HTTP 压测使用 [hey](https://github.com/rakyll/hey)：
+
+```bash
+# 会话列表
+hey -n 5000 -c 100 -m GET "http://localhost/api/chat/conversations" \
+  -H "Authorization: Bearer <token>"
+
+# 登录
+hey -n 3000 -c 100 -m POST "http://localhost/login" \
+  -H "Content-Type: application/json" \
+  -d '{"account":"xxx","password":"xxx"}'
+```
+
+Kafka 原生压测：
+
+```bash
+docker exec answer_kafka-1 /opt/kafka/bin/kafka-producer-perf-test.sh \
+  --topic bot-task-topic --num-records 50000 --record-size 256 \
+  --throughput -1 --bootstrap-server localhost:9092
+```
 
 ## 可观测性
 

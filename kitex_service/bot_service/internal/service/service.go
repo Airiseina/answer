@@ -349,12 +349,13 @@ func (svc *BotService) AddBotToConversation(ctx context.Context, operatorId, bot
 
 func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	bot, err := svc.dao.GetSystemBot()
-	if err == nil && bot.ID != 0 {
-		klog.Infof("系统Bot已存在, ID: %d", bot.ID)
-		return bot.ID, nil
-	}
 	if err != nil {
 		return 0, err
+	}
+	if bot.ID != 0 {
+		klog.Infof("系统Bot已存在, ID: %d，同步更新prompt和头像", bot.ID)
+		svc.syncSystemBotFromFiles(ctx, bot)
+		return bot.ID, nil
 	}
 	botId := svc.snowNode.Generate()
 	v := config.V
@@ -400,6 +401,85 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	svc.initSkillKnowledgeBase(ctx, botId)
 
 	return botId, nil
+}
+
+// syncSystemBotFromFiles 从文件同步系统Bot的prompt和头像
+// 每次启动时调用，如果文件内容与数据库不同则更新
+func (svc *BotService) syncSystemBotFromFiles(ctx context.Context, bot model.Bot) {
+	v := config.V
+	updates := make(map[string]interface{})
+
+	// 同步prompt
+	promptFile := v.GetString("ai.system.bot_prompt_file")
+	if promptFile != "" {
+		data, err := os.ReadFile(promptFile)
+		if err != nil {
+			klog.Warnf("系统Bot[%d]读取prompt文件[%s]失败: %v", bot.ID, promptFile, err)
+		} else {
+			newPrompt := string(data)
+			if newPrompt != bot.SystemPrompt {
+				updates["system_prompt"] = newPrompt
+				klog.Infof("系统Bot[%d] prompt已变更，将更新", bot.ID)
+			}
+		}
+	}
+
+	// 同步头像：计算新头像的objectName，与当前头像URL对比
+	newAvatarURL := svc.computeSystemBotAvatarURL()
+	if newAvatarURL != "" && bot.UserID != 0 {
+		// 获取当前用户头像URL进行对比
+		users, err := rpc.GetUserNames(ctx, []int64{bot.UserID})
+		if err != nil || len(users) == 0 {
+			klog.Warnf("系统Bot[%d]获取当前头像失败: %v", bot.ID, err)
+		} else if users[0].AvatarURL != newAvatarURL {
+			// 头像有变化，上传新头像并更新
+			svc.uploadSystemBotAvatar(ctx, bot.ID)
+			if err := rpc.UpdateBotUserAvatar(ctx, bot.UserID, newAvatarURL); err != nil {
+				klog.Warnf("系统Bot[%d]更新头像失败: %v", bot.ID, err)
+			} else {
+				klog.Infof("系统Bot[%d]头像已更新: %s", bot.ID, newAvatarURL)
+			}
+		}
+	}
+
+	// 更新数据库
+	if len(updates) > 0 {
+		if err := svc.dao.UpdateBot(bot.ID, updates); err != nil {
+			klog.Errorf("系统Bot[%d]同步更新失败: %v", bot.ID, err)
+		} else {
+			var keys []string
+			for k := range updates {
+				keys = append(keys, k)
+			}
+			klog.Infof("系统Bot[%d]同步更新成功，更新字段: %v", bot.ID, keys)
+		}
+	}
+}
+
+// computeSystemBotAvatarURL 计算系统Bot头像的URL（不上传，仅计算路径）
+func (svc *BotService) computeSystemBotAvatarURL() string {
+	entries, err := os.ReadDir("avatar")
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" && ext != ".webp" {
+			continue
+		}
+		filePath := filepath.Join("avatar", entry.Name())
+		data, err := os.ReadFile(filePath)
+		if err != nil || len(data) == 0 {
+			continue
+		}
+		contentHash := storage.ComputeContentHash(data)
+		objectName := storage.GenerateObjectName(contentHash, ext)
+		return storage.PublicURL + storage.BasePath + "/" + objectName
+	}
+	return ""
 }
 
 func (svc *BotService) uploadSystemBotAvatar(ctx context.Context, botID int64) string {

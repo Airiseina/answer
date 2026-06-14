@@ -97,3 +97,12 @@ func (d *documentDao) GetStuckDocuments() ([]model.KbDocument, error) {
 	}
 	return docs, nil
 }
+
+func (d *documentDao) GetParsedDocuments() ([]model.KbDocument, error) {
+	var docs []model.KbDocument
+	err := d.db.Where("status = ?", model.DocStatusParsed).Find(&docs).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询已解析文档失败: %w", err)
+	}
+	return docs, nil
+}

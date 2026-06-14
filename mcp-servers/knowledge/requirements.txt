@@ -1,9 +1,0 @@
-mcp[cli]>=1.0.0
-starlette
-uvicorn
-httpx
-volcengine-python-sdk[ark]>=1.0.0
-qdrant-client>=1.7.0
-meilisearch>=0.31.0
-grpcio
-pymysql

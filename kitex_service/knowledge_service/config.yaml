@@ -40,7 +40,7 @@ embedding:
   model: "doubao-embedding-vision-251215"
 
 rerank:
-  enabled: true
+  enabled: false
   # 模式: jina(云端API,免下载模型) 或 vllm(本地GPU部署)
   mode: "jina"
   # jina模式: base_url=https://api.jina.ai/v1, model=jina-reranker-v2-base-multilingual
@@ -49,3 +49,9 @@ rerank:
   model: "jina-reranker-v2-base-multilingual"
   top_n: 3
   api_key: ""
+
+neo4j:
+  uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "password"
+  max_connections: 10

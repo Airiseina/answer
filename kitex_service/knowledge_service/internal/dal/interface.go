@@ -26,6 +26,7 @@ type DocumentDao interface {
 	GetPendingDocuments(limit int) ([]model.KbDocument, error)
 	ResetStuckDocuments() error
 	GetStuckDocuments() ([]model.KbDocument, error)
+	GetParsedDocuments() ([]model.KbDocument, error)
 }
 
 type BotKnowledgeDao interface {

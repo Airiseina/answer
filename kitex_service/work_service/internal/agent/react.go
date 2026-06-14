@@ -46,6 +46,8 @@ type AgentRunConfig struct {
 	McpServers   []mcp.ServerConfig
 	UserContent  string
 	ImageData    *llm.ImageData // 图片数据，非nil时构造多模态消息
+	KBIDs        []int64        // Bot关联的知识库ID列表，用于内置知识库检索工具
+	BotID        int64          // Bot ID，用于获取知识库列表
 }
 
 // AgentResult Agent执行结果
@@ -66,6 +68,14 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, erro
 	}
 
 	toolsConfig := compose.ToolsNodeConfig{}
+
+	// 注册内置知识库检索工具（通过RPC调用knowledge_service，替代原MCP knowledge工具）
+	if len(cfg.KBIDs) > 0 {
+		toolsConfig.Tools = append(toolsConfig.Tools, newSearchKnowledgeTool())
+	}
+	if cfg.BotID > 0 {
+		toolsConfig.Tools = append(toolsConfig.Tools, newGetBotKnowledgeBasesTool())
+	}
 
 	if len(cfg.McpServers) > 0 {
 		mcpCtx, mcpCancel := context.WithTimeout(ctx, mcpTimeout)

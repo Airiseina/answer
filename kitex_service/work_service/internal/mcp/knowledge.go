@@ -2,93 +2,101 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
 	"github.com/cloudwego/kitex/pkg/klog"
 )
 
-const knowledgeMcpTimeout = 30 * time.Second
+const knowledgeRPCTimeout = 30 * time.Second
 
-func ensureKnowledgeConnected(ctx context.Context, pool *Pool) error {
-	if _, ok := pool.GetConnection("knowledge"); ok {
-		return nil
-	}
-	builtinServers := GetBuiltinServers()
-	var knowledgeCfg ServerConfig
-	found := false
-	for _, s := range builtinServers {
-		if s.Name == "knowledge" && s.URL != "" {
-			knowledgeCfg = ServerConfig{
-				Name:      s.Name,
-				URL:       s.URL,
-				Transport: s.Transport,
-			}
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("knowledge配置未找到或URL为空")
-	}
-	klog.Infof("知识库操作: knowledge未连接，正在自动连接 %s", knowledgeCfg.URL)
-	_, err := pool.Connect(ctx, knowledgeCfg)
+// SearchKnowledgeViaRPC 通过RPC调用knowledge_service进行知识库检索
+// 返回JSON字符串，格式与原MCP工具保持一致，便于Agent解析
+func SearchKnowledgeViaRPC(ctx context.Context, query string, kbIDs []int64, topK int) string {
+	searchCtx, cancel := context.WithTimeout(ctx, knowledgeRPCTimeout)
+	defer cancel()
+
+	results, err := rpc.SearchKnowledge(searchCtx, kbIDs, query, int32(topK))
 	if err != nil {
-		return fmt.Errorf("自动连接knowledge失败: %w", err)
+		klog.Errorf("知识库检索RPC失败: %v", err)
+		return ""
 	}
-	klog.Infof("知识库操作: knowledge自动连接成功")
-	return nil
+	if len(results) == 0 {
+		return ""
+	}
+
+	// 转换为与原MCP工具一致的JSON格式
+	type searchResultItem struct {
+		Content    string  `json:"content"`
+		Source     string  `json:"source"`
+		DocID      int64   `json:"doc_id"`
+		KBID       int64   `json:"kb_id"`
+		ChunkIndex int     `json:"chunk_index"`
+		Score      float64 `json:"score"`
+		PageNumber *int    `json:"page_number,omitempty"`
+	}
+	items := make([]searchResultItem, 0, len(results))
+	for _, r := range results {
+		items = append(items, searchResultItem{
+			Content:    r.Content,
+			Source:     r.Source,
+			DocID:      r.DocID,
+			KBID:       r.KBID,
+			ChunkIndex: r.ChunkIndex,
+			Score:      r.Score,
+			PageNumber: r.PageNumber,
+		})
+	}
+	data, _ := json.Marshal(items)
+	return string(data)
 }
 
-func SearchKnowledge(ctx context.Context, pool *Pool, query string, kbIDs string, topK int) string {
-	if err := ensureKnowledgeConnected(ctx, pool); err != nil {
-		klog.Errorf("确保knowledge连接失败: %v", err)
-		return ""
-	}
-	args := map[string]any{
-		"query":  query,
-		"kb_ids": kbIDs,
-		"top_k":  topK,
-	}
-	result, err := pool.CallToolWithFallback(ctx, "knowledge", "search_knowledge", args, knowledgeMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
-		klog.Warnf("知识库搜索降级: %v", err)
-		return "", nil
-	})
+// GetBotKnowledgeBasesViaRPC 通过RPC获取Bot关联的知识库列表
+// 返回JSON字符串，格式与原MCP工具保持一致
+func GetBotKnowledgeBasesViaRPC(ctx context.Context, botID int64) string {
+	kbCtx, cancel := context.WithTimeout(ctx, knowledgeRPCTimeout)
+	defer cancel()
+
+	kbs, err := rpc.GetBotKnowledgeBases(kbCtx, botID)
 	if err != nil {
-		klog.Errorf("搜索知识库失败: %v", err)
+		klog.Errorf("获取Bot知识库列表RPC失败: %v", err)
 		return ""
 	}
-	if isMcpToolError(result) {
-		klog.Errorf("搜索知识库返回错误: %s", result)
+	if len(kbs) == 0 {
 		return ""
 	}
-	return result
+
+	// 转换为与原MCP工具一致的JSON格式
+	type kbItem struct {
+		ID          int64  `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		DocCount    int32  `json:"doc_count"`
+		ChunkCount  int32  `json:"chunk_count"`
+	}
+	type kbResponse struct {
+		KnowledgeBases []kbItem `json:"knowledge_bases"`
+	}
+	resp := kbResponse{
+		KnowledgeBases: make([]kbItem, 0, len(kbs)),
+	}
+	for _, kb := range kbs {
+		resp.KnowledgeBases = append(resp.KnowledgeBases, kbItem{
+			ID:          kb.ID,
+			Name:        kb.Name,
+			Description: kb.Description,
+			DocCount:    kb.DocCount,
+			ChunkCount:  kb.ChunkCount,
+		})
+	}
+	data, _ := json.Marshal(resp)
+	return string(data)
 }
 
-func GetBotKnowledgeBases(ctx context.Context, pool *Pool, botID string) string {
-	if err := ensureKnowledgeConnected(ctx, pool); err != nil {
-		klog.Errorf("确保knowledge连接失败: %v", err)
-		return ""
-	}
-	args := map[string]any{
-		"bot_id": botID,
-	}
-	result, err := pool.CallToolWithFallback(ctx, "knowledge", "get_bot_knowledge_bases", args, knowledgeMcpTimeout, func(ctx context.Context, serverName, toolName string, args map[string]any, err error) (string, error) {
-		klog.Warnf("获取Bot知识库列表降级: %v", err)
-		return "", nil
-	})
-	if err != nil {
-		klog.Errorf("获取Bot知识库列表失败: %v", err)
-		return ""
-	}
-	if isMcpToolError(result) {
-		klog.Errorf("获取Bot知识库列表返回错误: %s", result)
-		return ""
-	}
-	return result
-}
-
+// BuildKnowledgePrompt 构建知识库检索结果的提示词
 func BuildKnowledgePrompt(knowledgeResult string) string {
 	trimmed := strings.TrimSpace(knowledgeResult)
 	if trimmed == "" {

@@ -10,6 +10,7 @@ require (
 	github.com/kitex-contrib/obs-opentelemetry/logging/zap v0.0.0-20251121033812-f6c3e41f13e9
 	github.com/kitex-contrib/registry-etcd v0.3.0
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
+	github.com/neo4j/neo4j-go-driver/v5 v5.27.0
 	github.com/qdrant/go-client v1.18.2
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/spf13/viper v1.21.0

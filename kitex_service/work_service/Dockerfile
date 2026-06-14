@@ -2,9 +2,11 @@ FROM golang:1.26-alpine AS builder
 ENV GOPROXY=https://goproxy.cn,direct
 WORKDIR /app
 
+# 先复制所有本地依赖的 go.mod/go.sum，确保 go mod download 能解析 replace 指令
 COPY pkg/go.mod pkg/go.sum pkg/
 COPY kitex_service/bot_service/go.mod kitex_service/bot_service/go.sum kitex_service/bot_service/
 COPY kitex_service/chat_service/go.mod kitex_service/chat_service/go.sum kitex_service/chat_service/
+COPY kitex_service/knowledge_service/go.mod kitex_service/knowledge_service/go.sum kitex_service/knowledge_service/
 COPY kitex_service/user_service/go.mod kitex_service/user_service/go.sum kitex_service/user_service/
 COPY kitex_service/work_service/go.mod kitex_service/work_service/go.sum kitex_service/work_service/
 
@@ -13,6 +15,7 @@ RUN cd /app/kitex_service/work_service && go mod download
 COPY pkg/ pkg/
 COPY kitex_service/bot_service/ kitex_service/bot_service/
 COPY kitex_service/chat_service/ kitex_service/chat_service/
+COPY kitex_service/knowledge_service/ kitex_service/knowledge_service/
 COPY kitex_service/user_service/ kitex_service/user_service/
 COPY kitex_service/work_service/ kitex_service/work_service/
 

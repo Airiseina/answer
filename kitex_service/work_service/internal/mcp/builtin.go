@@ -18,11 +18,7 @@ func GetBuiltinServers() []BuiltinServer {
 			URL:       v.GetString("mcp.mem0_url"),
 			Transport: "sse",
 		},
-		{
-			Name:      "knowledge",
-			URL:       v.GetString("mcp.knowledge_url"),
-			Transport: "sse",
-		},
+		// knowledge已从MCP改为直接RPC调用knowledge_service，不再需要MCP中间层
 		{
 			Name:      "searxng",
 			URL:       v.GetString("mcp.searxng_url"),
