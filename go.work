@@ -10,4 +10,5 @@ use (
 	./msg_gateway
 	./pkg
 	kitex_service/group_service
+	mcp-servers/searxng-go
 )
