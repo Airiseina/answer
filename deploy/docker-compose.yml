@@ -184,8 +184,8 @@ services:
        - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
        - RERANK_ENABLED=${RERANK_ENABLED:-false}
        - RERANK_MODE=${RERANK_MODE:-jina}
-       - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.jina.ai/v1}
-       - RERANK_MODEL=${RERANK_MODEL:-jina-reranker-v2-base-multilingual}
+       - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.siliconflow.cn/v1}
+       - RERANK_MODEL=${RERANK_MODEL:-Qwen/Qwen3-Reranker-8B}
        - RERANK_TOP_N=${RERANK_TOP_N:-3}
        - RERANK_API_KEY=${RERANK_API_KEY:-}
        - NEO4J_URI=bolt://neo4j:7687

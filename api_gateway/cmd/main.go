@@ -44,6 +44,7 @@ func main() {
 	rpc.Connect(v)
 	tracerOptions, cfg := hertztracing.NewServerTracer()
 	h := server.New(server.WithHostPorts("0.0.0.0:1234"), server.WithMaxRequestBodySize(50*1024*1024), tracerOptions)
+
 	h.Use(hertztracing.ServerMiddleware(cfg))
 	h.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},

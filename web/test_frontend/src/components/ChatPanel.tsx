@@ -13,27 +13,11 @@ interface PendingAttachment {
 }
 
 // escapeMisusedStrikethrough 转义Bot输出中被误用的删除线语法
-// GFM中 ~~文字~~ 会被渲染为删除线，但Bot常用~~表示语气（如害羞波浪线）
-// 只保留真正的删除线（~~包裹至少2个非空白字符），其余转义为\~~
+// GFM中 ~~文字~~ 会被渲染为删除线，但Bot常用~~表示语气（如害羞波浪线、强调）
+// 由于无法可靠区分"真正删除线"与"语气波浪线"，统一转义所有~~为字面字符
+// 这样 ~~BAIDU.COM~~ 会渲染为字面文本 ~~BAIDU.COM~~，而不是带删除线的 BAIDU.COM
 function escapeMisusedStrikethrough(text: string): string {
-  // 先用占位符保护真正的删除线（内部至少2个非空白字符）
-  const placeholders: string[] = []
-  let result = text.replace(/~~(.+?)~~/g, (match, inner: string) => {
-    const trimmed = inner.trim()
-    if (trimmed.length >= 2) {
-      const ph = `\x00PH${placeholders.length}\x00`
-      placeholders.push(match)
-      return ph
-    }
-    return match.replace(/~~/g, '\\~\\~')
-  })
-  // 剩余不成对的~~全部转义
-  result = result.replace(/~~/g, '\\~\\~')
-  // 还原占位符
-  placeholders.forEach((ph, i) => {
-    result = result.replace(`\x00PH${i}\x00`, ph)
-  })
-  return result
+  return text.replace(/~~/g, '\\~\\~')
 }
 
 export default function ChatPanel() {
@@ -69,6 +53,7 @@ export default function ChatPanel() {
   const [searchEndTime, setSearchEndTime] = useState('')
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [showInviteBot, setShowInviteBot] = useState(false)
   const msgEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -162,6 +147,52 @@ export default function ChatPanel() {
   const handleSelectFriend = (friendAccount: string, name: string) => {
     openChatWith(friendAccount, name, 1)
     setShowNewChat(false)
+  }
+
+  // 与Bot发起单聊：调用 add_to_conversation 接口，conversation_id=0 + conversation_type=1
+  // 后端会创建新的单聊会话（若已存在则返回已有会话ID）
+  const handleSelectBotForSingleChat = async (botId: string, botName: string) => {
+    const addRes = await api('POST', '/api/bot/add_to_conversation', {
+      bot_id: botId,
+      conversation_id: '0',
+      conversation_type: 1,
+    })
+    if (addRes.code === 0) {
+      const convId = String(addRes.data?.conversation_id || '')
+      await loadConversations()
+      if (convId && convId !== '0') {
+        setActiveConvId(convId)
+      } else {
+        // 会话已存在，尝试在会话列表中查找并定位
+        // Bot单聊会话的 peerAccount 为 bot 账号（bot_ 开头）
+      }
+      setShowNewChat(false)
+      setSelectedBotIds([])
+    } else {
+      alert(addRes.msg || '创建Bot单聊失败')
+    }
+  }
+
+  // 将Bot拉入已有的单聊会话（conversation_type=1 + 真实 conversation_id）
+  // 后端会调用 AddConversationMembers 把Bot加为该会话成员，单聊即变为多人会话
+  const handleInviteBotToSingleChat = async (botId: string) => {
+    if (activeConvId === null || activeConvId === '') return
+    const res = await api('POST', '/api/bot/add_to_conversation', {
+      bot_id: botId,
+      conversation_id: activeConvId,
+      conversation_type: 1,
+    })
+    if (res.code === 0) {
+      setShowInviteBot(false)
+      // 刷新会话成员信息，使新加入的Bot成员信息被加载
+      await loadConversations()
+      const updated = conversations.find(c => c.id === activeConvId)
+      if (updated?.memberAccounts && updated.memberAccounts.length > 0) {
+        loadConversationMembers(updated.memberAccounts)
+      }
+    } else {
+      alert(res.msg || '邀请Bot失败')
+    }
   }
 
   const handleCreateGroupConversation = async () => {
@@ -615,6 +646,24 @@ export default function ChatPanel() {
                 ))}
               </div>
             )}
+            {bots.length > 0 && (
+              <>
+                <label style={{ marginTop: 8 }}>选择 Bot 发起单聊</label>
+                <div className="friend-picker-list">
+                  {bots.map(b => (
+                    <div key={b.bot_id} className="friend-picker-item" onClick={() => handleSelectBotForSingleChat(b.bot_id, b.name)}>
+                      <div className="fp-avatar">🤖</div>
+                      <div className="fp-info">
+                        <div className="fp-name">{b.name}{b.is_system ? ' (系统)' : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {friends.length === 0 && bots.length === 0 && (
+              <div className="picker-empty">暂无好友或 Bot</div>
+            )}
           </div>
         ) : (
           <div className="modal-field">
@@ -726,6 +775,12 @@ export default function ChatPanel() {
           )}
         </div>
         <div className="chat-header-actions">
+          {conv.type === 1 && activeConvId !== '' && activeConvId !== null && bots.length > 0
+            && peerAccount && !peerAccount.startsWith('bot_') && (
+            <button className="chat-header-action-btn" onClick={() => setShowInviteBot(true)} title="邀请 Bot 加入">
+              🤖
+            </button>
+          )}
           <button className="chat-header-action-btn" onClick={handleOpenSearch} title="搜索消息">
             🔍
           </button>
@@ -994,6 +1049,36 @@ export default function ChatPanel() {
         </div>
       )}
       {showNewChat && renderNewChatModal()}
+      {showInviteBot && (
+        <div className="modal-overlay" onClick={() => setShowInviteBot(false)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-card-header">
+              <h3>邀请 Bot 加入会话</h3>
+              <button className="modal-card-close" onClick={() => setShowInviteBot(false)}>✕</button>
+            </div>
+            <div className="modal-field friend-picker">
+              <label>选择 Bot</label>
+              {bots.length === 0 ? (
+                <div className="picker-empty">暂无可用 Bot</div>
+              ) : (
+                <div className="friend-picker-list">
+                  {bots.map(b => (
+                    <div key={b.bot_id} className="friend-picker-item" onClick={() => handleInviteBotToSingleChat(b.bot_id)}>
+                      <div className="fp-avatar">🤖</div>
+                      <div className="fp-info">
+                        <div className="fp-name">{b.name}{b.is_system ? ' (系统)' : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setShowInviteBot(false)}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showSearch && (
         <div className="modal-overlay" onClick={handleCloseSearch}>
           <div className="modal-card search-modal" onClick={e => e.stopPropagation()}>

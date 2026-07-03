@@ -85,7 +85,7 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 - **Qdrant 语义检索**：Top-K 向量检索，对话自动注入知识库上下文
 - **Meilisearch BM25 检索**：关键词检索 + RRF 融合排序，双路混合检索
 - **Neo4j 知识图谱**：N-gram 实体提取 → 图谱索引 → 图谱遍历增强检索
-- **Rerank 精排**：BGE-Reranker 重排序，提升检索精度（vLLM GPU 部署 / Jina API）
+- **Rerank 精排**：BGE-Reranker 重排序，提升检索精度（硅基流动 API / vLLM GPU 部署 / Jina API）
 - **Bot 绑定知识库**：对话时自动检索关联知识库内容
 
 ### 长期记忆 (Mem0)
@@ -123,7 +123,7 @@ Answer IM 是一个面向多人在线场景的 AI 增强即时通讯系统。
 | MCP 协议 | [MCP Go SDK](https://github.com/mark3labs/mcp-go) | SSE 传输 / 工具调用 |
 | MCP Server | Go (SearXNG) + Python (Mem0/Weather/Timeserver) | 搜索 / 记忆 / 天气 / 时间 |
 | RAG 评估 | RAGAS | 知识库检索质量评估 (Profile: eval) |
-| 精排模型 | BGE-Reranker (vLLM / Jina API) | 检索结果重排序 (Profile: rerank) |
+| 精排模型 | BGE-Reranker (硅基流动 / vLLM / Jina API) | 检索结果重排序 (Profile: rerank) |
 | 前端 | React 19 + TypeScript + Vite 8 | 用户界面 |
 | Embedding 模型 | 豆包多模态 Embedding | 知识库向量化 / 语义检索 |
 | 文档解析 | pdf/DOCX/Markdown/PPTX parser | 知识库文档内容提取 |
@@ -262,7 +262,7 @@ answer/
 
 ```bash
 cd deploy
-cp .env .env  # 检查并修改 .env 中的 API Key
+cp .env.example .env  # 复制环境变量模板并修改其中的 API Key
 docker compose up -d
 ```
 
@@ -385,11 +385,8 @@ cd kitex_service/knowledge_service && go run main.go   # :4326
 # Mem0 记忆 (端口 8000)
 cd mcp-servers/mem0 && python -m mem0_mcp_server --mode sse --host 0.0.0.0 --port 8000
 
-# Knowledge 知识库 (端口 8001)
-cd mcp-servers/knowledge && python -m knowledge --mode sse --host 0.0.0.0 --port 8001
-
-# SearXNG 搜索 (端口 8001，需 searxng 容器已启动)
-cd mcp-servers/searxng && python -m searxng --mode sse --host 0.0.0.0 --port 8001
+# SearXNG 搜索 (端口 8001，Go 实现，需 searxng 容器已启动)
+cd mcp-servers/searxng-go && go run main.go
 
 # 天气 (端口 8080)
 python -m mcp_weather_server --mode sse --host 0.0.0.0 --port 8080
@@ -397,6 +394,8 @@ python -m mcp_weather_server --mode sse --host 0.0.0.0 --port 8080
 # 时间 (端口 8000，需 supergateway + npm)
 supergateway --stdio 'python -c "from mcp_timeserver import main; main()"' --port 8000 --ssePath /sse --messagePath /message
 ```
+
+> **说明**：知识库检索已从 MCP 改为直接 RPC 调用 `knowledge_service`（端口 4326），不再需要 Python MCP Knowledge 中间层。
 
 ### 6. 启动前端
 
@@ -613,9 +612,9 @@ Score: 0.92                   Score: 0.85
 - 按 RRF 分数降序排列后截取 Top-K 返回
 
 **Rerank 精排**：
-- 支持 vLLM 本地部署（BGE-Reranker-v2-m3，需 GPU，Profile: rerank）和 Jina API 两种模式
+- 支持三种模式：Jina API（海外）、硅基流动 API（国内推荐）、vLLM 本地部署（需 GPU，Profile: rerank）
 - 对 RRF 融合后的 Top-K 结果按查询-文档相关性重排序
-- 开发环境默认使用 Jina API 模式，生产环境可切换 vLLM 模式
+- 开发环境推荐使用硅基流动模式（国内低延迟，免费额度 2000 万 token），也可切换 vLLM 模式
 
 **降级策略**：
 - Meilisearch 不可用时，自动降级为纯向量检索
@@ -707,6 +706,110 @@ Score: 0.92                   Score: 0.85
 - mem0 为内部 Server，Agent 工具列表中自动过滤，通过专用方法调用
 - 知识库检索已从 MCP 改为直接 RPC 调用 knowledge_service，减少网络跳转
 - 外部 Server（searxng/weather/timeserver）作为通用工具暴露给 ReAct Agent
+
+### 自定义 MCP Server 扩展
+
+系统支持两种方式扩展 Bot 的工具能力，无需修改后端代码。
+
+> **传输协议**：当前后端仅支持 SSE 传输（`transport: "sse"`），MCP Server 必须暴露 `/sse` 端点。
+> **命名约束**：`mem0` 为内部 Server 名称，自定义 Server 不要使用 `mem0`，否则会被 Agent 自动过滤。
+
+#### 方式一：绑定远程 MCP Server（零部署，开箱即用）
+
+任何遵循 [MCP 协议](https://modelcontextprotocol.io) 且暴露 SSE 端点的公网服务都可直接绑定。以下给出可直接验证的用例：
+
+**用例：腾讯位置服务 MCP Server（国内，免费 Key）**
+
+[腾讯位置服务](https://lbs.qq.com/service/MCPServer/MCPServerGuide/userGuide)提供国内低延迟的 MCP SSE 端点，支持地理编码、逆地理编码、IP 定位、路线规划等工具：
+
+1. 前往 [腾讯位置服务控制台](https://lbs.qq.com/dev/console/application/mine) 注册并创建一个 Key，勾选「WebServiceAPI」权限（免费额度 10,000 次/日）。
+2. 前端 →「AI 助手」→「MCP 工具」→ 选择你的 Bot →「添加 MCP Server」。
+3. 填写：
+
+| 字段 | 值 |
+|------|------|
+| 名称 | `qqmap` |
+| URL | `https://mcp.map.qq.com/sse?key=你的Key&format=0` |
+| 描述 | `腾讯位置服务：地理编码、路线规划、IP定位` |
+| 传输协议 | `sse` |
+| 认证类型 | `none`（Key 已包含在 URL 参数中） |
+
+4. 保存后，向该 Bot 提问「从北京西站到天安门怎么走」或「我的 IP 地址在哪里」，Agent 会自动调用 `geocode`、`direction`、`ip_location` 等工具。
+
+对应的 REST API 调用：
+
+```bash
+curl -X POST http://localhost/api/bot/mcp/create \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bot_id": "<你的bot_id>",
+    "name": "qqmap",
+    "url": "https://mcp.map.qq.com/sse?key=你的Key&format=0",
+    "description": "腾讯位置服务：地理编码、路线规划、IP定位",
+    "transport": "sse",
+    "auth_type": "none"
+  }'
+```
+
+**用例：使用已部署的内部 MCP Server（Docker 环境）**
+
+Docker 部署后，以下 MCP Server 已在内部网络运行，可直接绑定到自定义 Bot：
+
+| 字段 | Weather（天气） | Timeserver（时间） | SearXNG（搜索） |
+|------|------|------|------|
+| 名称 | `weather` | `timeserver` | `searxng-custom` |
+| URL | `http://answer_mcp_weather:8080/sse` | `http://answer_mcp_timeserver:8000/sse` | `http://answer_mcp_searxng:8001/sse` |
+| 传输协议 | `sse` | `sse` | `sse` |
+
+> 内部 Server 通过 Docker 网络访问（容器名即域名），宿主机端口映射为 Weather `9001`、Timeserver `9005`、SearXNG `9003`。
+
+#### 方式二：自建 Go MCP Server
+
+若需要对接内部业务系统（如查询订单、调用内部 API），可参照 [mcp-servers/searxng-go/main.go](mcp-servers/searxng-go/main.go) 用 [mcp-go](https://github.com/mark3labs/mcp-go) 实现一个原生 Go MCP Server，示例如下：
+
+```go
+package main
+
+import (
+    "context"
+    "net/http"
+    "os"
+
+    "github.com/mark3labs/mcp-go/mcp"
+    "github.com/mark3labs/mcp-go/server"
+)
+
+func main() {
+    s := server.NewMCPServer("order-query", "1.0.0", server.WithToolCapabilities(true))
+
+    // 注册一个查询订单的工具
+    s.AddTool(mcp.NewTool("query_order",
+        mcp.WithDescription("根据订单号查询订单状态"),
+        mcp.WithString("order_id", mcp.Required(), mcp.Description("订单号")),
+    ), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+        orderID := req.GetString("order_id", "")
+        // TODO: 替换为真实业务调用
+        return mcp.NewToolResultText(`{"order_id":"` + orderID + `","status":"shipped"}`), nil
+    })
+
+    // 以 SSE 传输暴露 /sse 端点
+    port := os.Getenv("PORT")
+    if port == "" { port = "9000" }
+    http.ListenAndServe(":"+port, server.NewSSEServer(s, server.WithSSEEndpoint("/sse")))
+}
+```
+
+部署后，在 `deploy/docker-compose.yml` 中追加一个服务（或本地 `go run`），再通过方式一将 `http://<host>:9000/sse` 绑定到 Bot 即可。ReAct Agent 会在用户提问涉及订单时自动调用 `query_order` 工具。
+
+#### MCP Server 管理接口
+
+| 操作 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| 绑定 MCP Server | POST | `/api/bot/mcp/create` | 绑定到指定 Bot |
+| 查询已绑定列表 | GET | `/api/bot/mcp/list?bot_id=` | 返回含启用状态 |
+| 更新（启用/禁用/改URL） | POST | `/api/bot/mcp/update` | 支持局部更新 |
+| 删除 | POST | `/api/bot/mcp/delete` | 解除绑定 |
 
 ### Agent 上下文增强流程
 
@@ -881,13 +984,6 @@ Score: 0.92                   Score: 0.85
 
 ### 压测脚本
 
-压测脚本位于 `deploy/stress_test/`，运行方式：
-
-```bash
-cd deploy/stress_test
-go run main.go
-```
-
 HTTP 压测使用 [hey](https://github.com/rakyll/hey)：
 
 ```bash
@@ -937,7 +1033,7 @@ docker exec answer_kafka-1 /opt/kafka/bin/kafka-producer-perf-test.sh \
 
 ## 环境变量参考
 
-完整配置见 [deploy/.env](deploy/.env)。关键变量：
+完整配置见 [deploy/.env.example](deploy/.env.example)（部署时复制为 `.env`）。关键变量：
 
 | 变量 | 说明 |
 |------|------|
@@ -948,6 +1044,11 @@ docker exec answer_kafka-1 /opt/kafka/bin/kafka-producer-perf-test.sh \
 | `MEM0_LLM_API_KEY` | Mem0 记忆层 LLM Key |
 | `MEM0_EMBEDDING_API_KEY` | Mem0 向量模型 Key |
 | `KNOWLEDGE_DOUBAO_EMBEDDING_API_KEY` | 知识库向量模型 Key |
+| `RERANK_MODE` | 精排模式：`jina`（Jina API）/ `jina` + 硅基流动（见下方） / `vllm`（本地 GPU） |
+| `RERANK_BASE_URL` | 精排 API 地址（硅基流动：`https://api.siliconflow.cn/v1`，Jina：`https://api.jina.ai/v1`） |
+| `RERANK_MODEL` | 精排模型名（硅基流动：`BAAI/bge-reranker-v2-m3`，Jina：`jina-reranker-v2-base-multilingual`） |
+| `RERANK_API_KEY` | 精排 API Key（硅基流动在 [cloud.siliconflow.cn](https://cloud.siliconflow.cn) 申请，免费 2000 万 token） |
+| `RERANK_TOP_N` | 精排后保留的 Top-N 结果数（默认 `3`） |
 
 ## API 文档
 
@@ -957,11 +1058,10 @@ docker exec answer_kafka-1 /opt/kafka/bin/kafka-producer-perf-test.sh \
 > Base URL: `http://localhost:1234`（Docker 部署经由 Traefik 反向代理则为 `http://localhost`）
 > 认证方式：JWT Bearer Token（注册和登录外均需 Header `Authorization: <token>`）
 
-## CI/CD
+## 后续方向
 
-- **CI** (`.github/workflows/ci.yml`): Push/PR 触发 Go Lint + Build + Test
-- **Release** (`.github/workflows/release.yml`): 推送 `v*` 标签时构建 Docker 镜像并推送 GHCR
-
-## License
-
-All Rights Reserved.
+- [ ] 增加用户个人skill
+- [ ] 实现多agent协助
+- [ ] 多租户
+- [ ] 编写用户bot市场
+- [ ] 扩展agent能力（识别文件和语音功能，日和周总结）
