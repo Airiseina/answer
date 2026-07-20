@@ -28,7 +28,14 @@ func GetConfig() {
 	V.SetDefault("seaweedfs.public_url", "/files")
 	V.SetDefault("embedding.api_key", "")
 	V.SetDefault("embedding.base_url", "https://ark.cn-beijing.volces.com/api/v3")
-	V.SetDefault("embedding.model", "doubao-embedding-vision-251215")
+	// 使用文本向量化模型（支持标准 /embeddings 端点的批量调用）
+	// 维度 2048 与 Qdrant collection 配置兼容
+	V.SetDefault("embedding.model", "doubao-embedding-text-240715")
+	// LLM 配置：用于实体抽取/关键词抽取等图谱构建任务
+	// 配置缺失时实体抽取将降级为 N-gram 正则方案
+	V.SetDefault("llm.api_key", "")
+	V.SetDefault("llm.base_url", "https://ark.cn-beijing.volces.com/api/v3")
+	V.SetDefault("llm.model", "")
 	V.SetDefault("rerank.enabled", false)
 	V.SetDefault("rerank.mode", "jina")
 	V.SetDefault("rerank.base_url", "https://api.jina.ai/v1")

@@ -462,8 +462,20 @@ func (svc *KnowledgeService) graphSearch(ctx context.Context, kbIDs []int64, que
 		return nil, fmt.Errorf("图谱未初始化")
 	}
 
-	// 将查询分词为关键词
-	keywords := extractKeywords(query)
+	// 关键词抽取：优先使用 LLM 抽取命名实体，降级为简单分词
+	// LLM 抽取能识别"字节跳动"等命名实体，原 extractKeywords 会被切成"字节"+"跳动"
+	var keywords []string
+	if ai.ChatModelReady() {
+		kw, err := ai.ExtractKeywords(ctx, query)
+		if err != nil || len(kw) == 0 {
+			klog.Warnf("LLM 关键词抽取失败或为空，降级为简单分词: %v", err)
+			keywords = extractKeywords(query)
+		} else {
+			keywords = kw
+		}
+	} else {
+		keywords = extractKeywords(query)
+	}
 	if len(keywords) == 0 {
 		klog.Debugf("查询无有效关键词，跳过图谱检索: query=%q", query)
 		return nil, nil
@@ -492,12 +504,91 @@ func (svc *KnowledgeService) graphSearch(ctx context.Context, kbIDs []int64, que
 }
 
 // indexEntitiesFromChunks 从Chunk内容中提取实体并索引到Neo4j图谱
-// 基于规则的实体提取：提取高频N-gram作为实体，同一文档内共享N-gram的Chunk建立关联
+// 优先使用 LLM 抽取命名实体（人名/组织/技术等），LLM 不可用时降级为 N-gram 高频词方案
+// 与 BackfillEntities 共用 extractEntitiesFromChunks 抽取入口，保证两条链路一致
 func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc model.KbDocument, chunks []graph.ChunkData) {
 	if svc.neo4jGraph == nil {
 		return
 	}
+	entities, relations := svc.extractEntitiesFromChunks(ctx, doc.ID, chunks)
+	if len(entities) == 0 {
+		klog.Infof("文档[%d]未提取到有效实体", doc.ID)
+		return
+	}
+	klog.Infof("文档[%d]提取到%d个实体, %d个关系", doc.ID, len(entities), len(relations))
+	if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
+		klog.Warnf("文档[%d]实体索引失败(不影响Chunk索引): %v", doc.ID, err)
+	}
+}
 
+// extractEntitiesFromChunks 统一实体抽取入口
+// LLM 就绪时走 LLM 路径，否则降级为 N-gram 方案
+// 返回去重后的实体列表与关系列表，调用方负责调用 IndexEntities 持久化
+func (svc *KnowledgeService) extractEntitiesFromChunks(ctx context.Context, docID int64, chunks []graph.ChunkData) ([]graph.EntityData, []graph.RelationData) {
+	if ai.ChatModelReady() {
+		return svc.extractEntitiesWithLLM(ctx, docID, chunks)
+	}
+	klog.Warnf("LLM 未初始化，文档[%d]降级为 N-gram 实体提取", docID)
+	return svc.extractEntitiesWithNgrams(ctx, docID, chunks)
+}
+
+// extractEntitiesWithLLM 使用 LLM 从每个 Chunk 抽取实体，跨 Chunk 合并去重
+// LLM 输出结构化 JSON，包含命名实体（Person/Organization/Technology 等）和语义关系
+// 替代原 N-gram 高频词方案，提升图谱质量
+func (svc *KnowledgeService) extractEntitiesWithLLM(ctx context.Context, docID int64, chunks []graph.ChunkData) ([]graph.EntityData, []graph.RelationData) {
+	entityMap := make(map[string]*graph.EntityData) // entity name → 聚合后的数据
+	relationSet := make(map[string]graph.RelationData)
+
+	for _, chunk := range chunks {
+		result, err := ai.ExtractEntities(ctx, chunk.Content)
+		if err != nil {
+			klog.Warnf("文档[%d] Chunk[%s] LLM 实体抽取失败: %v", docID, chunk.ChunkID, err)
+			continue
+		}
+		// 合并实体：同名实体跨 Chunk 聚合 ChunkIDs
+		for _, e := range result.Entities {
+			if e.Name == "" {
+				continue
+			}
+			if existing, ok := entityMap[e.Name]; ok {
+				existing.ChunkIDs = appendUniqueString(existing.ChunkIDs, chunk.ChunkID)
+			} else {
+				entityMap[e.Name] = &graph.EntityData{
+					Name:        e.Name,
+					Type:        e.Type,
+					Description: e.Description,
+					ChunkIDs:    []string{chunk.ChunkID},
+				}
+			}
+		}
+		// 关系去重：相同 (source, target, type) 三元组只保留一份
+		for _, r := range result.Relations {
+			if r.SourceEntity == "" || r.TargetEntity == "" || r.RelationType == "" {
+				continue
+			}
+			key := fmt.Sprintf("%s|%s|%s", r.SourceEntity, r.TargetEntity, r.RelationType)
+			relationSet[key] = graph.RelationData{
+				SourceEntity: r.SourceEntity,
+				TargetEntity: r.TargetEntity,
+				RelationType: r.RelationType,
+			}
+		}
+	}
+
+	entities := make([]graph.EntityData, 0, len(entityMap))
+	for _, e := range entityMap {
+		entities = append(entities, *e)
+	}
+	relations := make([]graph.RelationData, 0, len(relationSet))
+	for _, r := range relationSet {
+		relations = append(relations, r)
+	}
+	return entities, relations
+}
+
+// extractEntitiesWithNgrams N-gram 降级方案：原 indexEntitiesFromChunks 主体逻辑
+// 保留 N-gram 提取 + 高频过滤 + 共现关系建图，作为 LLM 不可用时的兜底
+func (svc *KnowledgeService) extractEntitiesWithNgrams(_ context.Context, docID int64, chunks []graph.ChunkData) ([]graph.EntityData, []graph.RelationData) {
 	// 统计文档内各N-gram出现的Chunk列表
 	keywordChunks := make(map[string][]string) // keyword -> []chunkID
 	for _, chunk := range chunks {
@@ -511,11 +602,10 @@ func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc mo
 		}
 	}
 
-	// 只保留出现2次以上的N-gram作为实体（高频词更有可能是实体）
+	// 只保留出现3次以上的N-gram作为实体（高频词更有可能是实体）
 	var entities []graph.EntityData
 	var relations []graph.RelationData
 	entityNames := make(map[string]bool)
-
 	for kw, chunkIDs := range keywordChunks {
 		if len(chunkIDs) < 3 {
 			continue
@@ -524,7 +614,7 @@ func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc mo
 		entities = append(entities, graph.EntityData{
 			Name:        kw,
 			Type:        "Keyword",
-			Description: fmt.Sprintf("文档[%d]中的高频关键词", doc.ID),
+			Description: fmt.Sprintf("文档[%d]中的高频关键词", docID),
 			ChunkIDs:    chunkIDs,
 		})
 	}
@@ -537,8 +627,7 @@ func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc mo
 	for i := 0; i < len(entityList); i++ {
 		for j := i + 1; j < len(entityList); j++ {
 			e1, e2 := entityList[i], entityList[j]
-			overlapCount := overlapSize(keywordChunks[e1], keywordChunks[e2])
-			if overlapCount >= 3 {
+			if overlapSize(keywordChunks[e1], keywordChunks[e2]) >= 3 {
 				relations = append(relations, graph.RelationData{
 					SourceEntity: e1,
 					TargetEntity: e2,
@@ -547,16 +636,18 @@ func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc mo
 			}
 		}
 	}
+	return entities, relations
+}
 
-	if len(entities) == 0 {
-		klog.Infof("文档[%d]未提取到有效实体", doc.ID)
-		return
+// appendUniqueString 追加字符串到切片，已存在则跳过
+// 用于跨 Chunk 聚合实体 ChunkIDs 时去重
+func appendUniqueString(slice []string, val string) []string {
+	for _, s := range slice {
+		if s == val {
+			return slice
+		}
 	}
-
-	klog.Infof("文档[%d]提取到%d个实体, %d个关系", doc.ID, len(entities), len(relations))
-	if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
-		klog.Warnf("文档[%d]实体索引失败(不影响Chunk索引): %v", doc.ID, err)
-	}
+	return append(slice, val)
 }
 
 // extractNgrams 从文本中提取N-gram关键词
@@ -1101,6 +1192,7 @@ func (svc *KnowledgeService) ensureCollection(ctx context.Context) {
 
 // BackfillEntities 回填已有Chunk的实体到Neo4j图谱
 // 用于在服务启动时为历史数据补充实体提取
+// 走 extractEntitiesFromChunks 统一入口，LLM 就绪时用 LLM 抽取，否则降级为 N-gram
 func (svc *KnowledgeService) BackfillEntities(ctx context.Context) {
 	if svc.neo4jGraph == nil {
 		return
@@ -1135,53 +1227,8 @@ func (svc *KnowledgeService) BackfillEntities(ctx context.Context) {
 	totalRelations := 0
 
 	for docID, chunks := range docChunks {
-		// 统计文档内各N-gram出现的Chunk列表
-		keywordChunks := make(map[string][]string)
-		for _, chunk := range chunks {
-			keywords := extractNgrams(chunk.Content)
-			seen := make(map[string]bool)
-			for _, kw := range keywords {
-				if !seen[kw] {
-					seen[kw] = true
-					keywordChunks[kw] = append(keywordChunks[kw], chunk.ChunkID)
-				}
-			}
-		}
-
-		var entities []graph.EntityData
-		var relations []graph.RelationData
-		entityNames := make(map[string]bool)
-
-		for kw, chunkIDs := range keywordChunks {
-			if len(chunkIDs) < 3 {
-				continue
-			}
-			entityNames[kw] = true
-			entities = append(entities, graph.EntityData{
-				Name:        kw,
-				Type:        "Keyword",
-				Description: fmt.Sprintf("文档[%d]中的高频关键词", docID),
-				ChunkIDs:    chunkIDs,
-			})
-		}
-
-		entityList := make([]string, 0, len(entityNames))
-		for name := range entityNames {
-			entityList = append(entityList, name)
-		}
-		for i := 0; i < len(entityList); i++ {
-			for j := i + 1; j < len(entityList); j++ {
-				e1, e2 := entityList[i], entityList[j]
-				if overlapSize(keywordChunks[e1], keywordChunks[e2]) >= 3 {
-					relations = append(relations, graph.RelationData{
-						SourceEntity: e1,
-						TargetEntity: e2,
-						RelationType: "CO_OCCURS",
-					})
-				}
-			}
-		}
-
+		// 走统一抽取入口：LLM 或 N-gram 降级
+		entities, relations := svc.extractEntitiesFromChunks(ctx, docID, chunks)
 		if len(entities) > 0 {
 			if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
 				klog.Warnf("文档[%d]实体回填失败: %v", docID, err)

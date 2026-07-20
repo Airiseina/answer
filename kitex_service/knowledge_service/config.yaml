@@ -37,7 +37,16 @@ seaweedfs:
 
 embedding:
   api_key: ""
+  base_url: "https://ark.cn-beijing.volces.com/api/v3"
   model: "doubao-embedding-vision-251215"
+
+llm:
+  api_key: ""
+  # 火山方舟 OpenAI 兼容端点，与 embedding.base_url 可复用
+  base_url: "https://ark.cn-beijing.volces.com/api/v3"
+  # 对话模型 ID，用于实体抽取/关键词抽取等图谱构建任务
+  # 配置缺失时实体抽取将降级为 N-gram 正则方案
+  model: "doubao-seed-1-8-251228"
 
 rerank:
   enabled: false
