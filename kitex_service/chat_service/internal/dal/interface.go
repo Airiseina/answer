@@ -159,13 +159,25 @@ type ChatDao interface {
 
 	// SearchHotMessages 在热库（PostgreSQL）中搜索消息
 	// 支持按关键词和时间范围过滤，使用 PostgreSQL 的 jsonb 文本搜索
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
+	// 参数 userID: 请求者用户ID，>0 时只返回其所在会话的消息
 	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
 	// 参数 keyword: 搜索关键词
 	// 参数 startTime: 时间范围起始（毫秒时间戳，0 表示不限）
 	// 参数 endTime: 时间范围结束（毫秒时间戳，0 表示不限）
 	// 参数 limit: 返回条数上限
 	// 返回值: 消息列表、错误信息
-	SearchHotMessages(conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error)
+	SearchHotMessages(tenantID, userID, conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error)
+
+	// GetMessagesByTimeRange 跨会话拉取用户在时间窗内可见的消息，按时间升序返回
+	// 供系统 Agent 生成日总结/周总结使用
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
+	// 参数 userID: 请求者用户ID，只返回其所在会话的消息
+	// 参数 startTime: 时间范围起始（毫秒时间戳，0 表示不限）
+	// 参数 endTime: 时间范围结束（毫秒时间戳，0 表示不限）
+	// 参数 limit: 返回条数上限
+	// 返回值: 消息列表（按时间升序）、错误信息
+	GetMessagesByTimeRange(tenantID, userID int64, startTime, endTime int64, limit int16) ([]model.Message, error)
 }
 
 // OnlineDao 在线状态数据访问接口
@@ -204,7 +216,7 @@ type ConversationDao interface {
 	// 参数 userA, userB: 两个用户的ID，顺序无关（内部会按大小排序保证一致性）
 	// 参数 idGen: 会话ID生成函数，由 Service 层提供，保持 DAL 层不依赖 ID 生成策略
 	// 返回值: 会话ID、错误信息
-	GetOrCreatePrivateConversation(ctx context.Context, userA, userB int64, idGen func() int64) (int64, error)
+	GetOrCreatePrivateConversation(ctx context.Context, tenantID, userA, userB int64, idGen func() int64) (int64, error)
 
 	// GetConversationMembers 查询会话的所有成员ID
 	// 优先从 Redis 缓存读取，缓存未命中时回源数据库并回填缓存
@@ -215,7 +227,7 @@ type ConversationDao interface {
 	// GetUserConversations 查询用户参与的所有会话
 	// 参数 userID: 用户ID
 	// 返回值: 会话列表（按 updated_at 降序排列）、错误信息
-	GetUserConversations(ctx context.Context, userID int64) ([]model.Conversation, error)
+	GetUserConversations(ctx context.Context, tenantID, userID int64) ([]model.Conversation, error)
 
 	// GetConversationInfo 查询单个会话的详细信息
 	// 参数 conversationID: 会话ID
@@ -310,41 +322,46 @@ type InboxDao interface {
 	// GetInboxMessages 查询用户的收件箱消息（按会话维度）
 	// 写扩散的核心读取操作：直接查个人收件箱，无需关联会话表
 	// 参数 userID: 用户ID
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 conversationID: 会话ID
 	// 参数 beforeSeq: 游标，返回 seq < beforeSeq 的消息；传 0 表示从最新开始
 	// 参数 limit: 返回条数上限
 	// 返回值: 消息列表（按 seq 降序）、错误信息
-	GetInboxMessages(ctx context.Context, userID int64, conversationID int64, beforeSeq int64, limit int16) ([]model.InboxMessage, error)
+	GetInboxMessages(ctx context.Context, tenantID, userID int64, conversationID int64, beforeSeq int64, limit int16) ([]model.InboxMessage, error)
 
 	// GetInboxMessagesAfterSeq 查询用户收件箱中 seq > afterSeq 的消息
 	// 用于上线同步：客户端上报本地最大 seq，服务端返回增量消息
 	// 参数 userID: 用户ID
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 conversationID: 会话ID
 	// 参数 afterSeq: 客户端本地最大已同步seq
 	// 参数 limit: 返回条数上限
 	// 返回值: 消息列表（按 seq 升序）、错误信息
-	GetInboxMessagesAfterSeq(ctx context.Context, userID int64, conversationID int64, afterSeq int64, limit int16) ([]model.InboxMessage, error)
+	GetInboxMessagesAfterSeq(ctx context.Context, tenantID, userID int64, conversationID int64, afterSeq int64, limit int16) ([]model.InboxMessage, error)
 
 	// RecallInboxMessage 更新收件箱中消息的撤回状态
 	// 撤回消息时需要更新所有成员收件箱中对应消息的状态
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 msgID: 消息ID
 	// 返回值: 错误信息
-	RecallInboxMessage(ctx context.Context, msgID int64) error
+	RecallInboxMessage(ctx context.Context, tenantID, msgID int64) error
 
 	// EditInboxMessage 更新收件箱中消息的内容和编辑状态
 	// 编辑消息时需要更新所有成员收件箱中对应消息的内容
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 msgID: 消息ID
 	// 参数 newContent: 新的消息内容
 	// 返回值: 错误信息
-	EditInboxMessage(ctx context.Context, msgID int64, newContent string) error
+	EditInboxMessage(ctx context.Context, tenantID, msgID int64, newContent string) error
 
 	// GetInboxSeqByMsgID 根据消息ID查询收件箱中的 seq
 	// 用于 GetHistory 翻页游标转换：客户端传 beforeMsgID，需转为 beforeSeq 查收件箱
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 userID: 用户ID
 	// 参数 conversationID: 会话ID
 	// 参数 msgID: 消息ID
 	// 返回值: 对应的 seq（0 表示未找到）、错误信息
-	GetInboxSeqByMsgID(ctx context.Context, userID int64, conversationID int64, msgID int64) (int64, error)
+	GetInboxSeqByMsgID(ctx context.Context, tenantID, userID int64, conversationID int64, msgID int64) (int64, error)
 }
 
 // ColdStorageDao 冷库数据访问接口
@@ -358,23 +375,26 @@ type ColdStorageDao interface {
 
 	// GetColdHistory 从冷库拉取历史消息
 	// 当热库查询不到足够消息时，路由到冷库查询更早的历史
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 conversationID: 会话ID
 	// 参数 beforeTimestamp: 游标，返回 timestamp < beforeTimestamp 的消息
 	// 参数 limit: 返回条数上限
 	// 返回值: 冷库消息列表、错误信息
-	GetColdHistory(ctx context.Context, conversationID int64, beforeTimestamp int64, limit int16) ([]model.ColdMessage, error)
+	GetColdHistory(ctx context.Context, tenantID, conversationID int64, beforeTimestamp int64, limit int16) ([]model.ColdMessage, error)
 
 	// SearchMessages 在冷库中搜索消息
 	// ClickHouse 支持海量数据的高效文本搜索和分析查询
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
 	// 参数 keyword: 搜索关键词
 	// 参数 userID: 用户ID（用于权限校验，只搜索用户参与的会话）
 	// 参数 limit: 返回条数上限
 	// 返回值: 冷库消息列表、错误信息
-	SearchMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error)
+	SearchMessages(ctx context.Context, tenantID, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error)
 
 	// SearchMessagesByTimeRange 在冷库中按关键词和时间范围搜索消息
 	// 扩展 SearchMessages，增加时间范围过滤能力
+	// 参数 tenantID: 租户ID，>0 时强制按 tenant_id 过滤（跨租户隔离）
 	// 参数 conversationID: 会话ID（0 表示搜索所有会话）
 	// 参数 keyword: 搜索关键词
 	// 参数 userID: 用户ID（用于权限校验，只搜索用户参与的会话）
@@ -382,5 +402,5 @@ type ColdStorageDao interface {
 	// 参数 endTime: 时间范围结束（毫秒时间戳，0 表示不限）
 	// 参数 limit: 返回条数上限
 	// 返回值: 冷库消息列表、错误信息
-	SearchMessagesByTimeRange(ctx context.Context, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error)
+	SearchMessagesByTimeRange(ctx context.Context, tenantID, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error)
 }

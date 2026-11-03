@@ -31,6 +31,7 @@ type Client interface {
 	SyncMessages(ctx context.Context, req *chat.SyncMessagesReq, callOptions ...callopt.Option) (r *chat.SyncMessagesRes, err error)
 	SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq, callOptions ...callopt.Option) (r *chat.SearchColdMessagesRes, err error)
 	SearchMessages(ctx context.Context, req *chat.SearchMessagesReq, callOptions ...callopt.Option) (r *chat.SearchMessagesRes, err error)
+	GetMessagesByTimeRange(ctx context.Context, req *chat.GetMessagesByTimeRangeReq, callOptions ...callopt.Option) (r *chat.GetMessagesByTimeRangeRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -160,4 +161,9 @@ func (p *kChatServiceClient) SearchColdMessages(ctx context.Context, req *chat.S
 func (p *kChatServiceClient) SearchMessages(ctx context.Context, req *chat.SearchMessagesReq, callOptions ...callopt.Option) (r *chat.SearchMessagesRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SearchMessages(ctx, req)
+}
+
+func (p *kChatServiceClient) GetMessagesByTimeRange(ctx context.Context, req *chat.GetMessagesByTimeRangeReq, callOptions ...callopt.Option) (r *chat.GetMessagesByTimeRangeRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetMessagesByTimeRange(ctx, req)
 }

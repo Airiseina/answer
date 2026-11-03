@@ -43,6 +43,7 @@ type SendMessageReq struct {
 	Content        string `thrift:"content,4" frugal:"4,default,string" json:"content"`
 	ClientSeq      int64  `thrift:"client_seq,5" frugal:"5,default,i64" json:"client_seq"`
 	QuoteMsgId     *int64 `thrift:"quote_msg_id,6,optional" frugal:"6,optional,i64" json:"quote_msg_id,omitempty"`
+	TenantId       *int64 `thrift:"tenant_id,7,optional" frugal:"7,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSendMessageReq() *SendMessageReq {
@@ -80,6 +81,15 @@ func (p *SendMessageReq) GetQuoteMsgId() (v int64) {
 	}
 	return *p.QuoteMsgId
 }
+
+var SendMessageReq_TenantId_DEFAULT int64
+
+func (p *SendMessageReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SendMessageReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SendMessageReq) SetSenderId(val int64) {
 	p.SenderId = val
 }
@@ -98,9 +108,16 @@ func (p *SendMessageReq) SetClientSeq(val int64) {
 func (p *SendMessageReq) SetQuoteMsgId(val *int64) {
 	p.QuoteMsgId = val
 }
+func (p *SendMessageReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *SendMessageReq) IsSetQuoteMsgId() bool {
 	return p.QuoteMsgId != nil
+}
+
+func (p *SendMessageReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SendMessageReq) String() string {
@@ -117,6 +134,7 @@ var fieldIDToName_SendMessageReq = map[int16]string{
 	4: "content",
 	5: "client_seq",
 	6: "quote_msg_id",
+	7: "tenant_id",
 }
 
 type SendMessageRes struct {
@@ -128,6 +146,7 @@ type SendMessageRes struct {
 	Content          *string `thrift:"content,6,optional" frugal:"6,optional,string" json:"content,omitempty"`
 	ConversationType *int16  `thrift:"conversation_type,7,optional" frugal:"7,optional,i16" json:"conversation_type,omitempty"`
 	Seq              *int64  `thrift:"seq,8,optional" frugal:"8,optional,i64" json:"seq,omitempty"`
+	TenantId         *int64  `thrift:"tenant_id,9,optional" frugal:"9,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSendMessageRes() *SendMessageRes {
@@ -183,6 +202,15 @@ func (p *SendMessageRes) GetSeq() (v int64) {
 	}
 	return *p.Seq
 }
+
+var SendMessageRes_TenantId_DEFAULT int64
+
+func (p *SendMessageRes) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SendMessageRes_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SendMessageRes) SetSuccess(val bool) {
 	p.Success = val
 }
@@ -207,6 +235,9 @@ func (p *SendMessageRes) SetConversationType(val *int16) {
 func (p *SendMessageRes) SetSeq(val *int64) {
 	p.Seq = val
 }
+func (p *SendMessageRes) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *SendMessageRes) IsSetContent() bool {
 	return p.Content != nil
@@ -218,6 +249,10 @@ func (p *SendMessageRes) IsSetConversationType() bool {
 
 func (p *SendMessageRes) IsSetSeq() bool {
 	return p.Seq != nil
+}
+
+func (p *SendMessageRes) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SendMessageRes) String() string {
@@ -236,6 +271,7 @@ var fieldIDToName_SendMessageRes = map[int16]string{
 	6: "content",
 	7: "conversation_type",
 	8: "seq",
+	9: "tenant_id",
 }
 
 type Message struct {
@@ -250,6 +286,7 @@ type Message struct {
 	Status         *int16  `thrift:"status,9,optional" frugal:"9,optional,i16" json:"status,omitempty"`
 	IsEdited       *bool   `thrift:"is_edited,10,optional" frugal:"10,optional,bool" json:"is_edited,omitempty"`
 	QuoteMsgId     *int64  `thrift:"quote_msg_id,11,optional" frugal:"11,optional,i64" json:"quote_msg_id,omitempty"`
+	TenantId       *int64  `thrift:"tenant_id,12,optional" frugal:"12,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewMessage() *Message {
@@ -327,6 +364,15 @@ func (p *Message) GetQuoteMsgId() (v int64) {
 	}
 	return *p.QuoteMsgId
 }
+
+var Message_TenantId_DEFAULT int64
+
+func (p *Message) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return Message_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *Message) SetMsgId(val int64) {
 	p.MsgId = val
 }
@@ -360,6 +406,9 @@ func (p *Message) SetIsEdited(val *bool) {
 func (p *Message) SetQuoteMsgId(val *int64) {
 	p.QuoteMsgId = val
 }
+func (p *Message) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *Message) IsSetSenderName() bool {
 	return p.SenderName != nil
@@ -381,6 +430,10 @@ func (p *Message) IsSetQuoteMsgId() bool {
 	return p.QuoteMsgId != nil
 }
 
+func (p *Message) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
 func (p *Message) String() string {
 	if p == nil {
 		return "<nil>"
@@ -400,13 +453,15 @@ var fieldIDToName_Message = map[int16]string{
 	9:  "status",
 	10: "is_edited",
 	11: "quote_msg_id",
+	12: "tenant_id",
 }
 
 type GetHistoryReq struct {
-	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
-	ConversationId int64 `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
-	BeforeMsgId    int64 `thrift:"before_msg_id,3" frugal:"3,default,i64" json:"before_msg_id"`
-	Limit          int16 `thrift:"limit,4" frugal:"4,default,i16" json:"limit"`
+	UserId         int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	ConversationId int64  `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
+	BeforeMsgId    int64  `thrift:"before_msg_id,3" frugal:"3,default,i64" json:"before_msg_id"`
+	Limit          int16  `thrift:"limit,4" frugal:"4,default,i16" json:"limit"`
+	TenantId       *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetHistoryReq() *GetHistoryReq {
@@ -431,6 +486,15 @@ func (p *GetHistoryReq) GetBeforeMsgId() (v int64) {
 func (p *GetHistoryReq) GetLimit() (v int16) {
 	return p.Limit
 }
+
+var GetHistoryReq_TenantId_DEFAULT int64
+
+func (p *GetHistoryReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetHistoryReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetHistoryReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -442,6 +506,13 @@ func (p *GetHistoryReq) SetBeforeMsgId(val int64) {
 }
 func (p *GetHistoryReq) SetLimit(val int16) {
 	p.Limit = val
+}
+func (p *GetHistoryReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetHistoryReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetHistoryReq) String() string {
@@ -456,6 +527,7 @@ var fieldIDToName_GetHistoryReq = map[int16]string{
 	2: "conversation_id",
 	3: "before_msg_id",
 	4: "limit",
+	5: "tenant_id",
 }
 
 type GetHistoryRes struct {
@@ -500,6 +572,7 @@ type CreateConversationReq struct {
 	Name      string  `thrift:"name,1" frugal:"1,default,string" json:"name"`
 	MemberIds []int64 `thrift:"member_ids,2" frugal:"2,default,list<i64>" json:"member_ids"`
 	GroupId   *int64  `thrift:"group_id,3,optional" frugal:"3,optional,i64" json:"group_id,omitempty"`
+	TenantId  *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewCreateConversationReq() *CreateConversationReq {
@@ -525,6 +598,15 @@ func (p *CreateConversationReq) GetGroupId() (v int64) {
 	}
 	return *p.GroupId
 }
+
+var CreateConversationReq_TenantId_DEFAULT int64
+
+func (p *CreateConversationReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CreateConversationReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *CreateConversationReq) SetName(val string) {
 	p.Name = val
 }
@@ -534,9 +616,16 @@ func (p *CreateConversationReq) SetMemberIds(val []int64) {
 func (p *CreateConversationReq) SetGroupId(val *int64) {
 	p.GroupId = val
 }
+func (p *CreateConversationReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *CreateConversationReq) IsSetGroupId() bool {
 	return p.GroupId != nil
+}
+
+func (p *CreateConversationReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *CreateConversationReq) String() string {
@@ -550,6 +639,7 @@ var fieldIDToName_CreateConversationReq = map[int16]string{
 	1: "name",
 	2: "member_ids",
 	3: "group_id",
+	4: "tenant_id",
 }
 
 type CreateConversationRes struct {
@@ -591,7 +681,8 @@ var fieldIDToName_CreateConversationRes = map[int16]string{
 }
 
 type GetConversationsReq struct {
-	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	UserId   int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetConversationsReq() *GetConversationsReq {
@@ -604,8 +695,24 @@ func (p *GetConversationsReq) InitDefault() {
 func (p *GetConversationsReq) GetUserId() (v int64) {
 	return p.UserId
 }
+
+var GetConversationsReq_TenantId_DEFAULT int64
+
+func (p *GetConversationsReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetConversationsReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetConversationsReq) SetUserId(val int64) {
 	p.UserId = val
+}
+func (p *GetConversationsReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetConversationsReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetConversationsReq) String() string {
@@ -617,6 +724,7 @@ func (p *GetConversationsReq) String() string {
 
 var fieldIDToName_GetConversationsReq = map[int16]string{
 	1: "user_id",
+	2: "tenant_id",
 }
 
 type ConversationInfo struct {
@@ -628,6 +736,7 @@ type ConversationInfo struct {
 	MaxSeq         *int64  `thrift:"max_seq,6,optional" frugal:"6,optional,i64" json:"max_seq,omitempty"`
 	MaxReadSeq     *int64  `thrift:"max_read_seq,7,optional" frugal:"7,optional,i64" json:"max_read_seq,omitempty"`
 	UnreadCount    *int64  `thrift:"unread_count,8,optional" frugal:"8,optional,i64" json:"unread_count,omitempty"`
+	TenantId       *int64  `thrift:"tenant_id,9,optional" frugal:"9,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewConversationInfo() *ConversationInfo {
@@ -688,6 +797,15 @@ func (p *ConversationInfo) GetUnreadCount() (v int64) {
 	}
 	return *p.UnreadCount
 }
+
+var ConversationInfo_TenantId_DEFAULT int64
+
+func (p *ConversationInfo) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return ConversationInfo_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *ConversationInfo) SetConversationId(val int64) {
 	p.ConversationId = val
 }
@@ -712,6 +830,9 @@ func (p *ConversationInfo) SetMaxReadSeq(val *int64) {
 func (p *ConversationInfo) SetUnreadCount(val *int64) {
 	p.UnreadCount = val
 }
+func (p *ConversationInfo) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *ConversationInfo) IsSetGroupId() bool {
 	return p.GroupId != nil
@@ -727,6 +848,10 @@ func (p *ConversationInfo) IsSetMaxReadSeq() bool {
 
 func (p *ConversationInfo) IsSetUnreadCount() bool {
 	return p.UnreadCount != nil
+}
+
+func (p *ConversationInfo) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *ConversationInfo) String() string {
@@ -745,6 +870,7 @@ var fieldIDToName_ConversationInfo = map[int16]string{
 	6: "max_seq",
 	7: "max_read_seq",
 	8: "unread_count",
+	9: "tenant_id",
 }
 
 type GetConversationsRes struct {
@@ -989,6 +1115,7 @@ var fieldIDToName_GetOnlineStatusRes = map[int16]string{
 type AddConversationMembersReq struct {
 	ConversationId int64   `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
 	MemberIds      []int64 `thrift:"member_ids,2" frugal:"2,default,list<i64>" json:"member_ids"`
+	TenantId       *int64  `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewAddConversationMembersReq() *AddConversationMembersReq {
@@ -1005,11 +1132,27 @@ func (p *AddConversationMembersReq) GetConversationId() (v int64) {
 func (p *AddConversationMembersReq) GetMemberIds() (v []int64) {
 	return p.MemberIds
 }
+
+var AddConversationMembersReq_TenantId_DEFAULT int64
+
+func (p *AddConversationMembersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return AddConversationMembersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *AddConversationMembersReq) SetConversationId(val int64) {
 	p.ConversationId = val
 }
 func (p *AddConversationMembersReq) SetMemberIds(val []int64) {
 	p.MemberIds = val
+}
+func (p *AddConversationMembersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *AddConversationMembersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *AddConversationMembersReq) String() string {
@@ -1022,6 +1165,7 @@ func (p *AddConversationMembersReq) String() string {
 var fieldIDToName_AddConversationMembersReq = map[int16]string{
 	1: "conversation_id",
 	2: "member_ids",
+	3: "tenant_id",
 }
 
 type AddConversationMembersRes struct {
@@ -1056,6 +1200,7 @@ var fieldIDToName_AddConversationMembersRes = map[int16]string{
 type RemoveConversationMembersReq struct {
 	ConversationId int64   `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
 	MemberIds      []int64 `thrift:"member_ids,2" frugal:"2,default,list<i64>" json:"member_ids"`
+	TenantId       *int64  `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewRemoveConversationMembersReq() *RemoveConversationMembersReq {
@@ -1072,11 +1217,27 @@ func (p *RemoveConversationMembersReq) GetConversationId() (v int64) {
 func (p *RemoveConversationMembersReq) GetMemberIds() (v []int64) {
 	return p.MemberIds
 }
+
+var RemoveConversationMembersReq_TenantId_DEFAULT int64
+
+func (p *RemoveConversationMembersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return RemoveConversationMembersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *RemoveConversationMembersReq) SetConversationId(val int64) {
 	p.ConversationId = val
 }
 func (p *RemoveConversationMembersReq) SetMemberIds(val []int64) {
 	p.MemberIds = val
+}
+func (p *RemoveConversationMembersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *RemoveConversationMembersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *RemoveConversationMembersReq) String() string {
@@ -1089,6 +1250,7 @@ func (p *RemoveConversationMembersReq) String() string {
 var fieldIDToName_RemoveConversationMembersReq = map[int16]string{
 	1: "conversation_id",
 	2: "member_ids",
+	3: "tenant_id",
 }
 
 type RemoveConversationMembersRes struct {
@@ -1121,7 +1283,8 @@ var fieldIDToName_RemoveConversationMembersRes = map[int16]string{
 }
 
 type DeleteConversationReq struct {
-	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	ConversationId int64  `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	TenantId       *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewDeleteConversationReq() *DeleteConversationReq {
@@ -1134,8 +1297,24 @@ func (p *DeleteConversationReq) InitDefault() {
 func (p *DeleteConversationReq) GetConversationId() (v int64) {
 	return p.ConversationId
 }
+
+var DeleteConversationReq_TenantId_DEFAULT int64
+
+func (p *DeleteConversationReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return DeleteConversationReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *DeleteConversationReq) SetConversationId(val int64) {
 	p.ConversationId = val
+}
+func (p *DeleteConversationReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *DeleteConversationReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *DeleteConversationReq) String() string {
@@ -1147,6 +1326,7 @@ func (p *DeleteConversationReq) String() string {
 
 var fieldIDToName_DeleteConversationReq = map[int16]string{
 	1: "conversation_id",
+	2: "tenant_id",
 }
 
 type DeleteConversationRes struct {
@@ -1179,8 +1359,9 @@ var fieldIDToName_DeleteConversationRes = map[int16]string{
 }
 
 type MarkReadReq struct {
-	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
-	ConversationId int64 `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
+	UserId         int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	ConversationId int64  `thrift:"conversation_id,2" frugal:"2,default,i64" json:"conversation_id"`
+	TenantId       *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewMarkReadReq() *MarkReadReq {
@@ -1197,11 +1378,27 @@ func (p *MarkReadReq) GetUserId() (v int64) {
 func (p *MarkReadReq) GetConversationId() (v int64) {
 	return p.ConversationId
 }
+
+var MarkReadReq_TenantId_DEFAULT int64
+
+func (p *MarkReadReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return MarkReadReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *MarkReadReq) SetUserId(val int64) {
 	p.UserId = val
 }
 func (p *MarkReadReq) SetConversationId(val int64) {
 	p.ConversationId = val
+}
+func (p *MarkReadReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *MarkReadReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *MarkReadReq) String() string {
@@ -1214,6 +1411,7 @@ func (p *MarkReadReq) String() string {
 var fieldIDToName_MarkReadReq = map[int16]string{
 	1: "user_id",
 	2: "conversation_id",
+	3: "tenant_id",
 }
 
 type MarkReadRes struct {
@@ -1264,7 +1462,8 @@ var fieldIDToName_MarkReadRes = map[int16]string{
 }
 
 type GetConversationMembersReq struct {
-	ConversationId int64 `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	ConversationId int64  `thrift:"conversation_id,1" frugal:"1,default,i64" json:"conversation_id"`
+	TenantId       *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetConversationMembersReq() *GetConversationMembersReq {
@@ -1277,8 +1476,24 @@ func (p *GetConversationMembersReq) InitDefault() {
 func (p *GetConversationMembersReq) GetConversationId() (v int64) {
 	return p.ConversationId
 }
+
+var GetConversationMembersReq_TenantId_DEFAULT int64
+
+func (p *GetConversationMembersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetConversationMembersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetConversationMembersReq) SetConversationId(val int64) {
 	p.ConversationId = val
+}
+func (p *GetConversationMembersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetConversationMembersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetConversationMembersReq) String() string {
@@ -1290,6 +1505,7 @@ func (p *GetConversationMembersReq) String() string {
 
 var fieldIDToName_GetConversationMembersReq = map[int16]string{
 	1: "conversation_id",
+	2: "tenant_id",
 }
 
 type GetConversationMembersRes struct {
@@ -1331,8 +1547,9 @@ var fieldIDToName_GetConversationMembersRes = map[int16]string{
 }
 
 type GetOrCreatePrivateConversationReq struct {
-	UserIdA int64 `thrift:"user_id_a,1" frugal:"1,default,i64" json:"user_id_a"`
-	UserIdB int64 `thrift:"user_id_b,2" frugal:"2,default,i64" json:"user_id_b"`
+	UserIdA  int64  `thrift:"user_id_a,1" frugal:"1,default,i64" json:"user_id_a"`
+	UserIdB  int64  `thrift:"user_id_b,2" frugal:"2,default,i64" json:"user_id_b"`
+	TenantId *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetOrCreatePrivateConversationReq() *GetOrCreatePrivateConversationReq {
@@ -1349,11 +1566,27 @@ func (p *GetOrCreatePrivateConversationReq) GetUserIdA() (v int64) {
 func (p *GetOrCreatePrivateConversationReq) GetUserIdB() (v int64) {
 	return p.UserIdB
 }
+
+var GetOrCreatePrivateConversationReq_TenantId_DEFAULT int64
+
+func (p *GetOrCreatePrivateConversationReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetOrCreatePrivateConversationReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetOrCreatePrivateConversationReq) SetUserIdA(val int64) {
 	p.UserIdA = val
 }
 func (p *GetOrCreatePrivateConversationReq) SetUserIdB(val int64) {
 	p.UserIdB = val
+}
+func (p *GetOrCreatePrivateConversationReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetOrCreatePrivateConversationReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetOrCreatePrivateConversationReq) String() string {
@@ -1366,6 +1599,7 @@ func (p *GetOrCreatePrivateConversationReq) String() string {
 var fieldIDToName_GetOrCreatePrivateConversationReq = map[int16]string{
 	1: "user_id_a",
 	2: "user_id_b",
+	3: "tenant_id",
 }
 
 type GetOrCreatePrivateConversationRes struct {
@@ -1407,9 +1641,10 @@ var fieldIDToName_GetOrCreatePrivateConversationRes = map[int16]string{
 }
 
 type RecallMessageReq struct {
-	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
-	MsgId          int64 `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
-	ConversationId int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	UserId         int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	MsgId          int64  `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	ConversationId int64  `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	TenantId       *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewRecallMessageReq() *RecallMessageReq {
@@ -1430,6 +1665,15 @@ func (p *RecallMessageReq) GetMsgId() (v int64) {
 func (p *RecallMessageReq) GetConversationId() (v int64) {
 	return p.ConversationId
 }
+
+var RecallMessageReq_TenantId_DEFAULT int64
+
+func (p *RecallMessageReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return RecallMessageReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *RecallMessageReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -1438,6 +1682,13 @@ func (p *RecallMessageReq) SetMsgId(val int64) {
 }
 func (p *RecallMessageReq) SetConversationId(val int64) {
 	p.ConversationId = val
+}
+func (p *RecallMessageReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *RecallMessageReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *RecallMessageReq) String() string {
@@ -1451,6 +1702,7 @@ var fieldIDToName_RecallMessageReq = map[int16]string{
 	1: "user_id",
 	2: "msg_id",
 	3: "conversation_id",
+	4: "tenant_id",
 }
 
 type RecallMessageRes struct {
@@ -1523,6 +1775,7 @@ type EditMessageReq struct {
 	MsgId          int64  `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
 	ConversationId int64  `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
 	NewContent_    string `thrift:"new_content,4" frugal:"4,default,string" json:"new_content"`
+	TenantId       *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewEditMessageReq() *EditMessageReq {
@@ -1547,6 +1800,15 @@ func (p *EditMessageReq) GetConversationId() (v int64) {
 func (p *EditMessageReq) GetNewContent_() (v string) {
 	return p.NewContent_
 }
+
+var EditMessageReq_TenantId_DEFAULT int64
+
+func (p *EditMessageReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return EditMessageReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *EditMessageReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -1558,6 +1820,13 @@ func (p *EditMessageReq) SetConversationId(val int64) {
 }
 func (p *EditMessageReq) SetNewContent_(val string) {
 	p.NewContent_ = val
+}
+func (p *EditMessageReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *EditMessageReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *EditMessageReq) String() string {
@@ -1572,6 +1841,7 @@ var fieldIDToName_EditMessageReq = map[int16]string{
 	2: "msg_id",
 	3: "conversation_id",
 	4: "new_content",
+	5: "tenant_id",
 }
 
 type EditMessageRes struct {
@@ -1714,9 +1984,10 @@ var fieldIDToName_EditHistoryItem = map[int16]string{
 }
 
 type GetEditHistoryReq struct {
-	UserId         int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
-	MsgId          int64 `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
-	ConversationId int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	UserId         int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	MsgId          int64  `thrift:"msg_id,2" frugal:"2,default,i64" json:"msg_id"`
+	ConversationId int64  `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	TenantId       *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetEditHistoryReq() *GetEditHistoryReq {
@@ -1737,6 +2008,15 @@ func (p *GetEditHistoryReq) GetMsgId() (v int64) {
 func (p *GetEditHistoryReq) GetConversationId() (v int64) {
 	return p.ConversationId
 }
+
+var GetEditHistoryReq_TenantId_DEFAULT int64
+
+func (p *GetEditHistoryReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetEditHistoryReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetEditHistoryReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -1745,6 +2025,13 @@ func (p *GetEditHistoryReq) SetMsgId(val int64) {
 }
 func (p *GetEditHistoryReq) SetConversationId(val int64) {
 	p.ConversationId = val
+}
+func (p *GetEditHistoryReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetEditHistoryReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetEditHistoryReq) String() string {
@@ -1758,6 +2045,7 @@ var fieldIDToName_GetEditHistoryReq = map[int16]string{
 	1: "user_id",
 	2: "msg_id",
 	3: "conversation_id",
+	4: "tenant_id",
 }
 
 type GetEditHistoryRes struct {
@@ -1840,6 +2128,7 @@ type SyncMessagesReq struct {
 	UserId   int64          `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
 	ConvSeqs []*ConvSeqPair `thrift:"conv_seqs,2" frugal:"2,default,list<ConvSeqPair>" json:"conv_seqs"`
 	Limit    int16          `thrift:"limit,3" frugal:"3,default,i16" json:"limit"`
+	TenantId *int64         `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSyncMessagesReq() *SyncMessagesReq {
@@ -1860,6 +2149,15 @@ func (p *SyncMessagesReq) GetConvSeqs() (v []*ConvSeqPair) {
 func (p *SyncMessagesReq) GetLimit() (v int16) {
 	return p.Limit
 }
+
+var SyncMessagesReq_TenantId_DEFAULT int64
+
+func (p *SyncMessagesReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SyncMessagesReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SyncMessagesReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -1868,6 +2166,13 @@ func (p *SyncMessagesReq) SetConvSeqs(val []*ConvSeqPair) {
 }
 func (p *SyncMessagesReq) SetLimit(val int16) {
 	p.Limit = val
+}
+func (p *SyncMessagesReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *SyncMessagesReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SyncMessagesReq) String() string {
@@ -1881,6 +2186,7 @@ var fieldIDToName_SyncMessagesReq = map[int16]string{
 	1: "user_id",
 	2: "conv_seqs",
 	3: "limit",
+	4: "tenant_id",
 }
 
 type ConvMessages struct {
@@ -1964,6 +2270,7 @@ type SearchColdMessagesReq struct {
 	Keyword        string `thrift:"keyword,2" frugal:"2,default,string" json:"keyword"`
 	UserId         int64  `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
 	Limit          int16  `thrift:"limit,4" frugal:"4,default,i16" json:"limit"`
+	TenantId       *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSearchColdMessagesReq() *SearchColdMessagesReq {
@@ -1988,6 +2295,15 @@ func (p *SearchColdMessagesReq) GetUserId() (v int64) {
 func (p *SearchColdMessagesReq) GetLimit() (v int16) {
 	return p.Limit
 }
+
+var SearchColdMessagesReq_TenantId_DEFAULT int64
+
+func (p *SearchColdMessagesReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SearchColdMessagesReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SearchColdMessagesReq) SetConversationId(val int64) {
 	p.ConversationId = val
 }
@@ -1999,6 +2315,13 @@ func (p *SearchColdMessagesReq) SetUserId(val int64) {
 }
 func (p *SearchColdMessagesReq) SetLimit(val int16) {
 	p.Limit = val
+}
+func (p *SearchColdMessagesReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *SearchColdMessagesReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SearchColdMessagesReq) String() string {
@@ -2013,6 +2336,7 @@ var fieldIDToName_SearchColdMessagesReq = map[int16]string{
 	2: "keyword",
 	3: "user_id",
 	4: "limit",
+	5: "tenant_id",
 }
 
 type SearchColdMessagesRes struct {
@@ -2060,6 +2384,7 @@ type SearchMessagesReq struct {
 	StartTime      *int64  `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time,omitempty"`
 	EndTime        *int64  `thrift:"end_time,5,optional" frugal:"5,optional,i64" json:"end_time,omitempty"`
 	Limit          *int16  `thrift:"limit,6,optional" frugal:"6,optional,i16" json:"limit,omitempty"`
+	TenantId       *int64  `thrift:"tenant_id,7,optional" frugal:"7,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSearchMessagesReq() *SearchMessagesReq {
@@ -2117,6 +2442,15 @@ func (p *SearchMessagesReq) GetLimit() (v int16) {
 	}
 	return *p.Limit
 }
+
+var SearchMessagesReq_TenantId_DEFAULT int64
+
+func (p *SearchMessagesReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SearchMessagesReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SearchMessagesReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -2134,6 +2468,9 @@ func (p *SearchMessagesReq) SetEndTime(val *int64) {
 }
 func (p *SearchMessagesReq) SetLimit(val *int16) {
 	p.Limit = val
+}
+func (p *SearchMessagesReq) SetTenantId(val *int64) {
+	p.TenantId = val
 }
 
 func (p *SearchMessagesReq) IsSetKeyword() bool {
@@ -2156,6 +2493,10 @@ func (p *SearchMessagesReq) IsSetLimit() bool {
 	return p.Limit != nil
 }
 
+func (p *SearchMessagesReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
 func (p *SearchMessagesReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -2170,6 +2511,7 @@ var fieldIDToName_SearchMessagesReq = map[int16]string{
 	4: "start_time",
 	5: "end_time",
 	6: "limit",
+	7: "tenant_id",
 }
 
 type SearchMessagesRes struct {
@@ -2208,6 +2550,145 @@ func (p *SearchMessagesRes) String() string {
 var fieldIDToName_SearchMessagesRes = map[int16]string{
 	1: "success",
 	2: "messages",
+}
+
+type GetMessagesByTimeRangeReq struct {
+	UserId    int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	StartTime int64  `thrift:"start_time,2" frugal:"2,default,i64" json:"start_time"`
+	EndTime   int64  `thrift:"end_time,3" frugal:"3,default,i64" json:"end_time"`
+	Limit     *int16 `thrift:"limit,4,optional" frugal:"4,optional,i16" json:"limit,omitempty"`
+	TenantId  *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
+}
+
+func NewGetMessagesByTimeRangeReq() *GetMessagesByTimeRangeReq {
+	return &GetMessagesByTimeRangeReq{}
+}
+
+func (p *GetMessagesByTimeRangeReq) InitDefault() {
+}
+
+func (p *GetMessagesByTimeRangeReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *GetMessagesByTimeRangeReq) GetStartTime() (v int64) {
+	return p.StartTime
+}
+
+func (p *GetMessagesByTimeRangeReq) GetEndTime() (v int64) {
+	return p.EndTime
+}
+
+var GetMessagesByTimeRangeReq_Limit_DEFAULT int16
+
+func (p *GetMessagesByTimeRangeReq) GetLimit() (v int16) {
+	if !p.IsSetLimit() {
+		return GetMessagesByTimeRangeReq_Limit_DEFAULT
+	}
+	return *p.Limit
+}
+
+var GetMessagesByTimeRangeReq_TenantId_DEFAULT int64
+
+func (p *GetMessagesByTimeRangeReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetMessagesByTimeRangeReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
+func (p *GetMessagesByTimeRangeReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *GetMessagesByTimeRangeReq) SetStartTime(val int64) {
+	p.StartTime = val
+}
+func (p *GetMessagesByTimeRangeReq) SetEndTime(val int64) {
+	p.EndTime = val
+}
+func (p *GetMessagesByTimeRangeReq) SetLimit(val *int16) {
+	p.Limit = val
+}
+func (p *GetMessagesByTimeRangeReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetMessagesByTimeRangeReq) IsSetLimit() bool {
+	return p.Limit != nil
+}
+
+func (p *GetMessagesByTimeRangeReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
+func (p *GetMessagesByTimeRangeReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetMessagesByTimeRangeReq(%+v)", *p)
+}
+
+var fieldIDToName_GetMessagesByTimeRangeReq = map[int16]string{
+	1: "user_id",
+	2: "start_time",
+	3: "end_time",
+	4: "limit",
+	5: "tenant_id",
+}
+
+type GetMessagesByTimeRangeRes struct {
+	Success   bool       `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Messages  []*Message `thrift:"messages,2" frugal:"2,default,list<Message>" json:"messages"`
+	Truncated *bool      `thrift:"truncated,3,optional" frugal:"3,optional,bool" json:"truncated,omitempty"`
+}
+
+func NewGetMessagesByTimeRangeRes() *GetMessagesByTimeRangeRes {
+	return &GetMessagesByTimeRangeRes{}
+}
+
+func (p *GetMessagesByTimeRangeRes) InitDefault() {
+}
+
+func (p *GetMessagesByTimeRangeRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *GetMessagesByTimeRangeRes) GetMessages() (v []*Message) {
+	return p.Messages
+}
+
+var GetMessagesByTimeRangeRes_Truncated_DEFAULT bool
+
+func (p *GetMessagesByTimeRangeRes) GetTruncated() (v bool) {
+	if !p.IsSetTruncated() {
+		return GetMessagesByTimeRangeRes_Truncated_DEFAULT
+	}
+	return *p.Truncated
+}
+func (p *GetMessagesByTimeRangeRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetMessagesByTimeRangeRes) SetMessages(val []*Message) {
+	p.Messages = val
+}
+func (p *GetMessagesByTimeRangeRes) SetTruncated(val *bool) {
+	p.Truncated = val
+}
+
+func (p *GetMessagesByTimeRangeRes) IsSetTruncated() bool {
+	return p.Truncated != nil
+}
+
+func (p *GetMessagesByTimeRangeRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetMessagesByTimeRangeRes(%+v)", *p)
+}
+
+var fieldIDToName_GetMessagesByTimeRangeRes = map[int16]string{
+	1: "success",
+	2: "messages",
+	3: "truncated",
 }
 
 type ChatService interface {
@@ -2250,6 +2731,8 @@ type ChatService interface {
 	SearchColdMessages(ctx context.Context, req *SearchColdMessagesReq) (r *SearchColdMessagesRes, err error)
 
 	SearchMessages(ctx context.Context, req *SearchMessagesReq) (r *SearchMessagesRes, err error)
+
+	GetMessagesByTimeRange(ctx context.Context, req *GetMessagesByTimeRangeReq) (r *GetMessagesByTimeRangeRes, err error)
 }
 
 type ChatServiceSendMessageArgs struct {
@@ -3769,5 +4252,81 @@ func (p *ChatServiceSearchMessagesResult) String() string {
 }
 
 var fieldIDToName_ChatServiceSearchMessagesResult = map[int16]string{
+	0: "success",
+}
+
+type ChatServiceGetMessagesByTimeRangeArgs struct {
+	Req *GetMessagesByTimeRangeReq `thrift:"req,1" frugal:"1,default,GetMessagesByTimeRangeReq" json:"req"`
+}
+
+func NewChatServiceGetMessagesByTimeRangeArgs() *ChatServiceGetMessagesByTimeRangeArgs {
+	return &ChatServiceGetMessagesByTimeRangeArgs{}
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeArgs) InitDefault() {
+}
+
+var ChatServiceGetMessagesByTimeRangeArgs_Req_DEFAULT *GetMessagesByTimeRangeReq
+
+func (p *ChatServiceGetMessagesByTimeRangeArgs) GetReq() (v *GetMessagesByTimeRangeReq) {
+	if !p.IsSetReq() {
+		return ChatServiceGetMessagesByTimeRangeArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ChatServiceGetMessagesByTimeRangeArgs) SetReq(val *GetMessagesByTimeRangeReq) {
+	p.Req = val
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetMessagesByTimeRangeArgs(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetMessagesByTimeRangeArgs = map[int16]string{
+	1: "req",
+}
+
+type ChatServiceGetMessagesByTimeRangeResult struct {
+	Success *GetMessagesByTimeRangeRes `thrift:"success,0,optional" frugal:"0,optional,GetMessagesByTimeRangeRes" json:"success,omitempty"`
+}
+
+func NewChatServiceGetMessagesByTimeRangeResult() *ChatServiceGetMessagesByTimeRangeResult {
+	return &ChatServiceGetMessagesByTimeRangeResult{}
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeResult) InitDefault() {
+}
+
+var ChatServiceGetMessagesByTimeRangeResult_Success_DEFAULT *GetMessagesByTimeRangeRes
+
+func (p *ChatServiceGetMessagesByTimeRangeResult) GetSuccess() (v *GetMessagesByTimeRangeRes) {
+	if !p.IsSetSuccess() {
+		return ChatServiceGetMessagesByTimeRangeResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ChatServiceGetMessagesByTimeRangeResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetMessagesByTimeRangeRes)
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ChatServiceGetMessagesByTimeRangeResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ChatServiceGetMessagesByTimeRangeResult(%+v)", *p)
+}
+
+var fieldIDToName_ChatServiceGetMessagesByTimeRangeResult = map[int16]string{
 	0: "success",
 }

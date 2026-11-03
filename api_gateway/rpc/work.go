@@ -54,3 +54,28 @@ func SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq) (*work.Sug
 func TranslateMessage(ctx context.Context, req *work.TranslateMessageReq) (*work.TranslateMessageRes, error) {
 	return workCli.TranslateMessage(ctx, req)
 }
+
+// GenerateSummary 手动触发一次日/周总结生成。
+func GenerateSummary(ctx context.Context, req *work.GenerateSummaryReq) (*work.GenerateSummaryRes, error) {
+	return workCli.GenerateSummary(ctx, req)
+}
+
+// GetSummaryReport 读取本人总结详情。
+func GetSummaryReport(ctx context.Context, req *work.GetSummaryReportReq) (*work.GetSummaryReportRes, error) {
+	return workCli.GetSummaryReport(ctx, req)
+}
+
+// ListSummaryReports 返回本人总结列表。
+func ListSummaryReports(ctx context.Context, req *work.ListSummaryReportsReq) (*work.ListSummaryReportsRes, error) {
+	return workCli.ListSummaryReports(ctx, req)
+}
+
+// GetSummarySchedule 读取用户的总结订阅开关。
+func GetSummarySchedule(ctx context.Context, req *work.GetSummaryScheduleReq) (*work.GetSummaryScheduleRes, error) {
+	return workCli.GetSummarySchedule(ctx, req)
+}
+
+// SetSummarySchedule 写入用户的总结订阅开关。
+func SetSummarySchedule(ctx context.Context, req *work.SetSummaryScheduleReq) (*work.SetSummaryScheduleRes, error) {
+	return workCli.SetSummarySchedule(ctx, req)
+}

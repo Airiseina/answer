@@ -21,6 +21,7 @@ func (dao *coldStorageDao) ArchiveMessages(ctx context.Context, messages []model
 	for _, msg := range messages {
 		if err := batch.Append(
 			msg.MsgID,
+			msg.TenantID,
 			msg.ClientSeq,
 			msg.SenderID,
 			msg.ConversationID,
@@ -43,9 +44,13 @@ func (dao *coldStorageDao) ArchiveMessages(ctx context.Context, messages []model
 
 // GetColdHistory 从冷库拉取历史消息
 // 按 conversation_id + timestamp 查询，利用 ClickHouse 的主键排序加速
-func (dao *coldStorageDao) GetColdHistory(ctx context.Context, conversationID int64, beforeTimestamp int64, limit int16) ([]model.ColdMessage, error) {
-	query := "SELECT msg_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE conversation_id = ?"
+func (dao *coldStorageDao) GetColdHistory(ctx context.Context, tenantID int64, conversationID int64, beforeTimestamp int64, limit int16) ([]model.ColdMessage, error) {
+	query := "SELECT msg_id, tenant_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE conversation_id = ?"
 	args := []interface{}{conversationID}
+	if tenantID > 0 {
+		query += " AND tenant_id = ?"
+		args = append(args, tenantID)
+	}
 	if beforeTimestamp > 0 {
 		query += " AND timestamp < ?"
 		args = append(args, beforeTimestamp)
@@ -63,7 +68,7 @@ func (dao *coldStorageDao) GetColdHistory(ctx context.Context, conversationID in
 	for rows.Next() {
 		var msg model.ColdMessage
 		if err := rows.Scan(
-			&msg.MsgID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
+			&msg.MsgID, &msg.TenantID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
 			&msg.Seq, &msg.Content, &msg.Status, &msg.IsEdited,
 			&msg.Timestamp, &msg.QuoteMsgID, &msg.ArchivedAt,
 		); err != nil {
@@ -77,10 +82,14 @@ func (dao *coldStorageDao) GetColdHistory(ctx context.Context, conversationID in
 // SearchMessages 在冷库中搜索消息
 // 使用 ClickHouse 的 like 实现文本搜索，适合海量数据场景
 // 对于更复杂的全文搜索需求，可后续引入 ClickHouse 的 textSearch 索引
-func (dao *coldStorageDao) SearchMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error) {
-	query := "SELECT msg_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE content LIKE ?"
+func (dao *coldStorageDao) SearchMessages(ctx context.Context, tenantID int64, conversationID int64, keyword string, userID int64, limit int16) ([]model.ColdMessage, error) {
+	query := "SELECT msg_id, tenant_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE content LIKE ?"
 	args := []interface{}{"%" + keyword + "%"}
 
+	if tenantID > 0 {
+		query += " AND tenant_id = ?"
+		args = append(args, tenantID)
+	}
 	if conversationID > 0 {
 		query += " AND conversation_id = ?"
 		args = append(args, conversationID)
@@ -99,7 +108,7 @@ func (dao *coldStorageDao) SearchMessages(ctx context.Context, conversationID in
 	for rows.Next() {
 		var msg model.ColdMessage
 		if err := rows.Scan(
-			&msg.MsgID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
+			&msg.MsgID, &msg.TenantID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
 			&msg.Seq, &msg.Content, &msg.Status, &msg.IsEdited,
 			&msg.Timestamp, &msg.QuoteMsgID, &msg.ArchivedAt,
 		); err != nil {
@@ -113,10 +122,14 @@ func (dao *coldStorageDao) SearchMessages(ctx context.Context, conversationID in
 // SearchMessagesByTimeRange 在冷库中按关键词和时间范围搜索消息
 // 扩展 SearchMessages，增加时间范围过滤
 // keyword 为空时仅按时间范围过滤
-func (dao *coldStorageDao) SearchMessagesByTimeRange(ctx context.Context, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error) {
-	query := "SELECT msg_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE 1=1"
+func (dao *coldStorageDao) SearchMessagesByTimeRange(ctx context.Context, tenantID int64, conversationID int64, keyword string, userID int64, startTime int64, endTime int64, limit int16) ([]model.ColdMessage, error) {
+	query := "SELECT msg_id, tenant_id, client_seq, sender_id, conversation_id, seq, content, status, is_edited, timestamp, quote_msg_id, archived_at FROM answer_cold.cold_message WHERE 1=1"
 	args := []interface{}{}
 
+	if tenantID > 0 {
+		query += " AND tenant_id = ?"
+		args = append(args, tenantID)
+	}
 	if keyword != "" {
 		query += " AND content LIKE ?"
 		args = append(args, "%"+keyword+"%")
@@ -147,7 +160,7 @@ func (dao *coldStorageDao) SearchMessagesByTimeRange(ctx context.Context, conver
 	for rows.Next() {
 		var msg model.ColdMessage
 		if err := rows.Scan(
-			&msg.MsgID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
+			&msg.MsgID, &msg.TenantID, &msg.ClientSeq, &msg.SenderID, &msg.ConversationID,
 			&msg.Seq, &msg.Content, &msg.Status, &msg.IsEdited,
 			&msg.Timestamp, &msg.QuoteMsgID, &msg.ArchivedAt,
 		); err != nil {

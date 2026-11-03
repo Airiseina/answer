@@ -60,6 +60,7 @@ func (m *MeilisearchDao) EnsureIndex(ctx context.Context) error {
 	_, err = m.Client.Index(KbChunksIndex).UpdateFilterableAttributes(&[]string{
 		"kb_id",
 		"doc_id",
+		"tenant_id",
 	})
 	if err != nil {
 		logger.Warn("设置Meilisearch过滤字段失败", zap.Error(err))
@@ -71,6 +72,7 @@ func (m *MeilisearchDao) EnsureIndex(ctx context.Context) error {
 type ChunkDocument struct {
 	ChunkIDStr string `json:"chunk_id_str"`
 	ChunkID    int64  `json:"chunk_id"`
+	TenantID   int64  `json:"tenant_id"`
 	KBID       int64  `json:"kb_id"`
 	DocID      int64  `json:"doc_id"`
 	Content    string `json:"content"`
@@ -107,8 +109,9 @@ type BM25SearchResult struct {
 	Score      float64 `json:"-"`
 }
 
-// SearchBM25 使用Meilisearch进行BM25关键词检索
-func (m *MeilisearchDao) SearchBM25(ctx context.Context, kbIDs []int64, query string, topK int) ([]BM25SearchResult, error) {
+// SearchBM25 使用Meilisearch进行BM25关键词检索。
+// tenantID > 0 时附加 tenant_id 过滤条件，避免跨租户命中。
+func (m *MeilisearchDao) SearchBM25(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]BM25SearchResult, error) {
 	var filterStrs []string
 	for _, id := range kbIDs {
 		filterStrs = append(filterStrs, fmt.Sprintf("kb_id = %d", id))
@@ -118,6 +121,14 @@ func (m *MeilisearchDao) SearchBM25(ctx context.Context, kbIDs []int64, query st
 		filterStr = "(" + joinOr(filterStrs) + ")"
 	} else if len(filterStrs) == 1 {
 		filterStr = filterStrs[0]
+	}
+	if tenantID > 0 {
+		tenantFilter := fmt.Sprintf("tenant_id = %d", tenantID)
+		if filterStr == "" {
+			filterStr = tenantFilter
+		} else {
+			filterStr = "(" + filterStr + ") AND " + tenantFilter
+		}
 	}
 
 	req := &meilisearch.SearchRequest{
@@ -169,9 +180,14 @@ func (m *MeilisearchDao) SearchBM25(ctx context.Context, kbIDs []int64, query st
 	return results, nil
 }
 
-// DeleteByDocID 删除指定文档的所有分块
-func (m *MeilisearchDao) DeleteByDocID(ctx context.Context, docID int64) error {
-	task, err := m.Client.Index(KbChunksIndex).DeleteDocumentsByFilter(fmt.Sprintf("doc_id = %d", docID))
+// DeleteByDocID 删除指定文档的所有分块。
+// tenantID > 0 时附加 tenant_id 过滤，避免误删其他租户的索引。
+func (m *MeilisearchDao) DeleteByDocID(ctx context.Context, tenantID, docID int64) error {
+	filterStr := fmt.Sprintf("doc_id = %d", docID)
+	if tenantID > 0 {
+		filterStr = fmt.Sprintf("(%s) AND tenant_id = %d", filterStr, tenantID)
+	}
+	task, err := m.Client.Index(KbChunksIndex).DeleteDocumentsByFilter(filterStr)
 	if err != nil {
 		return fmt.Errorf("从Meilisearch删除文档分块失败: %w", err)
 	}

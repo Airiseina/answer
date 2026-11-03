@@ -2900,3 +2900,1399 @@ curl -X POST http://localhost/api/files \
 **请求示例**: `/files/docs/1_file.pdf`
 
 **响应**: 直接返回文件内容，Content-Type 根据文件类型自动设置。
+
+---
+
+## 11. Bot 市场
+
+> 用户端接口均需 JWT 认证，路径前缀为 `/api`；管理端接口前缀为 `/api/admin`，使用独立的管理后台登录态。
+> 市场只分发 Bot 的**定义**（名称、头像、描述、提示词、推荐模型、分类标签），
+> **不包含知识库与 MCP**；安装者需自备 `api_key` / `model` / `base_url`。
+
+### 11.0 审核状态机
+
+市场条目按以下状态流转，`status` 字段取值如下：
+
+| status | 含义 | 说明 |
+|--------|------|------|
+| 0 | 草稿 | 保存但未提交审核 |
+| 1 | 待审核 | 用户发布或修改提示词后进入该状态 |
+| 2 | 已发布 | 审核通过，市场全局可见 |
+| 3 | 已驳回 | 审核未通过，`review_note` 记录原因 |
+| 4 | 已下架 | 发布者主动下架 |
+
+流转规则：
+
+- 发布（`POST /api/market/bots`）后进入 **1 待审核**，`version` 从 0 起算。
+- 审核通过后进入 **2 已发布**，`version` 递增（首次上架得到 v1）。
+- 修改条目时，若改动 `system_prompt` 则重新回到 **1 待审核**（提示词是核心分发内容，必须重新过审）。
+- 驳回进入 **3 已驳回**；发布者下架进入 **4 已下架**。
+- 「我的发布」可通过 `status` 查询；传负值（如 `-1`）表示不过滤，一次性返回全部状态。
+
+### 11.1 浏览市场 Bot 列表
+
+- **URL**: `/api/market/bots`
+- **Method**: `GET`
+
+分页浏览已发布（status=2）的市场条目，全局可见，按安装量倒序返回。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| keyword | string | 否 | 关键词，匹配名称/描述/标签 |
+| category | string | 否 | 分类过滤 |
+| page | int | 否 | 页码，默认 1 |
+| page_size | int | 否 | 每页条数，默认 20，最大 100 |
+
+**请求示例**: `/api/market/bots?keyword=周报&page=1&page_size=20`
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "bots": [
+      {
+        "market_bot_id": "123456789",
+        "publisher_id": "7",
+        "publisher_name": "张三",
+        "name": "周报助手",
+        "description": "把一周的工作整理成周报",
+        "avatar_url": "http://localhost/files/avatars/1.png",
+        "system_prompt": "你是一个周报助手……",
+        "model": "gpt-4o-mini",
+        "category": "效率",
+        "tags": "周报,办公",
+        "status": 2,
+        "review_note": "",
+        "install_count": 128,
+        "rating": 4.6,
+        "rating_count": 32,
+        "version": 2,
+        "created_at": "1700000000000",
+        "updated_at": "1700000000000"
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+---
+
+### 11.2 查看市场 Bot 详情
+
+- **URL**: `/api/market/bots/:market_bot_id`
+- **Method**: `GET`
+
+查看条目详情。未发布（待审核/驳回/下架）内容仅发布者本人可见，其他人返回「条目不存在」。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID（路径参数） |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "bot": {
+      "market_bot_id": "123456789",
+      "publisher_id": "7",
+      "publisher_name": "张三",
+      "name": "周报助手",
+      "description": "把一周的工作整理成周报",
+      "avatar_url": "",
+      "system_prompt": "你是一个周报助手……",
+      "model": "gpt-4o-mini",
+      "category": "效率",
+      "tags": "周报,办公",
+      "status": 2,
+      "review_note": "",
+      "install_count": 128,
+      "rating": 4.6,
+      "rating_count": 32,
+      "version": 2,
+      "created_at": "1700000000000",
+      "updated_at": "1700000000000"
+    }
+  }
+}
+```
+
+失败（不存在或不可见）：
+```json
+{
+  "code": 1,
+  "msg": "条目不存在",
+  "data": "该 Bot 不存在或不可见"
+}
+```
+
+---
+
+### 11.3 我的发布
+
+- **URL**: `/api/market/my-published`
+- **Method**: `GET`
+
+查看自己发布的条目（含草稿/待审/驳回/下架）。数据按「租户 + 发布者」隔离，仅本人可见。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| status | int | 否 | 状态过滤；不传或传负值表示返回全部状态 |
+| page | int | 否 | 页码，默认 1 |
+| page_size | int | 否 | 每页条数，默认 20，最大 100 |
+
+**响应示例**: 与 11.1 相同（`data.bots` + `data.total`）。
+
+---
+
+### 11.4 发布 Bot 到市场
+
+- **URL**: `/api/market/bots`
+- **Method**: `POST`
+
+把自己的 Bot 定义提交到市场，提交后进入**待审核**状态。提示词会先做安全预审，危险内容会被拦截。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| name | string | 是 | Bot 名称，最长 64 字符 |
+| system_prompt | string | 是 | 系统提示词 |
+| description | string | 否 | 描述，最长 512 字符 |
+| avatar_url | string | 否 | 头像 URL |
+| model | string | 否 | 推荐模型 |
+| base_url | string | 否 | 推荐 Base URL |
+| category | string | 否 | 分类，最长 64 字符 |
+| tags | string | 否 | 标签，逗号分隔，最长 255 字符 |
+
+**请求示例**:
+```json
+{
+  "name": "周报助手",
+  "system_prompt": "你是一个周报助手……",
+  "description": "把一周的工作整理成周报",
+  "model": "gpt-4o-mini",
+  "category": "效率",
+  "tags": "周报,办公"
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "market_bot_id": "123456789",
+    "status": 1
+  }
+}
+```
+
+---
+
+### 11.5 更新我的发布
+
+- **URL**: `/api/market/bots/update`
+- **Method**: `POST`
+
+修改自己发布的条目，仅传需要改动的字段。改动 `system_prompt` 会重新进入待审核。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID |
+| name | string | 否 | Bot 名称 |
+| description | string | 否 | 描述 |
+| avatar_url | string | 否 | 头像 URL |
+| system_prompt | string | 否 | 系统提示词（改动后重新过审） |
+| model | string | 否 | 推荐模型 |
+| base_url | string | 否 | 推荐 Base URL |
+| category | string | 否 | 分类 |
+| tags | string | 否 | 标签 |
+
+**请求示例**:
+```json
+{
+  "market_bot_id": "123456789",
+  "description": "新的描述"
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "success": true
+  }
+}
+```
+
+---
+
+### 11.6 下架我的发布
+
+- **URL**: `/api/market/bots/offline`
+- **Method**: `POST`
+
+发布者主动下架自己的条目，状态置为 4 已下架。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "success": true
+  }
+}
+```
+
+---
+
+### 11.7 安装市场 Bot
+
+- **URL**: `/api/market/bots/install`
+- **Method**: `POST`
+
+用自己的 `api_key` 把市场 Bot 安装为自己的 Bot 实例（`origin=market`）。
+同一用户在相同租户内重复安装同一条目是幂等的，会返回既有实例。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID |
+| name | string | 否 | 安装后的 Bot 名称，不传则用市场条目名称 |
+| api_key | string | 是 | 安装者自己的 LLM API Key |
+| model | string | 是 | 安装时使用的模型 |
+| base_url | string | 否 | 安装时使用的 Base URL |
+
+**请求示例**:
+```json
+{
+  "market_bot_id": "123456789",
+  "name": "我的周报助手",
+  "api_key": "sk-xxx",
+  "model": "gpt-4o-mini"
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "bot_id": "223344556677",
+    "version": 2
+  }
+}
+```
+
+---
+
+### 11.8 给市场 Bot 评分
+
+- **URL**: `/api/market/bots/rate`
+- **Method**: `POST`
+
+对已发布的市场 Bot 评分（1-5）。同一用户重复评分视为改分，评分人数不重复累加。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID |
+| score | int | 是 | 评分，取值 1-5 |
+
+**请求示例**:
+```json
+{
+  "market_bot_id": "123456789",
+  "score": 5
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "success": true
+  }
+}
+```
+
+---
+
+### 11.9 条目字段说明
+
+11.1 / 11.2 / 11.3 / 11.9 返回的市场条目字段如下：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| market_bot_id | string | 市场 Bot ID（字符串化 int64） |
+| publisher_id | string | 发布者用户 ID（字符串化 int64） |
+| publisher_name | string | 发布者昵称 |
+| name | string | Bot 名称 |
+| description | string | 描述 |
+| avatar_url | string | 头像 URL |
+| system_prompt | string | 系统提示词 |
+| model | string | 推荐模型 |
+| base_url | string | 推荐 Base URL，空时不返回（`omitempty`） |
+| category | string | 分类 |
+| tags | string | 标签 |
+| status | int | 审核状态，见 11.0 |
+| review_note | string | 审核意见（驳回原因） |
+| install_count | int64 | 安装量 |
+| rating | float64 | 平均评分（无评分时为 0） |
+| rating_count | int | 评分人数 |
+| version | int | 版本号，审核通过后递增 |
+| created_at | string | 创建时间（毫秒时间戳，字符串） |
+| updated_at | string | 更新时间（毫秒时间戳，字符串） |
+
+---
+
+### 11.10 管理端：审核列表
+
+- **URL**: `/api/admin/market/reviews`
+- **Method**: `GET`
+- **认证**: 管理后台 JWT（见 11.13）
+
+查看市场审核队列，跨租户可见。未传 `status` 时默认查看待审核（status=1）。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| status | int | 否 | 状态过滤，默认 1 待审核 |
+| page | int | 否 | 页码，默认 1 |
+| page_size | int | 否 | 每页条数，默认 20，最大 100 |
+
+**响应示例**: 与 11.1 相同（`data.bots` + `data.total`）。
+
+---
+
+### 11.11 管理端：审核通过
+
+- **URL**: `/api/admin/market/reviews/:market_bot_id/approve`
+- **Method**: `POST`
+
+审核通过，条目上架（status=2），`version` 递增。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID（路径参数） |
+| note | string | 否 | 审核备注，最长 255 字符 |
+
+**请求示例**:
+```json
+{
+  "note": "内容合规"
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "success": true
+  }
+}
+```
+
+---
+
+### 11.12 管理端：审核驳回
+
+- **URL**: `/api/admin/market/reviews/:market_bot_id/reject`
+- **Method**: `POST`
+
+审核驳回，条目置为已驳回（status=3），`review_note` 记录原因。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| market_bot_id | string | 是 | 市场 Bot ID（路径参数） |
+| note | string | 否 | 驳回原因，最长 255 字符 |
+
+**请求示例**:
+```json
+{
+  "note": "提示词包含违规内容"
+}
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "success": true
+  }
+}
+```
+
+---
+
+### 11.13 管理端登录态说明
+
+管理后台使用独立账号体系，与普通用户登录态完全隔离：
+
+| 项 | 说明 |
+|----|------|
+| 登录接口 | `POST /api/admin/login` |
+| 请求体 | `{"account": "admin", "password": "******"}` |
+| 响应 | `{"token": "...", "name": "初始管理员", "role": "super"}` |
+| 携带方式 | Header `Authorization: <token>` |
+| 有效期 | 12 小时 |
+
+后续所有 `/api/admin/*` 接口均需携带该 `token`。
+
+---
+
+## 12. 日/周总结
+
+> 系统 Agent 会在每天 **21:00（东八区）** 为用户生成「今日总结」，并在 **每周日 21:00** 额外生成「本周总结」。
+> 总结聚合用户**全部会话**（私聊与群聊、跨租户）的消息，由系统 Bot 通过「用户 ⇄ 系统 Bot」私聊投递。
+> 当天/当周没有消息时，系统仍会发送占位文案「今日无话可说」/「本周无话可说」。
+> 所有总结接口均需登录态，且**仅本人可见**：服务端始终以登录态用户 ID 为准，不接受请求体传入的 `user_id`。
+
+### 12.1 读取总结列表
+
+- **URL**: `/api/summary/list`
+- **Method**: `GET`
+
+返回当前用户的全部总结（可按类型过滤），按统计窗口倒序排列。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| type | string | 否 | 过滤类型：`daily` / `weekly`；不传表示不过滤 |
+| limit | int | 否 | 每页条数，默认 20，最大 100 |
+| offset | int | 否 | 偏移量，默认 0 |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "reports": [
+      {
+        "id": "1234567890",
+        "user_id": "7",
+        "type": "daily",
+        "period_start": 1760000000000,
+        "period_end": 1760086399999,
+        "content": "**今日概览**\n今天主要……",
+        "model": "gpt-4o-mini",
+        "status": 2,
+        "error": "",
+        "created_at": 1760086400000
+      }
+    ]
+  }
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 总结报告 ID |
+| user_id | string | 报告归属用户 ID |
+| type | string | `daily` / `weekly` |
+| period_start | int64 | 统计窗口起始（毫秒时间戳） |
+| period_end | int64 | 统计窗口结束（毫秒时间戳） |
+| content | string | 总结正文（Markdown） |
+| model | string | 生成所用模型；占位文案为空 |
+| status | int | 0 待生成 / 1 生成中 / 2 已完成 / 3 生成失败 |
+| error | string | 失败原因（status=3 时非空） |
+| created_at | int64 | 创建时间（毫秒时间戳） |
+
+### 12.2 读取日总结列表
+
+- **URL**: `/api/summary/daily`
+- **Method**: `GET`
+
+等价于 `GET /api/summary/list?type=daily`，支持 `limit` / `offset`。
+
+### 12.3 读取周总结列表
+
+- **URL**: `/api/summary/weekly`
+- **Method**: `GET`
+
+等价于 `GET /api/summary/list?type=weekly`，支持 `limit` / `offset`。
+
+### 12.4 读取总结详情
+
+- **URL**: `/api/summary/detail`
+- **Method**: `GET`
+
+读取本人某份总结的完整正文。报告中 `user_id` 与登录态不一致时按「无权查看」处理。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | string | 是 | 总结报告 ID |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "report": {
+      "id": "1234567890",
+      "user_id": "7",
+      "type": "daily",
+      "period_start": 1760000000000,
+      "period_end": 1760086399999,
+      "content": "**今日概览**\n今天主要……",
+      "model": "gpt-4o-mini",
+      "status": 2,
+      "error": "",
+      "created_at": 1760086400000
+    }
+  }
+}
+```
+
+失败（报告不存在或无权查看）：
+```json
+{
+  "code": 1,
+  "msg": "总结不存在",
+  "data": "未找到该总结或无权查看"
+}
+```
+
+### 12.5 手动生成总结
+
+- **URL**: `/api/summary/generate`
+- **Method**: `POST`
+
+立即为当前用户生成一份总结。同一 `(user_id, type, 统计窗口起点)` 已生成成功时，**复用旧报告，不重复生成**。
+同一用户 30 秒内最多调用一次（限流）。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| type | string | 否 | `daily` / `weekly`，默认 `daily` |
+
+**请求示例**:
+```json
+{ "type": "weekly" }
+```
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "report": { "id": "1234567891", "type": "weekly", "status": 2, "content": "……" }
+  }
+}
+```
+
+### 12.6 读取总结订阅
+
+- **URL**: `/api/summary/schedule`
+- **Method**: `GET`
+
+读取当前用户的日/周总结订阅开关。未设置过时返回默认值（均为开启）。
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "daily_enabled": true,
+    "weekly_enabled": true
+  }
+}
+```
+
+### 12.7 更新总结订阅
+
+- **URL**: `/api/summary/schedule`
+- **Method**: `POST`
+
+写入当前用户的日/周总结订阅开关；关闭后定时调度不会为其生成对应类型的总结（手动生成不受影响）。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| daily_enabled | bool | 是 | 是否开启每日总结 |
+| weekly_enabled | bool | 是 | 是否开启每周总结 |
+
+**请求示例**:
+```json
+{ "daily_enabled": true, "weekly_enabled": false }
+```
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "daily_enabled": true,
+    "weekly_enabled": false
+  }
+}
+```
+
+---
+
+## 13. Token 用量与成本核算
+
+> 本章统计用户**自带 apikey** 调用大模型所产生的 Token 消耗与**预估成本**（记账口径，非售卖服务）。
+> 用量看板**仅本人可见**：服务端始终以登录态用户 ID 为准，不接受请求体传入的 `user_id`。
+> 归集规则：市场安装的 Bot 计入安装者；用户自建的 Bot 计入发送者；**通过 OpenAPI 接入的 Bot 不计入**。
+> 参考单价由平台管理员在管理后台**手工维护**，按每 1K Token 计价；未配置单价的模型只记录 Token 用量，成本计 0 并在汇总中提示。
+> 成本为**预估值，仅供参考**。
+
+### 13.1 用量明细
+
+- **URL**: `/api/billing/usage`
+- **Method**: `GET`
+
+返回当前登录用户的用量明细，可按日期、模型、Bot 过滤，按时间倒序分页。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| start_date | string | 否 | 起始自然日（东八区），格式 `yyyy-mm-dd` |
+| end_date | string | 否 | 结束自然日（东八区），格式 `yyyy-mm-dd`，含当日 |
+| model | string | 否 | 按模型名过滤 |
+| bot_id | int | 否 | 按 Bot ID 过滤 |
+| limit | int | 否 | 每页条数，默认 20 |
+| offset | int | 否 | 偏移量，默认 0 |
+
+**请求示例**: `/api/billing/usage?start_date=2026-10-01&end_date=2026-10-12&limit=20`
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "1000000001",
+        "biz_date": "2026-10-12",
+        "bot_id": "123456789",
+        "origin": 0,
+        "conversation_id": "555",
+        "msg_id": "987654321",
+        "model": "gpt-4o-mini",
+        "prompt_tokens": 1024,
+        "completion_tokens": 512,
+        "cost": 0.0031,
+        "created_at": 1760256000000
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| origin | int | Bot 来源：`0` 用户自建、`1` 市场安装、`2` OpenAPI（不计入统计） |
+| cost | float | 该次调用的预估成本，按记录的单价快照计算；无单价时为 0 |
+
+### 13.2 用量汇总
+
+- **URL**: `/api/billing/usage/summary`
+- **Method**: `GET`
+
+返回当前登录用户在区间内的合计、按天趋势、按 Bot / 按模型占比，以及未配置单价的调用次数。
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| start_date | string | 否 | 起始自然日（东八区），格式 `yyyy-mm-dd` |
+| end_date | string | 否 | 结束自然日（东八区），格式 `yyyy-mm-dd`，含当日 |
+
+**请求示例**: `/api/billing/usage/summary?start_date=2026-10-06&end_date=2026-10-12`
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "prompt_tokens": 120000,
+    "completion_tokens": 48000,
+    "cost": 0.42,
+    "request_count": 86,
+    "missing_price_count": 2,
+    "trend": [
+      { "biz_date": "2026-10-12", "prompt_tokens": 12000, "completion_tokens": 4000, "cost": 0.05, "request_count": 9 }
+    ],
+    "by_model": [
+      { "key": "gpt-4o-mini", "prompt_tokens": 120000, "completion_tokens": 48000, "cost": 0.42, "request_count": 86 }
+    ],
+    "by_bot": [
+      { "key": "123456789", "prompt_tokens": 120000, "completion_tokens": 48000, "cost": 0.42, "request_count": 86 }
+    ]
+  }
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| missing_price_count | int | 期间内未匹配到参考单价的调用次数（这些调用成本计 0） |
+| trend | array | 按自然日的用量趋势（东八区） |
+| by_model / by_bot | array | 按模型 / 按 Bot 聚合，`key` 为模型名或 Bot ID |
+
+---
+
+## 14. 管理后台：参考单价
+
+> 管理端接口前缀为 `/api/admin`，使用**独立的平台管理员登录态**，与用户 JWT 完全隔离。
+> 参考单价用于估算用户自带 apikey 的 Token 成本，仅作记账口径，按每 1K Token 手工维护。
+
+### 14.1 参考单价列表
+
+- **URL**: `/api/admin/billing/prices`
+- **Method**: `GET`
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| only_enabled | bool | 否 | 传 `1` / `true` 时仅返回启用的单价 |
+| limit | int | 否 | 每页条数 |
+| offset | int | 否 | 偏移量 |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "prices": [
+      {
+        "id": "1",
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "input_per_1k": 0.0011,
+        "output_per_1k": 0.0044,
+        "currency": "CNY",
+        "enabled": true,
+        "created_at": 1759257600000,
+        "updated_at": 1759257600000
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+### 14.2 新增 / 更新参考单价
+
+- **URL**: `/api/admin/billing/prices`
+- **Method**: `POST`
+
+同一模型号存在时更新，否则新建；操作均写入审计日志。
+
+**请求参数**（JSON Body）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | string | 否 | 更新时传已有单价 ID；不传表示新建 |
+| provider | string | 否 | 提供方 |
+| model | string | 是 | 模型名 |
+| input_per_1k | float | 是 | 输入每 1K Token 单价 |
+| output_per_1k | float | 是 | 输出每 1K Token 单价 |
+| currency | string | 否 | 币种，默认 `CNY` |
+| enabled | bool | 否 | 是否启用，默认启用 |
+
+**请求示例**:
+```json
+{ "provider": "openai", "model": "gpt-4o-mini", "input_per_1k": 0.0011, "output_per_1k": 0.0044, "currency": "CNY", "enabled": true }
+```
+
+**响应示例**:
+```json
+{ "code": 0, "msg": "操作成功", "data": { "success": true } }
+```
+
+### 14.3 删除参考单价
+
+- **URL**: `/api/admin/billing/prices/delete`
+- **Method**: `POST`
+
+**请求参数**（JSON Body）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | string | 是 | 参考单价 ID |
+
+**请求示例**:
+```json
+{ "id": "1" }
+```
+
+**响应示例**:
+```json
+{ "code": 0, "msg": "操作成功", "data": { "success": true } }
+```
+
+---
+
+## 15. 多 Agent 协作编排
+
+> 接口前缀 `/api`，均需 JWT 认证；编排图按 **Bot 维度 + 当前租户** 隔离，一个 Bot 只保留一份编排图。
+> 发布后该 Bot 的对话由 `work_service` 按编排图分层执行；未发布或执行异常时自动回退单 Agent，不影响正常回复。
+
+### 15.0 状态机与执行规则
+
+编排图 `status` 取值：
+
+| status | 含义 | 说明 |
+|--------|------|------|
+| 0 | 草稿 | 保存后即进入该状态，可继续编辑，不对对话生效 |
+| 1 | 已发布 | 该 Bot 的对话按图执行 |
+| 2 | 已停用 | 停用后按回退逻辑走单 Agent |
+
+- 每次保存都会把状态重置为 **0 草稿** 并递增 `version`，需要重新发布才对对话生效。
+- 每次保存都会写入一条历史快照（全量画布 JSON），默认最多返回最近 20 条，上限 50 条。
+- 运行时按拓扑分层串行推进：同一层节点按声明顺序执行，前驱节点的输出会作为上下文注入后继节点，`end` 节点负责汇聚结果。
+
+### 15.1 编排图 schema
+
+画布序列化为如下结构的 JSON 字符串，通过 `graph_json` 传入（字段名与后端 `pkg/agentgraph` 一致）：
+
+```json
+{
+  "nodes": [
+    { "id": "start", "type": "start", "name": "开始", "x": 60, "y": 60 },
+    { "id": "agent_1", "type": "agent", "name": "资料检索", "system_prompt": "你负责检索并整理资料", "model": "", "tools": ["knowledge"], "max_steps": 3, "x": 290, "y": 60 },
+    { "id": "end", "type": "end", "name": "结束", "system_prompt": "", "model": "", "x": 520, "y": 60 }
+  ],
+  "edges": [
+    { "from": "start", "to": "agent_1" },
+    { "from": "agent_1", "to": "end" }
+  ]
+}
+```
+
+**节点字段**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| id | string | 是 | 节点唯一标识，非空且不重复 |
+| type | string | 是 | 节点类型：`start` 触发 / `agent` 专家 / `end` 输出 |
+| name | string | 否 | 节点名称，最长 64 字 |
+| system_prompt | string | 否 | 节点提示词，最长 4000 字；`start` 节点忽略该字段 |
+| model | string | 否 | 该节点使用的模型，留空继承 Bot 的模型 |
+| tools | string[] | 否 | 工具白名单，仅 `agent` 节点生效 |
+| max_steps | int | 否 | 该节点 ReAct 步数上限，0 表示用默认值，最大 6 |
+| x / y | int | 否 | 画布坐标，仅用于前端回显，后端透传不参与校验 |
+
+**工具取值**（`tools`）:
+
+| 取值 | 含义 |
+|------|------|
+| 不传 / `[]` | 继承 Bot 的默认工具（绑定的知识库 + MCP） |
+| `["none"]` | 禁用全部工具 |
+| `["knowledge"]` | 允许检索 Bot 绑定的知识库 |
+| `["memory"]` | 允许读写长期记忆 |
+
+**连线字段**:
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| from | string | 是 | 起点节点 id，必须存在 |
+| to | string | 是 | 终点节点 id，必须存在 |
+
+### 15.2 校验规则
+
+校验逻辑集中在 `pkg/agentgraph`，「保存 / 校验 / 发布 / 运行前」共用同一套规则：
+
+| 规则 | 说明 |
+|------|------|
+| 规模上限 | 节点 ≤ 12，连线 ≤ 40 |
+| 开始节点 | 必须**有且仅有 1 个** `start` 节点 |
+| 结束节点 | **至少 1 个** `end` 节点，且 `end` 不能有出边 |
+| 入边约束 | `start` 不能有入边；节点不能连接自身 |
+| 无环 | 必须是有向无环图（DAG），存在环时报错 |
+| 可达性 | 所有节点都必须能沿连线从 `start` 到达 |
+| 工具白名单 | `tools` 只能取 `none` / `knowledge` / `memory` 或留空 |
+| 内容上限 | `name` ≤ 64 字，`system_prompt` ≤ 4000 字，`max_steps` ∈ [0, 6] |
+
+> 保存与发布的行为差异：**保存**允许「JSON 可解析但校验未通过」的草稿落库，并在响应里返回 `errors` 供画布提示；**发布**要求校验完全通过，否则状态不变并返回错误列表。
+
+### 15.3 查询编排图
+
+- **URL**: `/api/bot/agent-graph`
+- **Method**: `GET`
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+
+**响应示例**（已存在）:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "exists": true,
+    "graph": {
+      "graph_id": "123456789",
+      "bot_id": "88",
+      "name": "调研小组",
+      "graph": { "nodes": [], "edges": [] },
+      "status": 1,
+      "version": 3,
+      "created_at": "1759257600000",
+      "updated_at": "1759257600000"
+    }
+  }
+}
+```
+
+不存在时返回 `data.exists = false`，且不返回 `graph` 字段。
+
+### 15.4 保存编排图（草稿）
+
+- **URL**: `/api/bot/agent-graph/save`
+- **Method**: `POST`
+
+**请求参数**（JSON Body）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+| graph_json | string | 是 | 编排图 JSON 字符串，见 15.1 |
+| name | string | 否 | 编排图名称，缺省为「未命名编排」 |
+| graph_id | string | 否 | 指定要更新的图 ID，一般不传（按 Bot 自动 upsert） |
+
+**请求示例**:
+```json
+{ "bot_id": "88", "name": "调研小组", "graph_json": "{\"nodes\":[],\"edges\":[]}" }
+```
+
+**响应示例**:
+```json
+{ "code": 0, "msg": "操作成功", "data": { "success": true, "graph_id": "123456789", "version": 2, "status": 0, "errors": [] } }
+```
+
+| 字段 | 说明 |
+|------|------|
+| success | 是否完成落库；`false` 表示 `graph_json` 无法解析（未落库） |
+| graph_id | 编排图 ID，`0` 表示未落库 |
+| version | 保存后的版本号 |
+| status | 保存后固定为 `0`（草稿） |
+| errors | 校验未通过的错误列表，可随成功响应一起返回 |
+
+### 15.5 校验编排图
+
+- **URL**: `/api/bot/agent-graph/validate`
+- **Method**: `POST`
+
+只做结构与内容校验，不落库，供画布实时提示。
+
+**请求参数**（JSON Body）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+| graph_json | string | 是 | 待校验的编排图 JSON |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "valid": false,
+    "errors": ["编排图必须且只能有一个开始节点", "连线引用了不存在的终点: agent_9"]
+  }
+}
+```
+
+### 15.6 发布编排图
+
+- **URL**: `/api/bot/agent-graph/publish`
+- **Method**: `POST`
+
+**请求参数**（JSON Body）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+
+**响应示例**（发布成功）:
+```json
+{ "code": 0, "msg": "操作成功", "data": { "success": true } }
+```
+
+**响应示例**（校验未通过）:
+```json
+{ "code": 0, "msg": "操作成功", "data": { "success": false, "errors": ["编排图至少需要一个结束节点"] } }
+```
+
+### 15.7 历史版本
+
+- **URL**: `/api/bot/agent-graph/history`
+- **Method**: `GET`
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+| limit | int | 否 | 返回条数，默认 20，最大 50 |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "987654321",
+        "graph_id": "123456789",
+        "version": 2,
+        "graph": { "nodes": [], "edges": [] },
+        "operator_id": "7",
+        "created_at": "1759257600000"
+      }
+    ]
+  }
+}
+```
+
+历史快照仅用于前端回滚：载入某个版本后需要再次调用保存接口才会生效（保存会把状态重置为草稿）。
+
+### 15.8 运行与降级
+
+- 只有状态为 **1 已发布** 的编排图才会在对话中生效；其余情况（无图、草稿、已停用、执行失败、超时）自动回退单 Agent，回复链路不中断。
+- 整图执行超时默认 240 秒，可通过 `work_service` 的 `ai.agent_graph.timeout_seconds` 调整；`ai.agent_graph.enabled=false` 可整体关闭编排执行。
+- 各节点消耗的 Token 会累加后随最终回复一起记账，口径与单 Agent 一致（OpenAPI 接入的 Bot 不计入用量统计）。
+
+---
+
+## 16. 个人 Skill
+
+个人 Skill 让用户把自己的资料（SOP、话术、检查清单等）打包上传，绑定到自己的 Bot 后作为知识库资料被检索使用。
+
+### 16.0 边界、状态机与存储
+
+- **仅支持资料型 Skill**：zip 包（含 `SKILL.md` 与 `references/*.md`）或单个 markdown 文件；内容只进入独占知识库供检索，**不执行任何脚本、不提供自定义工具**。
+- **隔离**：Skill 严格按「租户 + 上传者」归属，只有本人可上传、查看、绑定、删除；**不随市场分发**（与 Bot 市场的分发边界一致）。
+- **每个 Skill 独占一个知识库**：上传时自动创建，删除 Skill 时一并回收该知识库及其文档向量。
+- **状态机**：`0 待解析` → `1 可用`（全部文件入库成功）/ `2 解析失败`（没有任何文件入库成功）/ `3 已停用`。
+- **限制**：单包 ≤ 10MB，解压后总量 ≤ 20MB，单文件 ≤ 2MB，文件数 ≤ 50；仅接受 `.md` / `.markdown` / `.txt`，其余文件跳过并在响应 `warnings` 里提示。
+- **安全**：拒绝路径穿越条目（`../`、绝对路径）、过滤打包垃圾文件（`__MACOSX/`、`.DS_Store`）、逐个文件做提示词注入扫描（命中即整体拒绝）。
+- **数据表**：`user_skill`（定义与状态）、`user_skill_file`（文件清单与对象地址）、`bot_skill`（Bot 绑定，`(tenant_id, bot_id, skill_id)` 复合主键）。
+
+`SKILL.md` 的 frontmatter 用于声明 Skill 元信息（未声明时用包名兜底）：
+
+```markdown
+---
+name: 会议纪要
+description: 把会议记录整理成结构化要点
+version: 1.0.0
+---
+```
+
+---
+
+### 16.1 上传 Skill
+
+- **URL**: `/api/skill/upload`
+- **Method**: `POST`
+- **Content-Type**: `multipart/form-data`
+
+上传 Skill 包，服务端解析后建立专属知识库并逐文件入库。同名 Skill 重复上传视为**覆盖更新**：复用原知识库，先清空旧文件记录再写入新快照。
+
+**请求参数**（表单字段）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| file | file | 是 | zip 包或单个 markdown 文件，≤ 10MB |
+
+**响应示例**:
+
+成功：
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "skill_id": "1234567890123456789",
+    "file_count": 3,
+    "size_bytes": 18432,
+    "warnings": ["assets/logo.png: 仅支持 md/markdown/txt 资料文件"]
+  }
+}
+```
+
+失败：
+```json
+{
+  "code": 1,
+  "msg": "上传Skill失败",
+  "data": "Skill 包解压后不能超过 20 MB"
+}
+```
+
+`warnings` 只在部分文件被跳过时出现，不影响整体成功；全部文件都被跳过时状态置为「解析失败」。
+
+---
+
+### 16.2 我的 Skill 列表
+
+- **URL**: `/api/skill/list`
+- **Method**: `GET`
+
+返回当前用户在当前租户下的全部 Skill，按更新时间倒序。
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "skills": [
+      {
+        "skill_id": "1234567890123456789",
+        "owner_id": "7",
+        "name": "会议纪要",
+        "description": "把会议记录整理成结构化要点",
+        "version": "1.0.0",
+        "status": 1,
+        "kb_id": "2234567890123456789",
+        "size_bytes": 18432,
+        "file_count": 3,
+        "created_at": "1700000000000",
+        "updated_at": "1700000000000"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 16.3 Skill 详情与文件清单
+
+- **URL**: `/api/skill/detail`
+- **Method**: `GET`
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| skill_id | string | 是 | Skill ID |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "skill": {
+      "skill_id": "1234567890123456789",
+      "owner_id": "7",
+      "name": "会议纪要",
+      "description": "把会议记录整理成结构化要点",
+      "version": "1.0.0",
+      "status": 1,
+      "kb_id": "2234567890123456789",
+      "size_bytes": 18432,
+      "file_count": 2,
+      "created_at": "1700000000000",
+      "updated_at": "1700000000000"
+    },
+    "files": [
+      {
+        "file_id": "3234567890123456789",
+        "skill_id": "1234567890123456789",
+        "rel_path": "SKILL.md",
+        "object_url": "/files/chat/ab/cd123.md",
+        "size_bytes": 512
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 16.4 删除 Skill
+
+- **URL**: `/api/skill/delete`
+- **Method**: `POST`
+
+删除 Skill 时依次：解绑所有 Bot 上绑定的该 Skill 知识库 → 删除知识库（含文档与向量）→ 清理绑定与文件记录 → 删除 Skill 本体。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| skill_id | string | 是 | Skill ID |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": { "success": true }
+}
+```
+
+`success=false` 表示 Skill 不存在或不属于当前用户。
+
+---
+
+### 16.5 绑定 / 解绑 Skill
+
+- **URL**: `/api/skill/bind`
+- **Method**: `POST`
+
+把 Skill 绑定到自己的 Bot（或从 Bot 上解绑）。绑定后会通过既有 `bot_knowledge` 链路把该 Skill 的知识库挂到 Bot 上，运行时被 `search_knowledge` 检索；解绑则同时解除该知识库绑定。
+
+**请求参数**:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | 目标 Bot ID |
+| skill_id | string | 是 | Skill ID |
+| enabled | bool | 是 | `true` 绑定，`false` 解绑 |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": { "success": true }
+}
+```
+
+约束：只有 Bot 创建者可以绑定；系统 Bot 不支持绑定个人 Skill；Skill 必须属于操作者本人。重复绑定幂等返回成功。
+
+---
+
+### 16.6 查询 Bot 已绑定的 Skill
+
+- **URL**: `/api/skill/bot_skills`
+- **Method**: `GET`
+
+**请求参数**（Query）:
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| bot_id | string | 是 | Bot ID |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "msg": "操作成功",
+  "data": {
+    "skills": [
+      {
+        "skill_id": "1234567890123456789",
+        "name": "会议纪要",
+        "description": "把会议记录整理成结构化要点",
+        "version": "1.0.0",
+        "enabled": true
+      }
+    ]
+  }
+}
+```
+
+仅 Bot 创建者可读；非创建者返回空列表。
+
+---
+
+### 16.7 运行与限制
+
+- Skill 的知识库随绑定并入 Bot 的检索范围，与用户自建知识库共用同一套 Self-RAG 检索策略，无需额外配置。
+- Skill 属于「用户自定义配置」资产：其检索所产生的 Token 计入 Bot 用量统计，口径与其他自建 Bot 一致。
+- 上传与绑定/删除都会写审计日志（`audit_log.event_type = user_skill`），记录操作者、租户与动作结果。
+- 资料型边界意味着即使包里混入脚本文件也不会被执行：非 `.md/.markdown/.txt` 一律跳过。
+- 多端在线：同一账号的多个 WebSocket 连接会同时收到消息、输入状态与已读回执，单个设备断开不影响其他设备（单账号最多保留 5 个并发连接，超出淘汰最早连接）。
+

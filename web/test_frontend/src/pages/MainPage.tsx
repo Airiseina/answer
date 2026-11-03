@@ -6,9 +6,11 @@ import ChatPanel from '../components/ChatPanel.tsx'
 import ContactsPanel from '../components/ContactsPanel.tsx'
 import GroupsPanel from '../components/GroupsPanel.tsx'
 import BotsPanel from '../components/BotsPanel.tsx'
+import SummariesPanel from '../components/SummariesPanel.tsx'
+import UsagePanel from '../components/UsagePanel.tsx'
 import './MainPage.css'
 
-type Tab = 'chat' | 'contacts' | 'groups' | 'bots'
+type Tab = 'chat' | 'contacts' | 'groups' | 'bots' | 'summaries' | 'usage'
 
 export default function MainPage() {
   const { auth, logout, wsConnected, wsConnect, wsDisconnect, activeConvId, openSystemAI } = useApp()
@@ -32,12 +34,14 @@ export default function MainPage() {
         {tab === 'contacts' && <ContactsPanel onSwitchToChat={() => setTab('chat')} />}
         {tab === 'groups' && <GroupsPanel onSwitchToChat={() => setTab('chat')} />}
         {tab === 'bots' && <BotsPanel onSwitchToChat={() => setTab('chat')} />}
+        {tab === 'summaries' && <SummariesPanel />}
+        {tab === 'usage' && <UsagePanel />}
       </div>
       <div className="main-right">
         {showChat ? <ChatPanel /> : (
           <div className="empty-panel">
-            <div className="empty-icon">{tab === 'contacts' ? '👤' : tab === 'groups' ? '👥' : tab === 'bots' ? '🤖' : '💬'}</div>
-            <p>{tab === 'contacts' ? '选择一个联系人开始聊天' : tab === 'groups' ? '选择一个群组查看详情' : tab === 'bots' ? '创建或选择一个 AI Bot' : '选择一个会话开始聊天'}</p>
+            <div className="empty-icon">{tab === 'contacts' ? '👤' : tab === 'groups' ? '👥' : tab === 'bots' ? '🤖' : tab === 'summaries' ? '📝' : tab === 'usage' ? '📊' : '💬'}</div>
+            <p>{tab === 'contacts' ? '选择一个联系人开始聊天' : tab === 'groups' ? '选择一个群组查看详情' : tab === 'bots' ? '创建或选择一个 AI Bot' : tab === 'summaries' ? '查看每日与每周总结' : tab === 'usage' ? '查看本人 Token 用量与预估成本' : '选择一个会话开始聊天'}</p>
           </div>
         )}
       </div>

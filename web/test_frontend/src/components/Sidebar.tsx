@@ -7,7 +7,7 @@ interface Props {
   account: string
   wsConnected: boolean
   tab: string
-  onTabChange: (tab: 'chat' | 'contacts' | 'groups' | 'bots') => void
+  onTabChange: (tab: 'chat' | 'contacts' | 'groups' | 'bots' | 'summaries' | 'usage') => void
   onWsToggle: () => void
   onLogout: () => void
   onOpenSystemAI: () => void
@@ -83,6 +83,22 @@ export default function Sidebar({ account, wsConnected, tab, onTabChange, onWsTo
             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
             <path d="M2 17l10 5 10-5"/>
             <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </button>
+        <button className={`sidebar-btn ${tab === 'summaries' ? 'active' : ''}`} onClick={() => onTabChange('summaries')} title="总结">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="13" y2="17"/>
+          </svg>
+        </button>
+        <button className={`sidebar-btn ${tab === 'usage' ? 'active' : ''}`} onClick={() => onTabChange('usage')} title="用量">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="20" x2="21" y2="20"/>
+            <rect x="5" y="11" width="3.5" height="6" rx="1"/>
+            <rect x="10.25" y="7" width="3.5" height="10" rx="1"/>
+            <rect x="15.5" y="4" width="3.5" height="13" rx="1"/>
           </svg>
         </button>
       </nav>

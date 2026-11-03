@@ -7,8 +7,11 @@ import (
 
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/consumer"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/model"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/scheduler"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work/workservice"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
@@ -61,7 +64,26 @@ func main() {
 	mcpPool := mcp.NewPool()
 	mcpPool.StartHealthCheck()
 	defer mcpPool.Close()
-	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool)
+
+	// 日/周总结依赖 MySQL 持久化报告与订阅；Redis 仅用于调度跨实例去重（可降级）。
+	db, err := infra.ConnectMysql(v)
+	if err != nil {
+		klog.Fatalf("连接数据库失败:%v", err)
+	}
+	if err = db.AutoMigrate(&model.SummaryReport{}, &model.SummarySchedule{}); err != nil {
+		klog.Fatalf("数据库建表失败:%v", err)
+	}
+	rdb, err := infra.ConnectRedis(v)
+	if err != nil {
+		klog.Warnf("连接Garnet失败，总结调度去重将降级为单实例执行: %v", err)
+	}
+	summaryDao := dal.NewSummaryDao(db)
+	workService := service.NewWorkService(llmClient, kafkaWriter, mcpPool, summaryDao)
+
+	// 定时生成日/周总结：每天 send_hour 触发日总结，周日同时触发周总结。
+	summaryScheduler := scheduler.NewSummaryScheduler(workService, rdb)
+	summaryScheduler.Start(context.Background())
+
 	kafkaReader, err := infra.ConnectKafkaConsumerGroup(v, "bot-worker-group", "bot-task-topic")
 	if err != nil {
 		klog.Fatalf("连接Kafka ConsumerGroup失败: %v", err)

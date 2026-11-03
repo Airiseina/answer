@@ -1,0 +1,21 @@
+## example
+mysql:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "123456"
+  name: "answer"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+# 初始管理员：服务启动时幂等创建，仅首次生效。
+admin:
+  bootstrap:
+    - account: "admin"
+      name: "平台管理员"
+      role: "super"
+      password: "change-me-on-first-login"

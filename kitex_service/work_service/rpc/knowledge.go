@@ -58,9 +58,10 @@ type KnowledgeSearchResult struct {
 // SearchKnowledge 调用knowledge_service进行混合检索（向量+BM25+RRF+Rerank）
 func SearchKnowledge(ctx context.Context, kbIDs []int64, query string, topK int32) ([]KnowledgeSearchResult, error) {
 	resp, err := knowledgeCli.SearchKnowledge(ctx, &knowledge.SearchKnowledgeReq{
-		KbIds: kbIDs,
-		Query: query,
-		TopK:  topK,
+		KbIds:    kbIDs,
+		Query:    query,
+		TopK:     topK,
+		TenantId: tenantFromCtx(ctx),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("知识库检索RPC失败: %w", err)
@@ -99,7 +100,8 @@ type KnowledgeBaseInfo struct {
 // GetBotKnowledgeBases 获取Bot关联的知识库列表
 func GetBotKnowledgeBases(ctx context.Context, botID int64) ([]KnowledgeBaseInfo, error) {
 	resp, err := knowledgeCli.GetBotKnowledgeBases(ctx, &knowledge.GetBotKnowledgeBasesReq{
-		BotId: botID,
+		BotId:    botID,
+		TenantId: tenantFromCtx(ctx),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("获取Bot知识库列表RPC失败: %w", err)

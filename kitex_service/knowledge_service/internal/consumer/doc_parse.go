@@ -22,8 +22,15 @@ const (
 )
 
 type DocParseMessage struct {
-	DocID int64 `json:"doc_id"`
-	KbID  int64 `json:"kb_id"`
+	DocID    int64 `json:"doc_id"`
+	KbID     int64 `json:"kb_id"`
+	TenantID int64 `json:"tenant_id"`
+}
+
+// docTask 单个待解析文档任务，携带租户以在 DAO 层强制隔离。
+type docTask struct {
+	TenantID int64
+	DocID    int64
 }
 
 type DocParseConsumer struct {
@@ -32,7 +39,7 @@ type DocParseConsumer struct {
 	docDao  dal.DocumentDao
 
 	mu     sync.Mutex
-	queues map[int64]chan int64
+	queues map[int64]chan docTask
 	wg     sync.WaitGroup
 }
 
@@ -48,7 +55,7 @@ func NewDocParseConsumer(brokers []string, topic, groupID string, svc *service.K
 		reader:  reader,
 		service: svc,
 		docDao:  docDao,
-		queues:  make(map[int64]chan int64),
+		queues:  make(map[int64]chan docTask),
 	}
 }
 
@@ -69,49 +76,49 @@ func (c *DocParseConsumer) Start() {
 		}
 		groupKey := parseMsg.KbID
 		if groupKey == 0 {
-			doc, err := c.docDao.GetByID(parseMsg.DocID)
+			doc, err := c.docDao.GetByID(parseMsg.TenantID, parseMsg.DocID)
 			if err == nil && doc.ID != 0 {
 				groupKey = doc.KBID
 			}
 		}
-		c.dispatch(groupKey, parseMsg.DocID)
+		c.dispatch(groupKey, docTask{TenantID: parseMsg.TenantID, DocID: parseMsg.DocID})
 		_ = c.reader.CommitMessages(ctx, msg)
 	}
 }
 
-func (c *DocParseConsumer) dispatch(groupKey int64, docID int64) {
+func (c *DocParseConsumer) dispatch(groupKey int64, task docTask) {
 	c.mu.Lock()
 	q, exists := c.queues[groupKey]
 	if !exists {
-		q = make(chan int64, 256)
+		q = make(chan docTask, 256)
 		c.queues[groupKey] = q
 		c.wg.Add(1)
 		go c.runGroupQueue(groupKey, q)
 	}
 	c.mu.Unlock()
-	q <- docID
+	q <- task
 }
 
-func (c *DocParseConsumer) runGroupQueue(groupKey int64, q chan int64) {
+func (c *DocParseConsumer) runGroupQueue(groupKey int64, q chan docTask) {
 	defer c.wg.Done()
-	for docID := range q {
-		c.processDoc(context.Background(), docID)
+	for task := range q {
+		c.processDoc(context.Background(), task.TenantID, task.DocID)
 	}
 	c.mu.Lock()
 	delete(c.queues, groupKey)
 	c.mu.Unlock()
 }
 
-func (c *DocParseConsumer) processDoc(ctx context.Context, docID int64) {
+func (c *DocParseConsumer) processDoc(ctx context.Context, tenantID, docID int64) {
 	defer func() {
 		if r := recover(); r != nil {
 			klog.Errorf("文档[%d]解析panic: %v\n%s", docID, r, string(debug.Stack()))
-			_ = c.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, fmt.Sprintf("解析异常: %v", r))
+			_ = c.docDao.UpdateStatus(tenantID, docID, model.DocStatusFailed, 0, fmt.Sprintf("解析异常: %v", r))
 		}
 	}()
 	parseCtx, cancel := context.WithTimeout(ctx, docParseTimeout)
 	defer cancel()
-	if err := c.service.ProcessDocument(parseCtx, docID); err != nil {
+	if err := c.service.ProcessDocument(parseCtx, tenantID, docID); err != nil {
 		klog.Errorf("文档[%d]异步解析失败: %v", docID, err)
 		return
 	}

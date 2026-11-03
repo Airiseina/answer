@@ -58,14 +58,20 @@ func main() {
 	if err != nil {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
-	err = db.AutoMigrate(&model.User{}, &model.FriendRequest{}, &model.Friend{}, &model.FriendGroup{})
+	err = db.AutoMigrate(&model.User{}, &model.FriendRequest{}, &model.Friend{}, &model.FriendGroup{},
+		&model.Tenant{}, &model.TenantMember{}, &model.TenantDepartment{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
 	userDao := mysql.NewUserDao(db)
-	userService := service.NewUserService(userDao)
+	tenantDao := mysql.NewTenantDao(db)
+	userService := service.NewUserService(userDao, tenantDao)
 	friendService := service.NewFriendService(userDao)
-	svr := loginservice.NewServer(&LoginServiceImpl{userService: userService, friendService: friendService},
+	tenantService := service.NewTenantService(userDao, tenantDao)
+	if err = tenantService.EnsurePlatformTenant(); err != nil {
+		klog.Fatalf("初始化平台租户失败:%v", err)
+	}
+	svr := loginservice.NewServer(&LoginServiceImpl{userService: userService, friendService: friendService, tenantService: tenantService},
 		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "userservice"}),
 		server.WithServiceAddr(addr),

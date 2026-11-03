@@ -66,10 +66,11 @@ func NewKnowledgeService(
 	}
 }
 
-func (svc *KnowledgeService) CreateKnowledgeBase(ctx context.Context, ownerID int64, name, description string) (int64, error) {
+func (svc *KnowledgeService) CreateKnowledgeBase(ctx context.Context, tenantID, ownerID int64, name, description string) (int64, error) {
 	kbID := svc.snow.Generate()
 	kb := model.KnowledgeBase{
 		ID:          kbID,
+		TenantID:    tenantID,
 		OwnerID:     ownerID,
 		Name:        name,
 		Description: description,
@@ -80,16 +81,16 @@ func (svc *KnowledgeService) CreateKnowledgeBase(ctx context.Context, ownerID in
 	return kbID, nil
 }
 
-func (svc *KnowledgeService) GetKnowledgeBase(kbID int64) (model.KnowledgeBase, error) {
-	return svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) GetKnowledgeBase(tenantID, kbID int64) (model.KnowledgeBase, error) {
+	return svc.kbDao.GetByID(tenantID, kbID)
 }
 
-func (svc *KnowledgeService) GetUserKnowledgeBases(ownerID int64) ([]model.KnowledgeBase, error) {
-	return svc.kbDao.GetByOwner(ownerID)
+func (svc *KnowledgeService) GetUserKnowledgeBases(tenantID, ownerID int64) ([]model.KnowledgeBase, error) {
+	return svc.kbDao.GetByOwner(tenantID, ownerID)
 }
 
-func (svc *KnowledgeService) UpdateKnowledgeBase(kbID, operatorID int64, updates map[string]interface{}) (bool, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) UpdateKnowledgeBase(tenantID, kbID, operatorID int64, updates map[string]interface{}) (bool, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
@@ -99,11 +100,11 @@ func (svc *KnowledgeService) UpdateKnowledgeBase(kbID, operatorID int64, updates
 	if kb.OwnerID != operatorID {
 		return false, nil
 	}
-	return true, svc.kbDao.Update(kbID, updates)
+	return true, svc.kbDao.Update(tenantID, kbID, updates)
 }
 
-func (svc *KnowledgeService) DeleteKnowledgeBase(ctx context.Context, kbID, operatorID int64) (bool, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) DeleteKnowledgeBase(ctx context.Context, tenantID, kbID, operatorID int64) (bool, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
@@ -113,28 +114,28 @@ func (svc *KnowledgeService) DeleteKnowledgeBase(ctx context.Context, kbID, oper
 	if kb.OwnerID != operatorID {
 		return false, nil
 	}
-	docs, err := svc.docDao.GetByKBID(kbID)
+	docs, err := svc.docDao.GetByKBID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
 	for _, doc := range docs {
-		svc.deleteDocVectors(ctx, doc.ID)
+		svc.deleteDocVectors(ctx, tenantID, doc.ID)
 	}
-	if err := svc.docDao.DeleteByKBID(kbID); err != nil {
+	if err := svc.docDao.DeleteByKBID(tenantID, kbID); err != nil {
 		return false, err
 	}
-	bks, err := svc.bkDao.GetByKBID(kbID)
+	bks, err := svc.bkDao.GetByKBID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
 	for _, bk := range bks {
-		_ = svc.bkDao.Delete(bk.BotID, bk.KBID)
+		_ = svc.bkDao.Delete(tenantID, bk.BotID, bk.KBID)
 	}
-	return true, svc.kbDao.Delete(kbID)
+	return true, svc.kbDao.Delete(tenantID, kbID)
 }
 
-func (svc *KnowledgeService) AddDocument(ctx context.Context, kbID, operatorID int64, fileName, fileURL, fileType string, fileSize int64) (int64, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) AddDocument(ctx context.Context, tenantID, kbID, operatorID int64, fileName, fileURL, fileType string, fileSize int64) (int64, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return 0, err
 	}
@@ -147,6 +148,7 @@ func (svc *KnowledgeService) AddDocument(ctx context.Context, kbID, operatorID i
 	docID := svc.snow.Generate()
 	doc := model.KbDocument{
 		ID:       docID,
+		TenantID: tenantID,
 		KBID:     kbID,
 		FileName: fileName,
 		FileURL:  fileURL,
@@ -157,43 +159,43 @@ func (svc *KnowledgeService) AddDocument(ctx context.Context, kbID, operatorID i
 	if err := svc.docDao.Create(doc); err != nil {
 		return 0, err
 	}
-	_ = svc.kbDao.IncrDocCount(kbID, 1)
-	if err := svc.publishDocParse(docID, kbID); err != nil {
+	_ = svc.kbDao.IncrDocCount(tenantID, kbID, 1)
+	if err := svc.publishDocParse(tenantID, docID, kbID); err != nil {
 		klog.Warnf("文档[%d]解析消息发送失败(将等待轮询): %v", docID, err)
 	}
 	return docID, nil
 }
 
-func (svc *KnowledgeService) GetDocuments(kbID int64) ([]model.KbDocument, error) {
-	return svc.docDao.GetByKBID(kbID)
+func (svc *KnowledgeService) GetDocuments(tenantID, kbID int64) ([]model.KbDocument, error) {
+	return svc.docDao.GetByKBID(tenantID, kbID)
 }
 
-func (svc *KnowledgeService) DeleteDocument(ctx context.Context, docID, operatorID int64) (bool, error) {
-	doc, err := svc.docDao.GetByID(docID)
+func (svc *KnowledgeService) DeleteDocument(ctx context.Context, tenantID, docID, operatorID int64) (bool, error) {
+	doc, err := svc.docDao.GetByID(tenantID, docID)
 	if err != nil {
 		return false, err
 	}
 	if doc.ID == 0 {
 		return false, nil
 	}
-	kb, err := svc.kbDao.GetByID(doc.KBID)
+	kb, err := svc.kbDao.GetByID(tenantID, doc.KBID)
 	if err != nil {
 		return false, err
 	}
 	if kb.OwnerID != operatorID {
 		return false, nil
 	}
-	svc.deleteDocVectors(ctx, docID)
-	if err := svc.docDao.DeleteByID(docID); err != nil {
+	svc.deleteDocVectors(ctx, tenantID, docID)
+	if err := svc.docDao.DeleteByID(tenantID, docID); err != nil {
 		return false, err
 	}
-	_ = svc.kbDao.IncrDocCount(doc.KBID, -1)
-	_ = svc.kbDao.IncrChunkCount(doc.KBID, -int(doc.ChunkCount))
+	_ = svc.kbDao.IncrDocCount(tenantID, doc.KBID, -1)
+	_ = svc.kbDao.IncrChunkCount(tenantID, doc.KBID, -int(doc.ChunkCount))
 	return true, nil
 }
 
-func (svc *KnowledgeService) RetryDocument(ctx context.Context, docID, operatorID int64) (bool, error) {
-	doc, err := svc.docDao.GetByID(docID)
+func (svc *KnowledgeService) RetryDocument(ctx context.Context, tenantID, docID, operatorID int64) (bool, error) {
+	doc, err := svc.docDao.GetByID(tenantID, docID)
 	if err != nil {
 		return false, err
 	}
@@ -203,18 +205,18 @@ func (svc *KnowledgeService) RetryDocument(ctx context.Context, docID, operatorI
 	if doc.Status != model.DocStatusFailed {
 		return false, nil
 	}
-	kb, err := svc.kbDao.GetByID(doc.KBID)
+	kb, err := svc.kbDao.GetByID(tenantID, doc.KBID)
 	if err != nil {
 		return false, err
 	}
 	if kb.OwnerID != operatorID {
 		return false, nil
 	}
-	return true, svc.docDao.UpdateStatus(docID, model.DocStatusPending, int(doc.ChunkCount), "")
+	return true, svc.docDao.UpdateStatus(tenantID, docID, model.DocStatusPending, int(doc.ChunkCount), "")
 }
 
-func (svc *KnowledgeService) BindKnowledgeBase(botID, operatorID, kbID int64) (bool, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) BindKnowledgeBase(tenantID, botID, operatorID, kbID int64) (bool, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
@@ -226,15 +228,16 @@ func (svc *KnowledgeService) BindKnowledgeBase(botID, operatorID, kbID int64) (b
 	}
 	bkID := svc.snow.Generate()
 	bk := model.BotKnowledge{
-		ID:    bkID,
-		BotID: botID,
-		KBID:  kbID,
+		ID:       bkID,
+		TenantID: tenantID,
+		BotID:    botID,
+		KBID:     kbID,
 	}
 	return true, svc.bkDao.Create(bk)
 }
 
-func (svc *KnowledgeService) UnbindKnowledgeBase(botID, operatorID, kbID int64) (bool, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) UnbindKnowledgeBase(tenantID, botID, operatorID, kbID int64) (bool, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
@@ -244,15 +247,15 @@ func (svc *KnowledgeService) UnbindKnowledgeBase(botID, operatorID, kbID int64) 
 	if kb.OwnerID != operatorID {
 		return false, fmt.Errorf("无权操作此知识库")
 	}
-	return true, svc.bkDao.Delete(botID, kbID)
+	return true, svc.bkDao.Delete(tenantID, botID, kbID)
 }
 
-func (svc *KnowledgeService) GetBotKnowledgeBases(botID int64) ([]model.KnowledgeBase, error) {
-	return svc.bkDao.GetKnowledgeBasesByBotID(botID)
+func (svc *KnowledgeService) GetBotKnowledgeBases(tenantID, botID int64) ([]model.KnowledgeBase, error) {
+	return svc.bkDao.GetKnowledgeBasesByBotID(tenantID, botID)
 }
 
-func (svc *KnowledgeService) BindSystemKnowledgeBase(botID, kbID int64) (bool, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) BindSystemKnowledgeBase(tenantID, botID, kbID int64) (bool, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return false, err
 	}
@@ -261,15 +264,16 @@ func (svc *KnowledgeService) BindSystemKnowledgeBase(botID, kbID int64) (bool, e
 	}
 	bkID := svc.snow.Generate()
 	bk := model.BotKnowledge{
-		ID:    bkID,
-		BotID: botID,
-		KBID:  kbID,
+		ID:       bkID,
+		TenantID: tenantID,
+		BotID:    botID,
+		KBID:     kbID,
 	}
 	return true, svc.bkDao.Create(bk)
 }
 
-func (svc *KnowledgeService) AddSystemDocument(ctx context.Context, kbID int64, fileName, fileURL, fileType string, fileSize int64) (int64, error) {
-	kb, err := svc.kbDao.GetByID(kbID)
+func (svc *KnowledgeService) AddSystemDocument(ctx context.Context, tenantID, kbID int64, fileName, fileURL, fileType string, fileSize int64) (int64, error) {
+	kb, err := svc.kbDao.GetByID(tenantID, kbID)
 	if err != nil {
 		return 0, err
 	}
@@ -279,6 +283,7 @@ func (svc *KnowledgeService) AddSystemDocument(ctx context.Context, kbID int64, 
 	docID := svc.snow.Generate()
 	doc := model.KbDocument{
 		ID:       docID,
+		TenantID: kb.TenantID,
 		KBID:     kbID,
 		FileName: fileName,
 		FileURL:  fileURL,
@@ -289,44 +294,49 @@ func (svc *KnowledgeService) AddSystemDocument(ctx context.Context, kbID int64, 
 	if err := svc.docDao.Create(doc); err != nil {
 		return 0, err
 	}
-	_ = svc.kbDao.IncrDocCount(kbID, 1)
-	if err := svc.publishDocParse(docID, kbID); err != nil {
+	_ = svc.kbDao.IncrDocCount(kb.TenantID, kbID, 1)
+	if err := svc.publishDocParse(kb.TenantID, docID, kbID); err != nil {
 		klog.Warnf("系统文档[%d]解析消息发送失败(将等待轮询): %v", docID, err)
 	}
 	return docID, nil
 }
 
-func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) error {
-	doc, err := svc.docDao.GetByID(docID)
+func (svc *KnowledgeService) ProcessDocument(ctx context.Context, tenantID, docID int64) error {
+	doc, err := svc.docDao.GetByID(tenantID, docID)
 	if err != nil {
 		return err
 	}
 	if doc.ID == 0 {
 		return fmt.Errorf("文档[%d]不存在", docID)
 	}
+	// 兼容历史消息：未显式携带租户时，回退到文档自身归属的租户。
+	scopeTenant := tenantID
+	if scopeTenant <= 0 {
+		scopeTenant = doc.TenantID
+	}
 	if doc.Status == model.DocStatusParsing || doc.Status == model.DocStatusParsed {
 		return nil
 	}
-	_ = svc.docDao.UpdateStatus(docID, model.DocStatusParsing, 0, "")
+	_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusParsing, 0, "")
 	localPath, err := svc.downloadDocument(ctx, doc)
 	if err != nil {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, err.Error())
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, err.Error())
 		return err
 	}
 	defer func() { _ = os.Remove(localPath) }()
 	p := parser.GetParser(doc.FileType)
 	if p == nil {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, fmt.Sprintf("不支持的文件类型: %s", doc.FileType))
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, fmt.Sprintf("不支持的文件类型: %s", doc.FileType))
 		return fmt.Errorf("不支持的文件类型: %s", doc.FileType)
 	}
 	parsed, err := p.Parse(localPath)
 	if err != nil {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, err.Error())
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, err.Error())
 		return err
 	}
 	chunks := svc.chunkDocument(parsed, doc)
 	if len(chunks) == 0 {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, "文档解析后内容为空")
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, "文档解析后内容为空")
 		return fmt.Errorf("文档解析后内容为空")
 	}
 	texts := make([]string, 0, len(chunks))
@@ -335,40 +345,40 @@ func (svc *KnowledgeService) ProcessDocument(ctx context.Context, docID int64) e
 	}
 	vectors, err := ai.GetEmbeddings(ctx, texts)
 	if err != nil {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, fmt.Sprintf("向量化失败: %v", err))
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, fmt.Sprintf("向量化失败: %v", err))
 		return err
 	}
-	if err := svc.storeVectors(ctx, doc, chunks, vectors); err != nil {
-		_ = svc.docDao.UpdateStatus(docID, model.DocStatusFailed, 0, fmt.Sprintf("向量存储失败: %v", err))
+	if err := svc.storeVectors(ctx, scopeTenant, doc, chunks, vectors); err != nil {
+		_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusFailed, 0, fmt.Sprintf("向量存储失败: %v", err))
 		return err
 	}
-	_ = svc.docDao.UpdateStatus(docID, model.DocStatusParsed, len(chunks), "")
-	_ = svc.kbDao.IncrChunkCount(doc.KBID, len(chunks))
+	_ = svc.docDao.UpdateStatus(scopeTenant, docID, model.DocStatusParsed, len(chunks), "")
+	_ = svc.kbDao.IncrChunkCount(scopeTenant, doc.KBID, len(chunks))
 	klog.Infof("文档[%d]解析完成，生成%d个分块", docID, len(chunks))
 	return nil
 }
 
-func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+func (svc *KnowledgeService) SearchKnowledge(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	// 三路混合检索：向量检索 + BM25关键词检索 + 图谱检索
 	// 优先级：三路 > 两路(向量+BM25) > 纯向量
 	if svc.meilisearch != nil && svc.neo4jGraph != nil {
-		return svc.hybridSearch(ctx, kbIDs, query, topK)
+		return svc.hybridSearch(ctx, tenantID, kbIDs, query, topK)
 	}
 	if svc.meilisearch != nil {
-		return svc.hybridSearchTwoWay(ctx, kbIDs, query, topK)
+		return svc.hybridSearchTwoWay(ctx, tenantID, kbIDs, query, topK)
 	}
 	// 降级：仅使用向量检索
-	return svc.vectorSearch(ctx, kbIDs, query, topK)
+	return svc.vectorSearch(ctx, tenantID, kbIDs, query, topK)
 }
 
 // hybridSearch 三路混合检索：向量检索 + BM25关键词检索 + 图谱检索，使用RRF融合排序
-func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+func (svc *KnowledgeService) hybridSearch(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	klog.Infof("混合检索开始: kb_ids=%v, top_k=%d, 图谱=%v", kbIDs, topK, svc.neo4jGraph != nil)
 
 	// 并行执行三路检索
-	vectorResults, vectorErr := svc.vectorSearch(ctx, kbIDs, query, topK)
-	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, kbIDs, query, topK)
-	graphResults, graphErr := svc.graphSearch(ctx, kbIDs, query, topK)
+	vectorResults, vectorErr := svc.vectorSearch(ctx, tenantID, kbIDs, query, topK)
+	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, tenantID, kbIDs, query, topK)
+	graphResults, graphErr := svc.graphSearch(ctx, tenantID, kbIDs, query, topK)
 
 	if vectorErr != nil && bm25Err != nil && graphErr != nil {
 		return nil, fmt.Errorf("三路混合检索全部失败: 向量检索=%v, BM25检索=%v, 图谱检索=%v", vectorErr, bm25Err, graphErr)
@@ -409,9 +419,9 @@ func (svc *KnowledgeService) hybridSearch(ctx context.Context, kbIDs []int64, qu
 }
 
 // hybridSearchTwoWay 两路混合检索：向量检索 + BM25关键词检索（无图谱时降级）
-func (svc *KnowledgeService) hybridSearchTwoWay(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
-	vectorResults, vectorErr := svc.vectorSearch(ctx, kbIDs, query, topK)
-	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, kbIDs, query, topK)
+func (svc *KnowledgeService) hybridSearchTwoWay(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+	vectorResults, vectorErr := svc.vectorSearch(ctx, tenantID, kbIDs, query, topK)
+	bm25Results, bm25Err := svc.meilisearch.SearchBM25(ctx, tenantID, kbIDs, query, topK)
 
 	if vectorErr != nil && bm25Err != nil {
 		return nil, fmt.Errorf("混合检索全部失败: 向量检索=%v, BM25检索=%v", vectorErr, bm25Err)
@@ -456,7 +466,7 @@ func (svc *KnowledgeService) hybridSearchTwoWay(ctx context.Context, kbIDs []int
 }
 
 // graphSearch 图谱检索：通过关键词在Neo4j中检索相关Chunk
-func (svc *KnowledgeService) graphSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+func (svc *KnowledgeService) graphSearch(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	if svc.neo4jGraph == nil {
 		klog.Debugf("图谱未初始化，跳过图谱检索")
 		return nil, fmt.Errorf("图谱未初始化")
@@ -482,7 +492,7 @@ func (svc *KnowledgeService) graphSearch(ctx context.Context, kbIDs []int64, que
 	}
 	klog.Infof("图谱检索: keywords=%v, kb_ids=%v, top_k=%d", keywords, kbIDs, topK)
 
-	graphResults, err := svc.neo4jGraph.SearchByKeywords(ctx, kbIDs, keywords, topK)
+	graphResults, err := svc.neo4jGraph.SearchByKeywords(ctx, tenantID, kbIDs, keywords, topK)
 	if err != nil {
 		return nil, fmt.Errorf("图谱检索失败: %w", err)
 	}
@@ -514,6 +524,14 @@ func (svc *KnowledgeService) indexEntitiesFromChunks(ctx context.Context, doc mo
 	if len(entities) == 0 {
 		klog.Infof("文档[%d]未提取到有效实体", doc.ID)
 		return
+	}
+	// 实体与关系必须归属到 Chunk 所在租户，避免跨租户串图。
+	tenantID := doc.TenantID
+	for i := range entities {
+		entities[i].TenantID = tenantID
+	}
+	for i := range relations {
+		relations[i].TenantID = tenantID
 	}
 	klog.Infof("文档[%d]提取到%d个实体, %d个关系", doc.ID, len(entities), len(relations))
 	if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
@@ -828,17 +846,21 @@ func extractKeywords(query string) []string {
 }
 
 // vectorSearch 纯向量检索（Qdrant）
-func (svc *KnowledgeService) vectorSearch(ctx context.Context, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
+func (svc *KnowledgeService) vectorSearch(ctx context.Context, tenantID int64, kbIDs []int64, query string, topK int) ([]SearchResult, error) {
 	queryVector, err := ai.GetEmbedding(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("查询向量化失败: %w", err)
 	}
 	kbIDValues := make([]*qdrant.Condition, 0, len(kbIDs))
 	for _, id := range kbIDs {
-		kbIDValues = append(kbIDValues, qdrant.NewMatch("kb_id", fmt.Sprintf("%d", id)))
+		kbIDValues = append(kbIDValues, qdrant.NewMatchInt("kb_id", id))
 	}
 	filter := &qdrant.Filter{
 		Should: kbIDValues,
+	}
+	// 强制租户过滤：即使 kbIDs 被伪造，也不会命中其他租户的向量。
+	if tenantID > 0 {
+		filter.Must = []*qdrant.Condition{qdrant.NewMatchInt("tenant_id", tenantID)}
 	}
 	searchResult, err := svc.qdrant.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: KbChunksCollection,
@@ -1098,7 +1120,7 @@ func (svc *KnowledgeService) downloadDocument(ctx context.Context, doc model.KbD
 	return tmpFile.Name(), nil
 }
 
-func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocument, chunks []chunker.Chunk, vectors [][]float32) error {
+func (svc *KnowledgeService) storeVectors(ctx context.Context, tenantID int64, doc model.KbDocument, chunks []chunker.Chunk, vectors [][]float32) error {
 	svc.ensureCollection(ctx)
 	points := make([]*qdrant.PointStruct, 0, len(chunks))
 	meiliDocs := make([]meilisearch.ChunkDocument, 0, len(chunks))
@@ -1106,6 +1128,7 @@ func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocum
 		chunkID := svc.snow.Generate()
 		payload := map[string]interface{}{
 			"chunk_id":    chunkID,
+			"tenant_id":   tenantID,
 			"kb_id":       doc.KBID,
 			"doc_id":      doc.ID,
 			"content":     c.Content,
@@ -1123,6 +1146,7 @@ func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocum
 		meiliDoc := meilisearch.ChunkDocument{
 			ChunkIDStr: fmt.Sprintf("%d", chunkID),
 			ChunkID:    chunkID,
+			TenantID:   tenantID,
 			KBID:       doc.KBID,
 			DocID:      doc.ID,
 			Content:    c.Content,
@@ -1153,6 +1177,7 @@ func (svc *KnowledgeService) storeVectors(ctx context.Context, doc model.KbDocum
 		for i, c := range chunks {
 			chunkData = append(chunkData, graph.ChunkData{
 				ChunkID:    fmt.Sprintf("%d", meiliDocs[i].ChunkID),
+				TenantID:   tenantID,
 				KBID:       doc.KBID,
 				DocID:      doc.ID,
 				Content:    c.Content,
@@ -1230,6 +1255,14 @@ func (svc *KnowledgeService) BackfillEntities(ctx context.Context) {
 		// 走统一抽取入口：LLM 或 N-gram 降级
 		entities, relations := svc.extractEntitiesFromChunks(ctx, docID, chunks)
 		if len(entities) > 0 {
+			if len(chunks) > 0 {
+				for i := range entities {
+					entities[i].TenantID = chunks[0].TenantID
+				}
+				for i := range relations {
+					relations[i].TenantID = chunks[0].TenantID
+				}
+			}
 			if err := svc.neo4jGraph.IndexEntities(ctx, entities, relations); err != nil {
 				klog.Warnf("文档[%d]实体回填失败: %v", docID, err)
 			} else {
@@ -1257,17 +1290,21 @@ func (svc *KnowledgeService) reparseAllDocs(ctx context.Context) {
 
 	klog.Infof("开始重新解析%d个文档以重建图谱", len(docs))
 	for _, doc := range docs {
-		_ = svc.docDao.UpdateStatus(doc.ID, model.DocStatusPending, 0, "")
-		_ = svc.RepublishDocParse(doc.ID, doc.KBID)
+		_ = svc.docDao.UpdateStatus(doc.TenantID, doc.ID, model.DocStatusPending, 0, "")
+		_ = svc.RepublishDocParse(doc.TenantID, doc.ID, doc.KBID)
 	}
 	klog.Infof("已重新发布%d个文档的解析任务", len(docs))
 }
 
-func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, docID int64) {
+func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, tenantID, docID int64) {
+	must := []*qdrant.Condition{qdrant.NewMatchInt("doc_id", docID)}
+	if tenantID > 0 {
+		must = append(must, qdrant.NewMatchInt("tenant_id", tenantID))
+	}
 	_, err := svc.qdrant.Delete(ctx, &qdrant.DeletePoints{
 		CollectionName: KbChunksCollection,
 		Points: qdrant.NewPointsSelectorFilter(&qdrant.Filter{
-			Must: []*qdrant.Condition{qdrant.NewMatch("doc_id", fmt.Sprintf("%d", docID))},
+			Must: must,
 		}),
 	})
 	if err != nil {
@@ -1275,13 +1312,13 @@ func (svc *KnowledgeService) deleteDocVectors(ctx context.Context, docID int64) 
 	}
 	// 同步从Meilisearch删除
 	if svc.meilisearch != nil {
-		if delErr := svc.meilisearch.DeleteByDocID(ctx, docID); delErr != nil {
+		if delErr := svc.meilisearch.DeleteByDocID(ctx, tenantID, docID); delErr != nil {
 			klog.Warnf("删除文档[%d]Meilisearch索引失败: %v", docID, delErr)
 		}
 	}
 	// 同步从Neo4j知识图谱删除
 	if svc.neo4jGraph != nil {
-		if delErr := svc.neo4jGraph.DeleteByDocID(ctx, docID); delErr != nil {
+		if delErr := svc.neo4jGraph.DeleteByDocID(ctx, tenantID, docID); delErr != nil {
 			klog.Warnf("删除文档[%d]Neo4j图谱数据失败: %v", docID, delErr)
 		}
 	}
@@ -1311,7 +1348,7 @@ func getInt64Value(v *qdrant.Value) int64 {
 	}
 }
 
-func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
+func (svc *KnowledgeService) publishDocParse(tenantID int64, docID int64, kbID int64) error {
 	if svc.kafkaBroker == "" || svc.kafkaTopic == "" {
 		return nil
 	}
@@ -1323,10 +1360,11 @@ func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
 	}
 	defer func() { _ = writer.Close() }()
 	type docParseMsg struct {
-		DocID int64 `json:"doc_id"`
-		KbID  int64 `json:"kb_id"`
+		DocID    int64 `json:"doc_id"`
+		KbID     int64 `json:"kb_id"`
+		TenantID int64 `json:"tenant_id"`
 	}
-	msg := docParseMsg{DocID: docID, KbID: kbID}
+	msg := docParseMsg{DocID: docID, KbID: kbID, TenantID: tenantID}
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("序列化文档解析消息失败: %w", err)
@@ -1336,8 +1374,8 @@ func (svc *KnowledgeService) publishDocParse(docID int64, kbID int64) error {
 	return writer.WriteMessages(ctx, kafka.Message{Value: data})
 }
 
-func (svc *KnowledgeService) RepublishDocParse(docID int64, kbID int64) error {
-	return svc.publishDocParse(docID, kbID)
+func (svc *KnowledgeService) RepublishDocParse(tenantID int64, docID int64, kbID int64) error {
+	return svc.publishDocParse(tenantID, docID, kbID)
 }
 
 // Reranker Rerank精排模型客户端

@@ -18,6 +18,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// 日/周总结的取数上限
+const (
+	defaultSummaryMessageLimit int16 = 500  // 日/周总结默认拉取的消息条数
+	maxSummaryMessageLimit     int16 = 1000 // 日/周总结拉取消息条数上限
+)
+
 // 会话ID的 Snowflake 节点（节点编号 4），由 Service 层统一管理
 // 与消息ID的节点编号 3 区分，确保全局唯一
 var (
@@ -76,6 +82,30 @@ type SendMessageResult struct {
 	ConversationType int16
 	MemberIDs        []int64
 	Content          string
+	TenantID         int64
+}
+
+// ensureConvTenant 校验会话归属租户，tenantID<=0 表示内部调用（不做租户校验）
+// 这是租户隔离的越权防线：即使传入别的租户的会话ID也无法读到数据
+func (svc *ChatService) ensureConvTenant(ctx context.Context, convID, tenantID int64) error {
+	if tenantID <= 0 || convID == 0 {
+		return nil
+	}
+	conv, err := svc.conversationDao.GetConversationInfo(ctx, convID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 会话不存在时不做租户判定，交由后续成员校验兜底
+			return nil
+		}
+		return fmt.Errorf("查询会话信息失败: %w", err)
+	}
+	if conv == nil || conv.ID == 0 {
+		return fmt.Errorf("会话不存在")
+	}
+	if conv.TenantID != tenantID {
+		return fmt.Errorf("会话[%d]不属于当前租户", convID)
+	}
+	return nil
 }
 
 // SendMessage 发送消息（统一入口，单聊和群聊共用）
@@ -93,7 +123,7 @@ type SendMessageResult struct {
 //   - clientSeq: 客户端序列号，用于去重
 //
 // 返回值: 发送结果（含消息ID、时间戳、会话ID、成员列表），或错误信息
-func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, conversationID int64, peerID int64, content string, clientSeq int64, quoteMsgID int64) (*SendMessageResult, error) {
+func (svc *ChatService) SendMessage(ctx context.Context, tenantID, senderID int64, conversationID int64, peerID int64, content string, clientSeq int64, quoteMsgID int64) (*SendMessageResult, error) {
 	if strings.TrimSpace(content) == "" {
 		return nil, fmt.Errorf("消息内容不能为空")
 	}
@@ -104,7 +134,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		if peerID == senderID {
 			return nil, fmt.Errorf("不能给自己发消息")
 		}
-		id, err := svc.conversationDao.GetOrCreatePrivateConversation(ctx, senderID, peerID, func() int64 {
+		id, err := svc.conversationDao.GetOrCreatePrivateConversation(ctx, tenantID, senderID, peerID, func() int64 {
 			return getConvSnowNode().Generate()
 		})
 		if err != nil {
@@ -117,6 +147,10 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	} else {
 		// 两者都为空：参数错误
 		return nil, fmt.Errorf("conversation_id和peer_id不能同时为空") //该处修改，并不能为系统繁忙
+	}
+	// 步骤1.5：租户校验，防止跨租户向他人会话发消息
+	if err := svc.ensureConvTenant(ctx, convID, tenantID); err != nil {
+		return nil, err
 	}
 	// 步骤2：校验发送者是否为会话成员
 	members, err := svc.conversationDao.GetConversationMembers(ctx, convID)
@@ -136,7 +170,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	convInfo, err := svc.conversationDao.GetConversationInfo(ctx, convID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) && peerID != 0 {
-			newConvID, createErr := svc.conversationDao.GetOrCreatePrivateConversation(ctx, senderID, peerID, func() int64 {
+			newConvID, createErr := svc.conversationDao.GetOrCreatePrivateConversation(ctx, tenantID, senderID, peerID, func() int64 {
 				return getConvSnowNode().Generate()
 			})
 			if createErr != nil {
@@ -170,7 +204,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		convType = convInfo.Type
 	}
 	if convType == model.ConvTypeGroup && convInfo.GroupID != 0 {
-		muted, muteErr := rpc.CheckMuted(ctx, convInfo.GroupID, senderID)
+		muted, muteErr := rpc.CheckMuted(ctx, tenantID, convInfo.GroupID, senderID)
 		if muteErr != nil {
 			klog.CtxWarnf(ctx, "查询禁言状态失败, group_id=%d, user_id=%d: %v", convInfo.GroupID, senderID, muteErr)
 		} else if muted {
@@ -178,7 +212,9 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		}
 	}
 	if clientSeq > 0 {
-		dedupeKey := fmt.Sprintf("msg:dedup:%d:%d", senderID, clientSeq)
+		// 去重键按租户隔离：同一用户在不同租户下的 client_seq 相互独立，
+		// 否则跨租户发送会被误判为重复消息。
+		dedupeKey := fmt.Sprintf("msg:dedup:%d:%d:%d", tenantID, senderID, clientSeq)
 		locked, err := svc.rdb.SetNX(ctx, dedupeKey, 1, 5*time.Minute).Result()
 		if err != nil {
 			return nil, fmt.Errorf("消息去重检查失败: %w", err)
@@ -195,8 +231,13 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		return nil, fmt.Errorf("生成消息序号失败: %w", seqErr)
 	}
 	now := time.Now().UnixMilli()
+	msgTenantID := tenantID
+	if convInfo != nil && convInfo.TenantID > 0 {
+		msgTenantID = convInfo.TenantID
+	}
 	msg := &model.Message{
 		MsgID:          msgID,
+		TenantID:       msgTenantID,
 		ClientSeq:      clientSeq,
 		SenderID:       senderID,
 		ConversationID: convID,
@@ -216,6 +257,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		inboxMessages := make([]model.InboxMessage, 0, len(members))
 		for _, memberID := range members {
 			inboxMessages = append(inboxMessages, model.InboxMessage{
+				TenantID:       msgTenantID,
 				UserID:         memberID,
 				ConversationID: convID,
 				MsgID:          msgID,
@@ -234,6 +276,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 	svc.dao.CacheMessage(ctx, msg)
 	// 设置撤回窗口键：recall:msg:{msgID}，TTL=2min
 	// 撤回时通过 EXISTS 判断该键是否存在，存在则可撤回，不存在则超时
+	// 不带租户前缀：msgID 由 snowflake 全局唯一生成，Key 已隐含唯一租户归属。
 	recallKey := fmt.Sprintf("recall:msg:%d", msgID)
 	if err := svc.rdb.Set(ctx, recallKey, 1, 2*time.Minute).Err(); err != nil {
 		klog.CtxWarnf(ctx, "设置撤回窗口键失败: %v", err)
@@ -246,6 +289,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 		ConversationType: convType,
 		MemberIDs:        members,
 		Content:          normalizedContent,
+		TenantID:         msgTenantID,
 	}, nil
 }
 
@@ -253,6 +297,7 @@ func (svc *ChatService) SendMessage(ctx context.Context, senderID int64, convers
 type MessageDTO struct {
 	ClientSeq      int64  // 客户端序列号
 	MsgID          int64  // 消息唯一ID
+	TenantID       int64  // 消息所属租户
 	SenderID       int64  // 发送者用户ID
 	ConversationID int64  // 所属会话ID
 	Seq            int64  // 会话内消息序号，用于未读数计算和消息同步
@@ -274,7 +319,10 @@ type MessageDTO struct {
 //   - limit: 返回条数，范围 [1, 100]，默认 20
 //
 // 返回值: 消息DTO列表（可能为 nil 表示无消息），或错误信息
-func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversationID int64, beforeMsgID int64, limit int16) ([]MessageDTO, error) {
+func (svc *ChatService) GetHistory(ctx context.Context, tenantID, userID int64, conversationID int64, beforeMsgID int64, limit int16) ([]MessageDTO, error) {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
+	}
 	if limit <= 0 {
 		limit = 20
 	}
@@ -317,6 +365,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 				msgs = append(msgs, MessageDTO{
 					ClientSeq:      msg.ClientSeq,
 					MsgID:          msg.MsgID,
+					TenantID:       tenantID,
 					SenderID:       msg.SenderID,
 					ConversationID: msg.ConversationID,
 					Seq:            msg.Seq,
@@ -338,14 +387,14 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 		var beforeSeq int64
 		if beforeMsgID > 0 {
 			// 将 beforeMsgID 转换为收件箱中的 beforeSeq
-			seq, seqErr := svc.inboxDao.GetInboxSeqByMsgID(ctx, userID, conversationID, beforeMsgID)
+			seq, seqErr := svc.inboxDao.GetInboxSeqByMsgID(ctx, tenantID, userID, conversationID, beforeMsgID)
 			if seqErr != nil {
 				klog.CtxWarnf(ctx, "查询收件箱seq失败，回退到群信箱: %v", seqErr)
 			} else {
 				beforeSeq = seq
 			}
 		}
-		inboxMsgs, err := svc.inboxDao.GetInboxMessages(ctx, userID, conversationID, beforeSeq, limit)
+		inboxMsgs, err := svc.inboxDao.GetInboxMessages(ctx, tenantID, userID, conversationID, beforeSeq, limit)
 		if err != nil {
 			klog.CtxWarnf(ctx, "从收件箱读取消息失败，回退到群信箱: %v", err)
 		} else if len(inboxMsgs) > 0 {
@@ -357,6 +406,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 				}
 				msgs = append(msgs, MessageDTO{
 					MsgID:          msg.MsgID,
+					TenantID:       tenantID,
 					SenderID:       msg.SenderID,
 					ConversationID: msg.ConversationID,
 					Seq:            msg.Seq,
@@ -389,6 +439,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 			msgs = append(msgs, MessageDTO{
 				ClientSeq:      msg.ClientSeq,
 				MsgID:          msg.MsgID,
+				TenantID:       tenantID,
 				SenderID:       msg.SenderID,
 				ConversationID: msg.ConversationID,
 				Seq:            msg.Seq,
@@ -411,7 +462,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 			beforeTimestamp = hotBoundary
 		}
 		remaining := limit - int16(len(msgs))
-		coldMessages, coldErr := svc.coldStorageDao.GetColdHistory(ctx, conversationID, beforeTimestamp, remaining)
+		coldMessages, coldErr := svc.coldStorageDao.GetColdHistory(ctx, tenantID, conversationID, beforeTimestamp, remaining)
 		if coldErr != nil {
 			klog.CtxWarnf(ctx, "查询冷库消息失败: %v", coldErr)
 		} else {
@@ -422,6 +473,7 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 				}
 				msgs = append(msgs, MessageDTO{
 					MsgID:          msg.MsgID,
+					TenantID:       tenantID,
 					ClientSeq:      msg.ClientSeq,
 					SenderID:       msg.SenderID,
 					ConversationID: msg.ConversationID,
@@ -442,9 +494,77 @@ func (svc *ChatService) GetHistory(ctx context.Context, userID int64, conversati
 	return msgs, nil
 }
 
+// GetMessagesByTimeRange 跨会话聚合用户在时间窗内的消息（供日/周总结使用）
+// 与 SearchMessages 的差异：不带关键词条件，按时间升序返回完整时间线，
+// 并在达到条数上限时告知调用方被截断（避免总结只看半截还不自知）。
+//
+// 参数:
+//   - userID: 请求者用户ID，只返回其所在会话的消息
+//   - startTime: 时间范围起始（毫秒时间戳，必填）
+//   - endTime: 时间范围结束（毫秒时间戳，必填）
+//   - limit: 返回条数上限，默认500，上限1000
+//
+// 返回值: 消息时间线、是否被截断、错误信息
+func (svc *ChatService) GetMessagesByTimeRange(ctx context.Context, tenantID, userID, startTime, endTime int64, limit int16) ([]MessageDTO, bool, error) {
+	if userID <= 0 {
+		return nil, false, fmt.Errorf("用户ID不能为空")
+	}
+	if startTime <= 0 || endTime <= 0 {
+		return nil, false, fmt.Errorf("时间范围不能为空")
+	}
+	if startTime > endTime {
+		return nil, false, fmt.Errorf("时间范围非法")
+	}
+	if limit <= 0 {
+		limit = defaultSummaryMessageLimit
+	}
+	if limit > maxSummaryMessageLimit {
+		limit = maxSummaryMessageLimit
+	}
+
+	// 多取一条用于判断是否被截断
+	rows, err := svc.dao.GetMessagesByTimeRange(tenantID, userID, startTime, endTime, limit+1)
+	if err != nil {
+		return nil, false, fmt.Errorf("查询时间窗消息失败: %w", err)
+	}
+	truncated := false
+	if len(rows) > int(limit) {
+		truncated = true
+		rows = rows[:limit]
+	}
+	if len(rows) == 0 {
+		return nil, false, nil
+	}
+	msgs := make([]MessageDTO, 0, len(rows))
+	for _, msg := range rows {
+		content := msg.Content
+		if msg.Status == model.MsgStatusRecalled {
+			content = "该消息已撤回"
+		}
+		msgs = append(msgs, MessageDTO{
+			MsgID:          msg.MsgID,
+			TenantID:       msg.TenantID,
+			ClientSeq:      msg.ClientSeq,
+			SenderID:       msg.SenderID,
+			ConversationID: msg.ConversationID,
+			Seq:            msg.Seq,
+			Content:        content,
+			Timestamp:      msg.Timestamp,
+			Status:         msg.Status,
+			IsEdited:       msg.IsEdited,
+			QuoteMsgID:     msg.QuoteMsgID,
+		})
+	}
+	if truncated {
+		klog.CtxWarnf(ctx, "用户[%d]时间窗消息达到上限%d条，已截断", userID, limit)
+	}
+	return msgs, truncated, nil
+}
+
 // ConversationDTO 会话数据传输对象，用于 Service → Handler 层的数据传递
 type ConversationDTO struct {
 	ID          int64   // 会话ID
+	TenantID    int64   // 会话所属租户
 	Type        int16   // 会话类型：1=单聊，2=群聊
 	Name        string  // 会话名称
 	GroupID     int64   // 群聊关联的群组ID，单聊时为0。前端通过此字段将会话与群组关联
@@ -468,10 +588,11 @@ type ConversationDTO struct {
 //   - groupID: 关联的群组ID，由 group_service 传入，用于前端将会话与群组关联
 //
 // 返回值: 新创建的会话ID，或错误信息
-func (svc *ChatService) CreateConversation(ctx context.Context, name string, memberIDs []int64, groupID int64) (int64, error) {
+func (svc *ChatService) CreateConversation(ctx context.Context, tenantID int64, name string, memberIDs []int64, groupID int64) (int64, error) {
 	convID := getConvSnowNode().Generate()
 	conv := &model.Conversation{
 		ID:        convID,
+		TenantID:  tenantID,
 		Type:      model.ConvTypeGroup,
 		Name:      name,
 		GroupID:   groupID,
@@ -489,8 +610,8 @@ func (svc *ChatService) CreateConversation(ctx context.Context, name string, mem
 // 返回值包含每个会话的成员列表、最大消息序号、已读序号和未读数
 // 未读数计算公式：unread = conv:max_seq - member:max_read_seq
 // 单聊和群聊使用完全一致的计算逻辑，这是统一会话模型的核心优势
-func (svc *ChatService) GetConversations(ctx context.Context, userID int64) ([]ConversationDTO, error) {
-	conversations, err := svc.conversationDao.GetUserConversations(ctx, userID)
+func (svc *ChatService) GetConversations(ctx context.Context, tenantID, userID int64) ([]ConversationDTO, error) {
+	conversations, err := svc.conversationDao.GetUserConversations(ctx, tenantID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -525,6 +646,7 @@ func (svc *ChatService) GetConversations(ctx context.Context, userID int64) ([]C
 		}
 		result = append(result, ConversationDTO{
 			ID:          conv.ID,
+			TenantID:    conv.TenantID,
 			Type:        conv.Type,
 			Name:        conv.Name,
 			GroupID:     conv.GroupID,
@@ -568,7 +690,10 @@ func (svc *ChatService) GetOnlineStatus(ctx context.Context, userIDs []int64) ([
 //
 // 安全校验：
 //   - 校验会话是否存在且为群聊类型，防止对单聊会话操作或操作不存在的会话
-func (svc *ChatService) AddConversationMembers(ctx context.Context, conversationID int64, memberIDs []int64) error {
+func (svc *ChatService) AddConversationMembers(ctx context.Context, tenantID, conversationID int64, memberIDs []int64) error {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return err
+	}
 	conv, err := svc.conversationDao.GetConversationInfo(ctx, conversationID)
 	if err != nil {
 		return fmt.Errorf("查询会话信息失败: %w", err)
@@ -591,7 +716,10 @@ func (svc *ChatService) AddConversationMembers(ctx context.Context, conversation
 //
 // 安全校验：
 //   - 校验会话是否存在且为群聊类型，防止对单聊会话操作或操作不存在的会话
-func (svc *ChatService) RemoveConversationMembers(ctx context.Context, conversationID int64, memberIDs []int64) error {
+func (svc *ChatService) RemoveConversationMembers(ctx context.Context, tenantID, conversationID int64, memberIDs []int64) error {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return err
+	}
 	conv, err := svc.conversationDao.GetConversationInfo(ctx, conversationID)
 	if err != nil {
 		return fmt.Errorf("查询会话信息失败: %w", err)
@@ -605,7 +733,10 @@ func (svc *ChatService) RemoveConversationMembers(ctx context.Context, conversat
 	return svc.conversationDao.RemoveMembers(ctx, conversationID, memberIDs)
 }
 
-func (svc *ChatService) DeleteConversation(ctx context.Context, conversationID int64) error {
+func (svc *ChatService) DeleteConversation(ctx context.Context, tenantID, conversationID int64) error {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return err
+	}
 	return svc.conversationDao.DeleteConversation(ctx, conversationID)
 }
 
@@ -623,7 +754,10 @@ func (svc *ChatService) DeleteConversation(ctx context.Context, conversationID i
 //   - conversationID: 会话ID
 //
 // 返回值: 更新后的已读序号、错误信息
-func (svc *ChatService) MarkRead(ctx context.Context, userID int64, conversationID int64) (int64, error) {
+func (svc *ChatService) MarkRead(ctx context.Context, tenantID, userID int64, conversationID int64) (int64, error) {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return 0, err
+	}
 	// 校验用户是否为会话成员
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
 	if err != nil {
@@ -658,7 +792,10 @@ func (svc *ChatService) MarkRead(ctx context.Context, userID int64, conversation
 
 // GetConversationMembers 查询会话的所有成员ID
 // 用于 typing 等场景下获取推送目标用户列表
-func (svc *ChatService) GetConversationMembers(ctx context.Context, conversationID int64) ([]int64, error) {
+func (svc *ChatService) GetConversationMembers(ctx context.Context, tenantID, conversationID int64) ([]int64, error) {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
+	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("查询会话成员失败: %w", err)
@@ -666,11 +803,11 @@ func (svc *ChatService) GetConversationMembers(ctx context.Context, conversation
 	return members, nil
 }
 
-func (svc *ChatService) GetOrCreatePrivateConversation(ctx context.Context, userIDA, userIDB int64) (int64, error) {
+func (svc *ChatService) GetOrCreatePrivateConversation(ctx context.Context, tenantID, userIDA, userIDB int64) (int64, error) {
 	if userIDA == userIDB {
 		return 0, fmt.Errorf("不能与自己创建会话")
 	}
-	convID, err := svc.conversationDao.GetOrCreatePrivateConversation(ctx, userIDA, userIDB, func() int64 {
+	convID, err := svc.conversationDao.GetOrCreatePrivateConversation(ctx, tenantID, userIDA, userIDB, func() int64 {
 		return getConvSnowNode().Generate()
 	})
 	if err != nil {
@@ -695,7 +832,10 @@ type RecallMessageResult struct {
 //  4. 校验消息是否在 2 分钟内（使用 Redis TTL 快速判断）
 //  5. 更新 PostgreSQL SET status='recalled'
 //  6. 返回会话信息和成员列表（供推送使用）
-func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID int64, conversationID int64) (*RecallMessageResult, error) {
+func (svc *ChatService) RecallMessage(ctx context.Context, tenantID, userID int64, msgID int64, conversationID int64) (*RecallMessageResult, error) {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
+	}
 	msg, err := svc.dao.GetMessage(msgID)
 	if err != nil {
 		return nil, fmt.Errorf("查询消息失败: %w", err)
@@ -718,7 +858,7 @@ func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID i
 		}
 		canRecall = true
 	} else if convInfo.Type == model.ConvTypeGroup && convInfo.GroupID != 0 {
-		role, roleErr := rpc.GetMemberRole(ctx, convInfo.GroupID, userID)
+		role, roleErr := rpc.GetMemberRole(ctx, tenantID, convInfo.GroupID, userID)
 		if roleErr != nil {
 			if msg.SenderID != userID {
 				return nil, fmt.Errorf("只能撤回自己发送的消息")
@@ -729,7 +869,7 @@ func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID i
 			case 2:
 				canRecall = true
 			case 1:
-				senderRole, senderRoleErr := rpc.GetMemberRole(ctx, convInfo.GroupID, msg.SenderID)
+				senderRole, senderRoleErr := rpc.GetMemberRole(ctx, tenantID, convInfo.GroupID, msg.SenderID)
 				if senderRoleErr != nil || senderRole == 2 {
 					return nil, fmt.Errorf("管理员无法撤回群主的消息")
 				}
@@ -765,7 +905,7 @@ func (svc *ChatService) RecallMessage(ctx context.Context, userID int64, msgID i
 		return nil, fmt.Errorf("撤回消息失败: %w", err)
 	}
 	// 同步更新收件箱中的消息撤回状态（写扩散场景）
-	if inboxErr := svc.inboxDao.RecallInboxMessage(ctx, msgID); inboxErr != nil {
+	if inboxErr := svc.inboxDao.RecallInboxMessage(ctx, tenantID, msgID); inboxErr != nil {
 		klog.CtxWarnf(ctx, "同步收件箱撤回状态失败: %v", inboxErr)
 	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
@@ -792,9 +932,12 @@ type EditMessageResult struct {
 //  3. 校验消息是否已被撤回（已撤回的消息不可编辑）
 //  4. 更新 PostgreSQL SET content=new_content, is_edited=true
 //  5. 返回会话信息和成员列表（供推送使用）
-func (svc *ChatService) EditMessage(ctx context.Context, userID int64, msgID int64, conversationID int64, newContent string) (*EditMessageResult, error) {
+func (svc *ChatService) EditMessage(ctx context.Context, tenantID, userID int64, msgID int64, conversationID int64, newContent string) (*EditMessageResult, error) {
 	if strings.TrimSpace(newContent) == "" {
 		return nil, fmt.Errorf("消息内容不能为空")
+	}
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
 	}
 	normalizedContent := model.NormalizeContent(newContent)
 	msg, err := svc.dao.GetMessage(msgID)
@@ -833,7 +976,7 @@ func (svc *ChatService) EditMessage(ctx context.Context, userID int64, msgID int
 		return nil, fmt.Errorf("编辑消息失败: %w", err)
 	}
 	// 同步更新收件箱中的消息编辑内容（写扩散场景）
-	if inboxErr := svc.inboxDao.EditInboxMessage(ctx, msgID, normalizedContent); inboxErr != nil {
+	if inboxErr := svc.inboxDao.EditInboxMessage(ctx, tenantID, msgID, normalizedContent); inboxErr != nil {
 		klog.CtxWarnf(ctx, "同步收件箱编辑内容失败: %v", inboxErr)
 	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
@@ -859,7 +1002,10 @@ type EditHistoryDTO struct {
 
 // GetEditHistory 查询消息的编辑历史
 // 校验请求者是否为会话成员，防止非成员查看编辑历史
-func (svc *ChatService) GetEditHistory(ctx context.Context, userID int64, msgID int64, conversationID int64) ([]EditHistoryDTO, error) {
+func (svc *ChatService) GetEditHistory(ctx context.Context, tenantID, userID int64, msgID int64, conversationID int64) ([]EditHistoryDTO, error) {
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
+	}
 	members, err := svc.conversationDao.GetConversationMembers(ctx, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("查询会话成员失败: %w", err)
@@ -915,7 +1061,7 @@ type ConvSyncResult struct {
 //   - limit: 每个会话最多返回的消息条数
 //
 // 返回值: 各会话的同步消息结果列表
-func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs []dal.ConvSeqPair, limit int16) ([]ConvSyncResult, error) {
+func (svc *ChatService) SyncMessages(ctx context.Context, tenantID, userID int64, convSeqs []dal.ConvSeqPair, limit int16) ([]ConvSyncResult, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -924,6 +1070,10 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 	}
 	var results []ConvSyncResult
 	for _, pair := range convSeqs {
+		if err := svc.ensureConvTenant(ctx, pair.ConversationID, tenantID); err != nil {
+			klog.CtxWarnf(ctx, "SyncMessages: 会话%d租户校验失败: %v", pair.ConversationID, err)
+			continue
+		}
 		members, err := svc.conversationDao.GetConversationMembers(ctx, pair.ConversationID)
 		if err != nil {
 			klog.CtxWarnf(ctx, "SyncMessages: 查询会话%d成员失败: %v", pair.ConversationID, err)
@@ -946,7 +1096,7 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 		// 写扩散路径：小群（≤100人）从收件箱读取增量消息
 		// 与 GetHistory 保持一致，小群优先查个人收件箱
 		if len(members) <= model.WriteDiffusionThreshold {
-			inboxMsgs, inboxErr := svc.inboxDao.GetInboxMessagesAfterSeq(ctx, userID, pair.ConversationID, pair.LastSeq, limit)
+			inboxMsgs, inboxErr := svc.inboxDao.GetInboxMessagesAfterSeq(ctx, tenantID, userID, pair.ConversationID, pair.LastSeq, limit)
 			if inboxErr != nil {
 				klog.CtxWarnf(ctx, "SyncMessages: 从收件箱读取会话%d增量消息失败，回退到群信箱: %v", pair.ConversationID, inboxErr)
 			} else if len(inboxMsgs) > 0 {
@@ -957,6 +1107,7 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 					}
 					dtos = append(dtos, MessageDTO{
 						MsgID:          msg.MsgID,
+						TenantID:       tenantID,
 						SenderID:       msg.SenderID,
 						ConversationID: msg.ConversationID,
 						Seq:            msg.Seq,
@@ -988,6 +1139,7 @@ func (svc *ChatService) SyncMessages(ctx context.Context, userID int64, convSeqs
 				dtos = append(dtos, MessageDTO{
 					ClientSeq:      msg.ClientSeq,
 					MsgID:          msg.MsgID,
+					TenantID:       tenantID,
 					SenderID:       msg.SenderID,
 					ConversationID: msg.ConversationID,
 					Seq:            msg.Seq,
@@ -1042,6 +1194,7 @@ func (svc *ChatService) ArchiveColdMessages(ctx context.Context) error {
 		for _, msg := range messages {
 			coldMessages = append(coldMessages, model.ColdMessage{
 				MsgID:          msg.MsgID,
+				TenantID:       msg.TenantID,
 				ClientSeq:      msg.ClientSeq,
 				SenderID:       msg.SenderID,
 				ConversationID: msg.ConversationID,
@@ -1078,9 +1231,12 @@ func (svc *ChatService) ArchiveColdMessages(ctx context.Context) error {
 
 // SearchColdMessages 在冷库中搜索消息
 // 当用户需要搜索历史消息时，路由到 ClickHouse 进行高效搜索
-func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID int64, keyword string, userID int64, limit int16) ([]MessageDTO, error) {
+func (svc *ChatService) SearchColdMessages(ctx context.Context, tenantID int64, conversationID int64, keyword string, userID int64, limit int16) ([]MessageDTO, error) {
 	if !svc.coldEnabled || svc.coldStorageDao == nil {
 		return nil, fmt.Errorf("冷库未启用")
+	}
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
 	}
 	if limit <= 0 {
 		limit = 20
@@ -1088,7 +1244,7 @@ func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID i
 	if limit > 100 {
 		limit = 100
 	}
-	coldMessages, err := svc.coldStorageDao.SearchMessages(ctx, conversationID, keyword, userID, limit)
+	coldMessages, err := svc.coldStorageDao.SearchMessages(ctx, tenantID, conversationID, keyword, userID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("搜索冷库消息失败: %w", err)
 	}
@@ -1100,6 +1256,7 @@ func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID i
 		}
 		msgs = append(msgs, MessageDTO{
 			MsgID:          msg.MsgID,
+			TenantID:       tenantID,
 			ClientSeq:      msg.ClientSeq,
 			SenderID:       msg.SenderID,
 			ConversationID: msg.ConversationID,
@@ -1128,9 +1285,12 @@ func (svc *ChatService) SearchColdMessages(ctx context.Context, conversationID i
 //   - startTime: 时间范围起始（毫秒时间戳，0 表示不限）
 //   - endTime: 时间范围结束（毫秒时间戳，0 表示不限）
 //   - limit: 返回条数上限，默认20，上限100
-func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keyword string, conversationID int64, startTime int64, endTime int64, limit int16) ([]MessageDTO, error) {
+func (svc *ChatService) SearchMessages(ctx context.Context, tenantID, userID int64, keyword string, conversationID int64, startTime int64, endTime int64, limit int16) ([]MessageDTO, error) {
 	if strings.TrimSpace(keyword) == "" && startTime <= 0 && endTime <= 0 {
 		return nil, fmt.Errorf("搜索关键词和时间范围不能同时为空")
+	}
+	if err := svc.ensureConvTenant(ctx, conversationID, tenantID); err != nil {
+		return nil, err
 	}
 	if limit <= 0 {
 		limit = 20
@@ -1160,7 +1320,7 @@ func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keywor
 	var msgs []MessageDTO
 
 	// 1. 搜索热库（PostgreSQL）
-	hotMessages, err := svc.dao.SearchHotMessages(conversationID, keyword, startTime, endTime, limit)
+	hotMessages, err := svc.dao.SearchHotMessages(tenantID, userID, conversationID, keyword, startTime, endTime, limit)
 	if err != nil {
 		klog.CtxWarnf(ctx, "搜索热库消息失败: %v", err)
 	} else {
@@ -1171,6 +1331,7 @@ func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keywor
 			}
 			msgs = append(msgs, MessageDTO{
 				MsgID:          msg.MsgID,
+				TenantID:       tenantID,
 				ClientSeq:      msg.ClientSeq,
 				SenderID:       msg.SenderID,
 				ConversationID: msg.ConversationID,
@@ -1187,7 +1348,7 @@ func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keywor
 	// 2. 搜索冷库（ClickHouse）：启用冷库且热库结果不足时
 	if svc.coldEnabled && svc.coldStorageDao != nil && len(msgs) < int(limit) {
 		remaining := limit - int16(len(msgs))
-		coldMessages, coldErr := svc.coldStorageDao.SearchMessagesByTimeRange(ctx, conversationID, keyword, userID, startTime, endTime, remaining)
+		coldMessages, coldErr := svc.coldStorageDao.SearchMessagesByTimeRange(ctx, tenantID, conversationID, keyword, userID, startTime, endTime, remaining)
 		if coldErr != nil {
 			klog.CtxWarnf(ctx, "搜索冷库消息失败: %v", coldErr)
 		} else {
@@ -1198,6 +1359,7 @@ func (svc *ChatService) SearchMessages(ctx context.Context, userID int64, keywor
 				}
 				msgs = append(msgs, MessageDTO{
 					MsgID:          msg.MsgID,
+					TenantID:       tenantID,
 					ClientSeq:      msg.ClientSeq,
 					SenderID:       msg.SenderID,
 					ConversationID: msg.ConversationID,

@@ -45,10 +45,12 @@ const (
 	onlineKeyPrefix = "online:user:"
 	// 在线状态 TTL，网关通过心跳续期
 	onlineTTL = 90 * time.Second
+	// 单用户最多保留的并发连接数；超过后淘汰最早的连接，避免异常客户端无限堆积。
+	maxDevicesPerUser = 5
 )
 
 type Manager struct {
-	Clients     map[int64]*Client   // 在线用户映射表：UserID → Client
+	Clients     map[int64][]*Client // 在线用户映射表：UserID → 该用户在本网关上的全部连接（多端）
 	Register    chan *Client        // 上线注册通道，新连接建立时写入
 	Unregister  chan *Client        // 下线注销通道，连接断开时写入
 	Message     chan *ClientMessage // 消息处理通道，客户端消息经此通道进入处理流程
@@ -60,12 +62,56 @@ var GlobalManager Manager
 
 func InitManager(gatewayAddr string) {
 	GlobalManager = Manager{
-		Clients:     make(map[int64]*Client),
+		Clients:     make(map[int64][]*Client),
 		Register:    make(chan *Client),
 		Unregister:  make(chan *Client),
 		Message:     make(chan *ClientMessage, 256),
 		GatewayAddr: gatewayAddr,
 	}
+}
+
+// attachDeviceLocked 把新连接追加到该用户名下，返回被淘汰的最早连接（如有）与当前在线用户数。
+// 调用方必须持有写锁。
+func (manager *Manager) attachDeviceLocked(client *Client) (*Client, int) {
+	devices := append(manager.Clients[client.UserId], client)
+	var evicted *Client
+	if len(devices) > maxDevicesPerUser {
+		evicted = devices[0]
+		devices = devices[1:]
+	}
+	manager.Clients[client.UserId] = devices
+	return evicted, len(manager.Clients)
+}
+
+// detachDeviceLocked 从该用户名下移除指定连接，返回剩余连接数与当前在线用户数。
+// 调用方必须持有写锁。
+func (manager *Manager) detachDeviceLocked(client *Client) (int, int) {
+	devices := manager.Clients[client.UserId]
+	kept := make([]*Client, 0, len(devices))
+	for _, device := range devices {
+		if device != client {
+			kept = append(kept, device)
+		}
+	}
+	if len(kept) == 0 {
+		delete(manager.Clients, client.UserId)
+		return 0, len(manager.Clients)
+	}
+	manager.Clients[client.UserId] = kept
+	return len(kept), len(manager.Clients)
+}
+
+// localDevices 返回该用户在当前网关上的连接快照，调用方无需持锁即可安全遍历与发送。
+func (manager *Manager) localDevices(userID int64) []*Client {
+	manager.Lock.RLock()
+	defer manager.Lock.RUnlock()
+	devices := manager.Clients[userID]
+	if len(devices) == 0 {
+		return nil
+	}
+	out := make([]*Client, len(devices))
+	copy(out, devices)
+	return out
 }
 
 func (manager *Manager) Start() {
@@ -76,13 +122,12 @@ func (manager *Manager) Start() {
 		select {
 		case client := <-manager.Register:
 			manager.Lock.Lock()
-			if old, ok := manager.Clients[client.UserId]; ok {
-				_ = old.Socket.Close()
-				klog.Infof("用户%d重复连接，关闭旧连接", client.UserId)
-			}
-			manager.Clients[client.UserId] = client
-			onlineCount := len(manager.Clients)
+			evicted, onlineCount := manager.attachDeviceLocked(client)
 			manager.Lock.Unlock()
+			if evicted != nil && evicted.Socket != nil {
+				_ = evicted.Socket.Close()
+				klog.Infof("用户%d并发连接超过%d个，关闭最早连接", client.UserId, maxDevicesPerUser)
+			}
 			meter.M.WsConnectTotal.Add(context.Background(), 1)
 			// 直接写入 Garnet：userId → gatewayAddr，支持跨网关路由
 			go func() {
@@ -106,45 +151,42 @@ func (manager *Manager) Start() {
 					}
 				}
 			}()
-			klog.Infof("用户%d上线, 当前在线: %d", client.UserId, onlineCount)
+			klog.Infof("用户%d上线, 当前在线用户: %d", client.UserId, onlineCount)
 
 		case client := <-manager.Unregister:
 			manager.Lock.Lock()
-			// 只有当 map 中的 client 与发起 Unregister 的 client 是同一个时，才删除
-			// 防止旧连接关闭时误删新连接：
-			//   用户重连 → Register 关闭旧 Socket → 旧 ReadMessage 退出 → Unregister 旧 client
-			//   此时 map 中已经是新 client，不应删除
-			if current, ok := manager.Clients[client.UserId]; ok && current == client {
-				delete(manager.Clients, client.UserId)
-				onlineCount := len(manager.Clients)
-				meter.M.WsDisconnectTotal.Add(context.Background(), 1)
-				manager.Lock.Unlock()
-
-				// 从 Garnet 删除在线状态
-				go func() {
-					if rdb != nil {
-						key := fmt.Sprintf("%s%d", onlineKeyPrefix, client.UserId)
-						ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-						defer cancel()
-						if err := rdb.Del(ctx, key).Err(); err != nil {
-							klog.Errorf("用户%d下线从Garnet删除失败: %v", client.UserId, err)
-						}
-					} else {
-						// 降级：Garnet 不可用时回退到 RPC
-						ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-						defer cancel()
-						_, err := rpc.SetOffline(ctx, &chat.SetOfflineReq{
-							UserId: client.UserId,
-						})
-						if err != nil {
-							klog.Errorf("用户%d下线注销从Redis失败: %v", client.UserId, err)
-						}
-					}
-				}()
-				klog.Infof("用户%d下线, 当前在线: %d", client.UserId, onlineCount)
-			} else {
-				manager.Lock.Unlock()
+			// 只移除发起注销的这个连接：同一用户的其它设备（多端）必须保持在线。
+			// 这样也天然覆盖了「重连 → 旧连接关闭」的场景，不会误删新连接。
+			remaining, onlineCount := manager.detachDeviceLocked(client)
+			manager.Lock.Unlock()
+			if remaining > 0 {
+				klog.Infof("用户%d关闭一个连接，仍有%d个连接在线", client.UserId, remaining)
+				continue
 			}
+			meter.M.WsDisconnectTotal.Add(context.Background(), 1)
+
+			// 从 Garnet 删除在线状态
+			go func() {
+				if rdb != nil {
+					key := fmt.Sprintf("%s%d", onlineKeyPrefix, client.UserId)
+					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+					defer cancel()
+					if err := rdb.Del(ctx, key).Err(); err != nil {
+						klog.Errorf("用户%d下线从Garnet删除失败: %v", client.UserId, err)
+					}
+				} else {
+					// 降级：Garnet 不可用时回退到 RPC
+					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+					defer cancel()
+					_, err := rpc.SetOffline(ctx, &chat.SetOfflineReq{
+						UserId: client.UserId,
+					})
+					if err != nil {
+						klog.Errorf("用户%d下线注销从Redis失败: %v", client.UserId, err)
+					}
+				}
+			}()
+			klog.Infof("用户%d下线, 当前在线用户: %d", client.UserId, onlineCount)
 
 		case clientMsg := <-manager.Message:
 			manager.handleMessage(clientMsg)
@@ -262,6 +304,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 		Content:        wsMsg.Content,
 		ClientSeq:      wsMsg.ClientSeq,
 		QuoteMsgId:     wsMsg.QuoteMsgId,
+		TenantId:       &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("RPC SendMessage失败: %v", err)
@@ -316,7 +359,7 @@ func (manager *Manager) handleMessage(clientMsg *ClientMessage) {
 			}
 		}
 	}
-	go manager.triggerBots(sender.UserId, resp.ConversationId, convType, resp.MemberIds, mentionedUserIDs, pushContent, func() int64 {
+	go manager.triggerBots(sender.TenantID, sender.UserId, resp.ConversationId, convType, resp.MemberIds, mentionedUserIDs, pushContent, func() int64 {
 		if wsMsg.QuoteMsgId != nil {
 			return *wsMsg.QuoteMsgId
 		}
@@ -356,13 +399,10 @@ func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg
 			}
 			gatewayAddr := addr.(string)
 			uid := otherMemberIDs[i]
-			manager.Lock.RLock()
-			client, localOnline := manager.Clients[uid]
-			manager.Lock.RUnlock()
-			if localOnline {
-				if err := client.Send(chatMsg); err != nil {
-					klog.Errorf("推送消息给本地用户%d失败: %v", uid, err)
-				}
+			// 多端：本网关上的所有设备都要收到同一条消息。
+			devices := manager.localDevices(uid)
+			if len(devices) > 0 {
+				manager.sendToDevices(devices, chatMsg)
 			} else if gatewayAddr != manager.GatewayAddr {
 				pushToGateway(gatewayAddr, chatMsg, []int64{uid})
 			}
@@ -382,16 +422,21 @@ func (manager *Manager) pushToMembers(memberIDs []int64, senderID int64, chatMsg
 			if !status.Online {
 				continue
 			}
-			manager.Lock.RLock()
-			client, localOnline := manager.Clients[status.UserId]
-			manager.Lock.RUnlock()
-			if localOnline {
-				if err := client.Send(chatMsg); err != nil {
-					klog.Errorf("推送消息给本地用户%d失败: %v", status.UserId, err)
-				}
+			devices := manager.localDevices(status.UserId)
+			if len(devices) > 0 {
+				manager.sendToDevices(devices, chatMsg)
 			} else if status.GatewayAddr != manager.GatewayAddr {
 				pushToGateway(status.GatewayAddr, chatMsg, []int64{status.UserId})
 			}
+		}
+	}
+}
+
+// sendToDevices 把同一条消息推给用户在该网关上的全部设备，单个设备失败不影响其余设备。
+func (manager *Manager) sendToDevices(devices []*Client, msg *WsMessage) {
+	for _, client := range devices {
+		if err := client.Send(msg); err != nil {
+			klog.Errorf("推送消息给用户%d的设备失败: %v", client.UserId, err)
 		}
 	}
 }
@@ -464,17 +509,12 @@ func HandlePush(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Request: missing target_user_ids", http.StatusBadRequest)
 		return
 	}
-	GlobalManager.Lock.RLock()
+	pushMsg := msg
+	pushMsg.TargetUserIds = nil
 	for _, uid := range msg.TargetUserIds {
-		if client, ok := GlobalManager.Clients[uid]; ok {
-			pushMsg := msg
-			pushMsg.TargetUserIds = nil
-			if err := client.Send(&pushMsg); err != nil {
-				klog.Errorf("推送消息给用户%d失败: %v", uid, err)
-			}
-		}
+		// 多端：目标用户在该网关上的所有设备都要收到这条跨网关推送。
+		GlobalManager.sendToDevices(GlobalManager.localDevices(uid), &pushMsg)
 	}
-	GlobalManager.Lock.RUnlock()
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -497,6 +537,7 @@ func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 	resp, err := rpc.MarkRead(ctx, &chat.MarkReadReq{
 		UserId:         sender.UserId,
 		ConversationId: wsMsg.ConversationID,
+		TenantId:       &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("RPC MarkRead失败: %v", err)
@@ -526,20 +567,37 @@ func (manager *Manager) handleMarkRead(sender *Client, wsMsg *WsMessage) {
 	})
 
 	// 向该用户的其他在线设备推送已读回执（多端同步）
-	manager.pushReadReceiptToOtherDevices(sender.UserId, wsMsg.ConversationID, maxReadSeq)
+	manager.pushReadReceiptToOtherDevices(sender, wsMsg.ConversationID, maxReadSeq)
 }
 
 // pushReadReceiptToOtherDevices 向用户的其他在线设备推送已读回执
-// 用于多端同步：一端标记已读后，其他端也需要更新未读数
-// 当前实现仅推送本地网关上的连接，跨网关推送将在 Phase 7 完善
-func (manager *Manager) pushReadReceiptToOtherDevices(userID int64, conversationID int64, maxReadSeq int64) {
-	manager.Lock.RLock()
-	defer manager.Lock.RUnlock()
-	// 当前 Clients 映射为 UserID → 单个 Client，多端场景需在 Phase 7 改造为多连接
-	// 此处预留推送逻辑，Phase 7 将 Clients 改为 map[int64][]*Client 后即可生效
-	_ = userID
-	_ = conversationID
-	_ = maxReadSeq
+// 用于多端同步：一端标记已读后，其他端也需要更新未读数。
+// 本地网关按连接逐个推送（排除发起端），该用户在其他网关上的连接由对方网关按本地多端分发。
+func (manager *Manager) pushReadReceiptToOtherDevices(sender *Client, conversationID int64, maxReadSeq int64) {
+	receipt := &WsMessage{
+		Type:           "read_receipt",
+		ConversationID: conversationID,
+		MaxReadSeq:     maxReadSeq,
+		Success:        true,
+	}
+	for _, client := range manager.localDevices(sender.UserId) {
+		if client == sender {
+			continue
+		}
+		if err := client.Send(receipt); err != nil {
+			klog.Errorf("向用户%d的其他设备推送已读回执失败: %v", sender.UserId, err)
+		}
+	}
+	if rdb == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	gatewayAddr, err := rdb.Get(ctx, fmt.Sprintf("%s%d", onlineKeyPrefix, sender.UserId)).Result()
+	if err != nil || gatewayAddr == "" || gatewayAddr == manager.GatewayAddr {
+		return
+	}
+	pushToGateway(gatewayAddr, receipt, []int64{sender.UserId})
 }
 
 // handleTyping 处理输入状态消息
@@ -559,6 +617,7 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 	// 查询会话成员列表，确定需要推送的目标用户
 	membersResp, err := rpc.GetConversationMembers(ctx, &chat.GetConversationMembersReq{
 		ConversationId: wsMsg.ConversationID,
+		TenantId:       &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("查询会话[%d]成员列表失败: %v", wsMsg.ConversationID, err)
@@ -604,11 +663,10 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 			}
 			gatewayAddr := addr.(string)
 			uid := otherMemberIDs[i]
-			manager.Lock.RLock()
-			client, localOnline := manager.Clients[uid]
-			manager.Lock.RUnlock()
-			if localOnline {
-				_ = client.Send(typingMsg)
+			// 多端：该用户在本网关上的所有设备都同步输入状态。
+			devices := manager.localDevices(uid)
+			if len(devices) > 0 {
+				manager.sendToDevices(devices, typingMsg)
 			} else if gatewayAddr != manager.GatewayAddr {
 				pushToGateway(gatewayAddr, typingMsg, []int64{uid})
 			}
@@ -625,11 +683,9 @@ func (manager *Manager) handleTyping(sender *Client, wsMsg *WsMessage) {
 			if !status.Online {
 				continue
 			}
-			manager.Lock.RLock()
-			client, localOnline := manager.Clients[status.UserId]
-			manager.Lock.RUnlock()
-			if localOnline {
-				_ = client.Send(typingMsg)
+			devices := manager.localDevices(status.UserId)
+			if len(devices) > 0 {
+				manager.sendToDevices(devices, typingMsg)
 			} else if status.GatewayAddr != manager.GatewayAddr {
 				pushToGateway(status.GatewayAddr, typingMsg, []int64{status.UserId})
 			}
@@ -658,6 +714,7 @@ func (manager *Manager) handleRecall(sender *Client, wsMsg *WsMessage) {
 		UserId:         sender.UserId,
 		MsgId:          wsMsg.MsgID,
 		ConversationId: wsMsg.ConversationID,
+		TenantId:       &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("RPC RecallMessage失败: %v", err)
@@ -728,6 +785,7 @@ func (manager *Manager) handleEdit(sender *Client, wsMsg *WsMessage) {
 		MsgId:          wsMsg.MsgID,
 		ConversationId: wsMsg.ConversationID,
 		NewContent_:    wsMsg.NewContent,
+		TenantId:       &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("RPC EditMessage失败: %v", err)
@@ -823,6 +881,7 @@ func (manager *Manager) handleSync(sender *Client, wsMsg *WsMessage) {
 		UserId:   sender.UserId,
 		ConvSeqs: convSeqs,
 		Limit:    limit,
+		TenantId: &sender.TenantID,
 	})
 	if err != nil {
 		klog.Errorf("RPC SyncMessages失败: %v", err)
@@ -889,7 +948,7 @@ const (
 	botTaskTopic          = "bot-task-topic"
 )
 
-func (manager *Manager) triggerBots(senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string, quoteMsgID int64) {
+func (manager *Manager) triggerBots(tenantID, senderID, conversationID int64, convType int16, memberIDs []int64, mentionedIDs []int64, content string, quoteMsgID int64) {
 	if len(memberIDs) == 0 {
 		return
 	}
@@ -938,6 +997,7 @@ func (manager *Manager) triggerBots(senderID, conversationID int64, convType int
 			"sender_id":       senderID,
 			"content":         content,
 			"quote_msg_id":    quoteMsgID,
+			"tenant_id":       tenantID,
 		}
 		taskJSON, _ := json.Marshal(task)
 		err = kafkaWriter.WriteMessages(context.Background(), kafka.Message{

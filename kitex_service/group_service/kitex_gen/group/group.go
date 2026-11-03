@@ -197,6 +197,7 @@ type CreateGroupReq struct {
 	CreatorId      int64   `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
 	Name           string  `thrift:"name,2" frugal:"2,default,string" json:"name"`
 	InitialMembers []int64 `thrift:"initial_members,3" frugal:"3,default,list<i64>" json:"initial_members"`
+	TenantId       *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewCreateGroupReq() *CreateGroupReq {
@@ -217,6 +218,15 @@ func (p *CreateGroupReq) GetName() (v string) {
 func (p *CreateGroupReq) GetInitialMembers() (v []int64) {
 	return p.InitialMembers
 }
+
+var CreateGroupReq_TenantId_DEFAULT int64
+
+func (p *CreateGroupReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CreateGroupReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *CreateGroupReq) SetCreatorId(val int64) {
 	p.CreatorId = val
 }
@@ -225,6 +235,13 @@ func (p *CreateGroupReq) SetName(val string) {
 }
 func (p *CreateGroupReq) SetInitialMembers(val []int64) {
 	p.InitialMembers = val
+}
+func (p *CreateGroupReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *CreateGroupReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *CreateGroupReq) String() string {
@@ -238,6 +255,7 @@ var fieldIDToName_CreateGroupReq = map[int16]string{
 	1: "creator_id",
 	2: "name",
 	3: "initial_members",
+	4: "tenant_id",
 }
 
 type CreateGroupRes struct {
@@ -291,6 +309,7 @@ type InviteMembersReq struct {
 	InviterId int64   `thrift:"inviter_id,1" frugal:"1,default,i64" json:"inviter_id"`
 	GroupId   int64   `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
 	UserIds   []int64 `thrift:"user_ids,3" frugal:"3,default,list<i64>" json:"user_ids"`
+	TenantId  *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewInviteMembersReq() *InviteMembersReq {
@@ -311,6 +330,15 @@ func (p *InviteMembersReq) GetGroupId() (v int64) {
 func (p *InviteMembersReq) GetUserIds() (v []int64) {
 	return p.UserIds
 }
+
+var InviteMembersReq_TenantId_DEFAULT int64
+
+func (p *InviteMembersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return InviteMembersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *InviteMembersReq) SetInviterId(val int64) {
 	p.InviterId = val
 }
@@ -319,6 +347,13 @@ func (p *InviteMembersReq) SetGroupId(val int64) {
 }
 func (p *InviteMembersReq) SetUserIds(val []int64) {
 	p.UserIds = val
+}
+func (p *InviteMembersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *InviteMembersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *InviteMembersReq) String() string {
@@ -332,12 +367,14 @@ var fieldIDToName_InviteMembersReq = map[int16]string{
 	1: "inviter_id",
 	2: "group_id",
 	3: "user_ids",
+	4: "tenant_id",
 }
 
 type KickMembersReq struct {
 	OperatorId int64   `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
 	GroupId    int64   `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
 	UserIds    []int64 `thrift:"user_ids,3" frugal:"3,default,list<i64>" json:"user_ids"`
+	TenantId   *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewKickMembersReq() *KickMembersReq {
@@ -358,6 +395,15 @@ func (p *KickMembersReq) GetGroupId() (v int64) {
 func (p *KickMembersReq) GetUserIds() (v []int64) {
 	return p.UserIds
 }
+
+var KickMembersReq_TenantId_DEFAULT int64
+
+func (p *KickMembersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return KickMembersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *KickMembersReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -366,6 +412,13 @@ func (p *KickMembersReq) SetGroupId(val int64) {
 }
 func (p *KickMembersReq) SetUserIds(val []int64) {
 	p.UserIds = val
+}
+func (p *KickMembersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *KickMembersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *KickMembersReq) String() string {
@@ -379,10 +432,12 @@ var fieldIDToName_KickMembersReq = map[int16]string{
 	1: "operator_id",
 	2: "group_id",
 	3: "user_ids",
+	4: "tenant_id",
 }
 
 type GetGroupInfoReq struct {
-	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	GroupId  int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetGroupInfoReq() *GetGroupInfoReq {
@@ -395,8 +450,24 @@ func (p *GetGroupInfoReq) InitDefault() {
 func (p *GetGroupInfoReq) GetGroupId() (v int64) {
 	return p.GroupId
 }
+
+var GetGroupInfoReq_TenantId_DEFAULT int64
+
+func (p *GetGroupInfoReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetGroupInfoReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetGroupInfoReq) SetGroupId(val int64) {
 	p.GroupId = val
+}
+func (p *GetGroupInfoReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetGroupInfoReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetGroupInfoReq) String() string {
@@ -408,6 +479,7 @@ func (p *GetGroupInfoReq) String() string {
 
 var fieldIDToName_GetGroupInfoReq = map[int16]string{
 	1: "group_id",
+	2: "tenant_id",
 }
 
 type GetGroupInfoRes struct {
@@ -458,9 +530,10 @@ var fieldIDToName_GetGroupInfoRes = map[int16]string{
 }
 
 type ChangeOwnerReq struct {
-	OldId   int64 `thrift:"old_id,1" frugal:"1,default,i64" json:"old_id"`
-	NewId_  int64 `thrift:"new_id,2" frugal:"2,default,i64" json:"new_id"`
-	GroupId int64 `thrift:"group_id,3" frugal:"3,default,i64" json:"group_id"`
+	OldId    int64  `thrift:"old_id,1" frugal:"1,default,i64" json:"old_id"`
+	NewId_   int64  `thrift:"new_id,2" frugal:"2,default,i64" json:"new_id"`
+	GroupId  int64  `thrift:"group_id,3" frugal:"3,default,i64" json:"group_id"`
+	TenantId *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewChangeOwnerReq() *ChangeOwnerReq {
@@ -481,6 +554,15 @@ func (p *ChangeOwnerReq) GetNewId_() (v int64) {
 func (p *ChangeOwnerReq) GetGroupId() (v int64) {
 	return p.GroupId
 }
+
+var ChangeOwnerReq_TenantId_DEFAULT int64
+
+func (p *ChangeOwnerReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return ChangeOwnerReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *ChangeOwnerReq) SetOldId(val int64) {
 	p.OldId = val
 }
@@ -489,6 +571,13 @@ func (p *ChangeOwnerReq) SetNewId_(val int64) {
 }
 func (p *ChangeOwnerReq) SetGroupId(val int64) {
 	p.GroupId = val
+}
+func (p *ChangeOwnerReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *ChangeOwnerReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *ChangeOwnerReq) String() string {
@@ -502,12 +591,14 @@ var fieldIDToName_ChangeOwnerReq = map[int16]string{
 	1: "old_id",
 	2: "new_id",
 	3: "group_id",
+	4: "tenant_id",
 }
 
 type ChangeNoticeReq struct {
 	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
 	GroupId    int64  `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
 	Notice     string `thrift:"notice,3" frugal:"3,default,string" json:"notice"`
+	TenantId   *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewChangeNoticeReq() *ChangeNoticeReq {
@@ -528,6 +619,15 @@ func (p *ChangeNoticeReq) GetGroupId() (v int64) {
 func (p *ChangeNoticeReq) GetNotice() (v string) {
 	return p.Notice
 }
+
+var ChangeNoticeReq_TenantId_DEFAULT int64
+
+func (p *ChangeNoticeReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return ChangeNoticeReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *ChangeNoticeReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -536,6 +636,13 @@ func (p *ChangeNoticeReq) SetGroupId(val int64) {
 }
 func (p *ChangeNoticeReq) SetNotice(val string) {
 	p.Notice = val
+}
+func (p *ChangeNoticeReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *ChangeNoticeReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *ChangeNoticeReq) String() string {
@@ -549,13 +656,15 @@ var fieldIDToName_ChangeNoticeReq = map[int16]string{
 	1: "operator_id",
 	2: "group_id",
 	3: "notice",
+	4: "tenant_id",
 }
 
 type MutedReq struct {
-	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
-	GroupId    int64 `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
-	MutedId    int64 `thrift:"muted_id,3" frugal:"3,default,i64" json:"muted_id"`
-	IsMuted    bool  `thrift:"is_muted,4" frugal:"4,default,bool" json:"is_muted"`
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	GroupId    int64  `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
+	MutedId    int64  `thrift:"muted_id,3" frugal:"3,default,i64" json:"muted_id"`
+	IsMuted    bool   `thrift:"is_muted,4" frugal:"4,default,bool" json:"is_muted"`
+	TenantId   *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewMutedReq() *MutedReq {
@@ -580,6 +689,15 @@ func (p *MutedReq) GetMutedId() (v int64) {
 func (p *MutedReq) GetIsMuted() (v bool) {
 	return p.IsMuted
 }
+
+var MutedReq_TenantId_DEFAULT int64
+
+func (p *MutedReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return MutedReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *MutedReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -591,6 +709,13 @@ func (p *MutedReq) SetMutedId(val int64) {
 }
 func (p *MutedReq) SetIsMuted(val bool) {
 	p.IsMuted = val
+}
+func (p *MutedReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *MutedReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *MutedReq) String() string {
@@ -605,13 +730,15 @@ var fieldIDToName_MutedReq = map[int16]string{
 	2: "group_id",
 	3: "muted_id",
 	4: "is_muted",
+	5: "tenant_id",
 }
 
 type SetAdminReq struct {
-	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
-	GroupId    int64 `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
-	TargetId   int64 `thrift:"target_id,3" frugal:"3,default,i64" json:"target_id"`
-	Role       int64 `thrift:"role,4" frugal:"4,default,i64" json:"role"`
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	GroupId    int64  `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
+	TargetId   int64  `thrift:"target_id,3" frugal:"3,default,i64" json:"target_id"`
+	Role       int64  `thrift:"role,4" frugal:"4,default,i64" json:"role"`
+	TenantId   *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSetAdminReq() *SetAdminReq {
@@ -636,6 +763,15 @@ func (p *SetAdminReq) GetTargetId() (v int64) {
 func (p *SetAdminReq) GetRole() (v int64) {
 	return p.Role
 }
+
+var SetAdminReq_TenantId_DEFAULT int64
+
+func (p *SetAdminReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SetAdminReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SetAdminReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -647,6 +783,13 @@ func (p *SetAdminReq) SetTargetId(val int64) {
 }
 func (p *SetAdminReq) SetRole(val int64) {
 	p.Role = val
+}
+func (p *SetAdminReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *SetAdminReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SetAdminReq) String() string {
@@ -661,10 +804,12 @@ var fieldIDToName_SetAdminReq = map[int16]string{
 	2: "group_id",
 	3: "target_id",
 	4: "role",
+	5: "tenant_id",
 }
 
 type GetUserGroupsReq struct {
-	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	UserId   int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetUserGroupsReq() *GetUserGroupsReq {
@@ -677,8 +822,24 @@ func (p *GetUserGroupsReq) InitDefault() {
 func (p *GetUserGroupsReq) GetUserId() (v int64) {
 	return p.UserId
 }
+
+var GetUserGroupsReq_TenantId_DEFAULT int64
+
+func (p *GetUserGroupsReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetUserGroupsReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetUserGroupsReq) SetUserId(val int64) {
 	p.UserId = val
+}
+func (p *GetUserGroupsReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetUserGroupsReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetUserGroupsReq) String() string {
@@ -690,6 +851,7 @@ func (p *GetUserGroupsReq) String() string {
 
 var fieldIDToName_GetUserGroupsReq = map[int16]string{
 	1: "user_id",
+	2: "tenant_id",
 }
 
 type UserGroupInfo struct {
@@ -769,7 +931,8 @@ var fieldIDToName_GetUserGroupsRes = map[int16]string{
 }
 
 type SearchGroupByNumberReq struct {
-	GroupNumber int64 `thrift:"group_number,1" frugal:"1,default,i64" json:"group_number"`
+	GroupNumber int64  `thrift:"group_number,1" frugal:"1,default,i64" json:"group_number"`
+	TenantId    *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSearchGroupByNumberReq() *SearchGroupByNumberReq {
@@ -782,8 +945,24 @@ func (p *SearchGroupByNumberReq) InitDefault() {
 func (p *SearchGroupByNumberReq) GetGroupNumber() (v int64) {
 	return p.GroupNumber
 }
+
+var SearchGroupByNumberReq_TenantId_DEFAULT int64
+
+func (p *SearchGroupByNumberReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SearchGroupByNumberReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SearchGroupByNumberReq) SetGroupNumber(val int64) {
 	p.GroupNumber = val
+}
+func (p *SearchGroupByNumberReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *SearchGroupByNumberReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SearchGroupByNumberReq) String() string {
@@ -795,6 +974,7 @@ func (p *SearchGroupByNumberReq) String() string {
 
 var fieldIDToName_SearchGroupByNumberReq = map[int16]string{
 	1: "group_number",
+	2: "tenant_id",
 }
 
 type GroupSearchResult_ struct {
@@ -895,6 +1075,7 @@ type JoinGroupReq struct {
 	UserId      int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
 	GroupNumber int64  `thrift:"group_number,2" frugal:"2,default,i64" json:"group_number"`
 	Message     string `thrift:"message,3" frugal:"3,default,string" json:"message"`
+	TenantId    *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewJoinGroupReq() *JoinGroupReq {
@@ -915,6 +1096,15 @@ func (p *JoinGroupReq) GetGroupNumber() (v int64) {
 func (p *JoinGroupReq) GetMessage() (v string) {
 	return p.Message
 }
+
+var JoinGroupReq_TenantId_DEFAULT int64
+
+func (p *JoinGroupReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return JoinGroupReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *JoinGroupReq) SetUserId(val int64) {
 	p.UserId = val
 }
@@ -923,6 +1113,13 @@ func (p *JoinGroupReq) SetGroupNumber(val int64) {
 }
 func (p *JoinGroupReq) SetMessage(val string) {
 	p.Message = val
+}
+func (p *JoinGroupReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *JoinGroupReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *JoinGroupReq) String() string {
@@ -936,13 +1133,15 @@ var fieldIDToName_JoinGroupReq = map[int16]string{
 	1: "user_id",
 	2: "group_number",
 	3: "message",
+	4: "tenant_id",
 }
 
 type HandleJoinReqReq struct {
-	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
-	GroupId    int64 `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
-	UserId     int64 `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
-	Accept     bool  `thrift:"accept,4" frugal:"4,default,bool" json:"accept"`
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	GroupId    int64  `thrift:"group_id,2" frugal:"2,default,i64" json:"group_id"`
+	UserId     int64  `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+	Accept     bool   `thrift:"accept,4" frugal:"4,default,bool" json:"accept"`
+	TenantId   *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewHandleJoinReqReq() *HandleJoinReqReq {
@@ -967,6 +1166,15 @@ func (p *HandleJoinReqReq) GetUserId() (v int64) {
 func (p *HandleJoinReqReq) GetAccept() (v bool) {
 	return p.Accept
 }
+
+var HandleJoinReqReq_TenantId_DEFAULT int64
+
+func (p *HandleJoinReqReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return HandleJoinReqReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *HandleJoinReqReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -978,6 +1186,13 @@ func (p *HandleJoinReqReq) SetUserId(val int64) {
 }
 func (p *HandleJoinReqReq) SetAccept(val bool) {
 	p.Accept = val
+}
+func (p *HandleJoinReqReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *HandleJoinReqReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *HandleJoinReqReq) String() string {
@@ -992,10 +1207,12 @@ var fieldIDToName_HandleJoinReqReq = map[int16]string{
 	2: "group_id",
 	3: "user_id",
 	4: "accept",
+	5: "tenant_id",
 }
 
 type GetJoinRequestsReq struct {
-	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	GroupId  int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetJoinRequestsReq() *GetJoinRequestsReq {
@@ -1008,8 +1225,24 @@ func (p *GetJoinRequestsReq) InitDefault() {
 func (p *GetJoinRequestsReq) GetGroupId() (v int64) {
 	return p.GroupId
 }
+
+var GetJoinRequestsReq_TenantId_DEFAULT int64
+
+func (p *GetJoinRequestsReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetJoinRequestsReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetJoinRequestsReq) SetGroupId(val int64) {
 	p.GroupId = val
+}
+func (p *GetJoinRequestsReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetJoinRequestsReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetJoinRequestsReq) String() string {
@@ -1021,6 +1254,7 @@ func (p *GetJoinRequestsReq) String() string {
 
 var fieldIDToName_GetJoinRequestsReq = map[int16]string{
 	1: "group_id",
+	2: "tenant_id",
 }
 
 type JoinRequestInfo struct {
@@ -1109,8 +1343,9 @@ var fieldIDToName_GetJoinRequestsRes = map[int16]string{
 }
 
 type CheckMutedReq struct {
-	GroupId int64 `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
-	UserId  int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	GroupId  int64  `thrift:"group_id,1" frugal:"1,default,i64" json:"group_id"`
+	UserId   int64  `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	TenantId *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewCheckMutedReq() *CheckMutedReq {
@@ -1127,11 +1362,27 @@ func (p *CheckMutedReq) GetGroupId() (v int64) {
 func (p *CheckMutedReq) GetUserId() (v int64) {
 	return p.UserId
 }
+
+var CheckMutedReq_TenantId_DEFAULT int64
+
+func (p *CheckMutedReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CheckMutedReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *CheckMutedReq) SetGroupId(val int64) {
 	p.GroupId = val
 }
 func (p *CheckMutedReq) SetUserId(val int64) {
 	p.UserId = val
+}
+func (p *CheckMutedReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *CheckMutedReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *CheckMutedReq) String() string {
@@ -1144,6 +1395,7 @@ func (p *CheckMutedReq) String() string {
 var fieldIDToName_CheckMutedReq = map[int16]string{
 	1: "group_id",
 	2: "user_id",
+	3: "tenant_id",
 }
 
 type CheckMutedRes struct {

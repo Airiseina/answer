@@ -11,6 +11,7 @@ const (
 
 type KbDocument struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	TenantID     int64     `gorm:"not null;default:0;index" json:"tenant_id"`
 	KBID         int64     `gorm:"not null;index" json:"kb_id"`
 	FileName     string    `gorm:"type:varchar(256);not null" json:"file_name"`
 	FileURL      string    `gorm:"type:varchar(500);not null" json:"file_url"`

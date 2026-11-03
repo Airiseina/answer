@@ -11,6 +11,7 @@ struct SendMessageReq {
     4: string content
     5: i64 client_seq
     6: optional i64 quote_msg_id
+    7: optional i64 tenant_id
 }
 
 struct SendMessageRes {
@@ -22,6 +23,7 @@ struct SendMessageRes {
     6: optional string content
     7: optional i16 conversation_type
     8: optional i64 seq  // 会话内消息序号，用于未读数计算
+    9: optional i64 tenant_id  // 会话所属租户，供下游（Bot 任务）透传
 }
 
 struct Message {
@@ -36,6 +38,7 @@ struct Message {
     9: optional i16 status  // 消息状态：0=正常，1=已撤回
     10: optional bool is_edited  // 是否已编辑
     11: optional i64 quote_msg_id  // 引用消息ID
+    12: optional i64 tenant_id  // 消息所属租户
 }
 
 struct GetHistoryReq {
@@ -43,6 +46,7 @@ struct GetHistoryReq {
     2: i64 conversation_id
     3: i64 before_msg_id
     4: i16 limit
+    5: optional i64 tenant_id
 }
 
 struct GetHistoryRes {
@@ -54,6 +58,7 @@ struct CreateConversationReq {
     1: string name
     2: list<i64> member_ids
     3: optional i64 group_id  // 关联的群组ID，由 group_service 创建群组时传入
+    4: optional i64 tenant_id
 }
 
 struct CreateConversationRes {
@@ -63,6 +68,7 @@ struct CreateConversationRes {
 
 struct GetConversationsReq {
     1: i64 user_id
+    2: optional i64 tenant_id
 }
 
 struct ConversationInfo {
@@ -74,6 +80,7 @@ struct ConversationInfo {
     6: optional i64 max_seq       // 会话当前最大消息序号
     7: optional i64 max_read_seq  // 用户在该会话中的已读序号
     8: optional i64 unread_count  // 未读消息数
+    9: optional i64 tenant_id     // 会话所属租户
 }
 
 struct GetConversationsRes {
@@ -115,6 +122,7 @@ struct GetOnlineStatusRes {
 struct AddConversationMembersReq {
     1: i64 conversation_id   // 目标会话ID
     2: list<i64> member_ids  // 待添加的用户ID列表
+    3: optional i64 tenant_id
 }
 
 // 添加会话成员响应
@@ -127,6 +135,7 @@ struct AddConversationMembersRes {
 struct RemoveConversationMembersReq {
     1: i64 conversation_id   // 目标会话ID
     2: list<i64> member_ids  // 待移除的用户ID列表
+    3: optional i64 tenant_id
 }
 
 // 移除会话成员响应
@@ -136,6 +145,7 @@ struct RemoveConversationMembersRes {
 
 struct DeleteConversationReq {
     1: i64 conversation_id
+    2: optional i64 tenant_id
 }
 
 struct DeleteConversationRes {
@@ -147,6 +157,7 @@ struct DeleteConversationRes {
 struct MarkReadReq {
     1: i64 user_id           // 用户ID
     2: i64 conversation_id   // 会话ID
+    3: optional i64 tenant_id
 }
 
 // 标记会话已读响应
@@ -159,6 +170,7 @@ struct MarkReadRes {
 // 用于 typing 等场景下获取会话成员列表，以便向在线成员推送事件
 struct GetConversationMembersReq {
     1: i64 conversation_id
+    2: optional i64 tenant_id
 }
 
 // 查询会话成员响应
@@ -170,6 +182,7 @@ struct GetConversationMembersRes {
 struct GetOrCreatePrivateConversationReq {
     1: i64 user_id_a
     2: i64 user_id_b
+    3: optional i64 tenant_id
 }
 
 struct GetOrCreatePrivateConversationRes {
@@ -183,6 +196,7 @@ struct RecallMessageReq {
     1: i64 user_id           // 请求者用户ID，用于权限校验
     2: i64 msg_id            // 待撤回的消息ID
     3: i64 conversation_id   // 会话ID，用于推送通知
+    4: optional i64 tenant_id
 }
 
 // 撤回消息响应
@@ -199,6 +213,7 @@ struct EditMessageReq {
     2: i64 msg_id            // 待编辑的消息ID
     3: i64 conversation_id   // 会话ID，用于推送通知
     4: string new_content    // 新的消息内容
+    5: optional i64 tenant_id
 }
 
 // 编辑消息响应
@@ -223,6 +238,7 @@ struct GetEditHistoryReq {
     1: i64 user_id           // 请求者用户ID，用于权限校验
     2: i64 msg_id            // 消息ID
     3: i64 conversation_id   // 会话ID，用于权限校验
+    4: optional i64 tenant_id
 }
 
 // 查询编辑历史响应
@@ -247,6 +263,7 @@ struct SyncMessagesReq {
     1: i64 user_id                    // 请求者用户ID，用于成员身份校验
     2: list<ConvSeqPair> conv_seqs    // 各会话的本地最大seq
     3: i16 limit                      // 每个会话最多返回的消息条数，默认50，上限200
+    4: optional i64 tenant_id
 }
 
 // 单个会话的同步消息结果
@@ -270,6 +287,7 @@ struct SearchColdMessagesReq {
     2: string keyword        // 搜索关键词
     3: i64 user_id           // 用户ID，用于权限校验
     4: i16 limit             // 返回条数，默认20，上限100
+    5: optional i64 tenant_id
 }
 
 // 搜索冷库消息响应
@@ -287,12 +305,32 @@ struct SearchMessagesReq {
     4: optional i64 start_time          // 时间范围起始（毫秒时间戳，不传表示不限）
     5: optional i64 end_time            // 时间范围结束（毫秒时间戳，不传表示不限）
     6: optional i16 limit               // 返回条数，默认20，上限100
+    7: optional i64 tenant_id
 }
 
 // 搜索历史消息响应
 struct SearchMessagesRes {
     1: bool success
     2: list<Message> messages
+}
+
+// ===== 日/周总结：跨会话时间窗聚合 =====
+
+// 按时间窗聚合用户全部会话的消息请求
+// 用于系统 Agent 生成日总结/周总结：跨会话拉取用户在时间窗内可见的消息
+struct GetMessagesByTimeRangeReq {
+    1: i64 user_id          // 请求者用户ID，用于会话可见性过滤
+    2: i64 start_time       // 起始时间（毫秒时间戳，含）
+    3: i64 end_time         // 结束时间（毫秒时间戳，含）
+    4: optional i16 limit   // 返回条数上限，默认500，上限1000
+    5: optional i64 tenant_id
+}
+
+// 按时间窗聚合用户全部会话的消息响应
+struct GetMessagesByTimeRangeRes {
+    1: bool success
+    2: list<Message> messages
+    3: optional bool truncated  // 是否因条数上限被截断
 }
 
 service ChatService {
@@ -325,4 +363,6 @@ service ChatService {
     SearchColdMessagesRes SearchColdMessages(1: SearchColdMessagesReq req)
     // 搜索历史消息：支持按关键词和时间范围搜索，同时搜索热库和冷库
     SearchMessagesRes SearchMessages(1: SearchMessagesReq req)
+    // 按时间窗聚合用户全部会话的消息：供日/周总结使用
+    GetMessagesByTimeRangeRes GetMessagesByTimeRange(1: GetMessagesByTimeRangeReq req)
 }

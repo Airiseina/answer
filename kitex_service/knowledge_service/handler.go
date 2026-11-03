@@ -5,6 +5,7 @@ import (
 
 	"github.com/Airiseina/answer/kitex_service/knowledge_service/internal/service"
 	knowledge "github.com/Airiseina/answer/kitex_service/knowledge_service/kitex_gen/knowledge"
+	"github.com/Airiseina/answer/pkg/tenant"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )
@@ -18,7 +19,7 @@ func (s *KnowledgeServiceImpl) CreateKnowledgeBase(ctx context.Context, req *kno
 	if req.IsSetDescription() {
 		description = req.GetDescription()
 	}
-	kbID, err := s.knowledgeService.CreateKnowledgeBase(ctx, req.OwnerId, req.Name, description)
+	kbID, err := s.knowledgeService.CreateKnowledgeBase(ctx, req.GetTenantId(), req.OwnerId, req.Name, description)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]创建知识库失败: %v", req.OwnerId, err)
 		return &knowledge.CreateKnowledgeBaseRes{Success: false}, err
@@ -27,7 +28,7 @@ func (s *KnowledgeServiceImpl) CreateKnowledgeBase(ctx context.Context, req *kno
 }
 
 func (s *KnowledgeServiceImpl) GetKnowledgeBase(ctx context.Context, req *knowledge.GetKnowledgeBaseReq) (resp *knowledge.GetKnowledgeBaseRes, err error) {
-	kb, err := s.knowledgeService.GetKnowledgeBase(req.KbId)
+	kb, err := s.knowledgeService.GetKnowledgeBase(req.GetTenantId(), req.KbId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询知识库[%d]失败: %v", req.KbId, err)
 		return &knowledge.GetKnowledgeBaseRes{Success: false}, err
@@ -50,7 +51,7 @@ func (s *KnowledgeServiceImpl) GetKnowledgeBase(ctx context.Context, req *knowle
 }
 
 func (s *KnowledgeServiceImpl) GetUserKnowledgeBases(ctx context.Context, req *knowledge.GetUserKnowledgeBasesReq) (resp *knowledge.GetUserKnowledgeBasesRes, err error) {
-	kbs, err := s.knowledgeService.GetUserKnowledgeBases(req.OwnerId)
+	kbs, err := s.knowledgeService.GetUserKnowledgeBases(req.GetTenantId(), req.OwnerId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询用户[%d]知识库列表失败: %v", req.OwnerId, err)
 		return &knowledge.GetUserKnowledgeBasesRes{Success: false}, err
@@ -81,7 +82,7 @@ func (s *KnowledgeServiceImpl) UpdateKnowledgeBase(ctx context.Context, req *kno
 	if len(updates) == 0 {
 		return &knowledge.CommonRes{Success: false}, nil
 	}
-	success, err := s.knowledgeService.UpdateKnowledgeBase(req.KbId, req.OperatorId, updates)
+	success, err := s.knowledgeService.UpdateKnowledgeBase(req.GetTenantId(), req.KbId, req.OperatorId, updates)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]更新知识库[%d]失败: %v", req.OperatorId, req.KbId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -90,7 +91,7 @@ func (s *KnowledgeServiceImpl) UpdateKnowledgeBase(ctx context.Context, req *kno
 }
 
 func (s *KnowledgeServiceImpl) DeleteKnowledgeBase(ctx context.Context, req *knowledge.DeleteKnowledgeBaseReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.DeleteKnowledgeBase(ctx, req.KbId, req.OperatorId)
+	success, err := s.knowledgeService.DeleteKnowledgeBase(ctx, req.GetTenantId(), req.KbId, req.OperatorId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]删除知识库[%d]失败: %v", req.OperatorId, req.KbId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -99,7 +100,7 @@ func (s *KnowledgeServiceImpl) DeleteKnowledgeBase(ctx context.Context, req *kno
 }
 
 func (s *KnowledgeServiceImpl) AddDocument(ctx context.Context, req *knowledge.AddDocumentReq) (resp *knowledge.AddDocumentRes, err error) {
-	docID, err := s.knowledgeService.AddDocument(ctx, req.KbId, req.OperatorId, req.FileName, req.FileUrl, req.FileType, req.FileSize)
+	docID, err := s.knowledgeService.AddDocument(ctx, req.GetTenantId(), req.KbId, req.OperatorId, req.FileName, req.FileUrl, req.FileType, req.FileSize)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]添加文档到知识库[%d]失败: %v", req.OperatorId, req.KbId, err)
 		return &knowledge.AddDocumentRes{Success: false}, err
@@ -108,7 +109,7 @@ func (s *KnowledgeServiceImpl) AddDocument(ctx context.Context, req *knowledge.A
 }
 
 func (s *KnowledgeServiceImpl) GetDocuments(ctx context.Context, req *knowledge.GetDocumentsReq) (resp *knowledge.GetDocumentsRes, err error) {
-	docs, err := s.knowledgeService.GetDocuments(req.KbId)
+	docs, err := s.knowledgeService.GetDocuments(req.GetTenantId(), req.KbId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询知识库[%d]文档列表失败: %v", req.KbId, err)
 		return &knowledge.GetDocumentsRes{Success: false}, err
@@ -135,7 +136,7 @@ func (s *KnowledgeServiceImpl) GetDocuments(ctx context.Context, req *knowledge.
 }
 
 func (s *KnowledgeServiceImpl) DeleteDocument(ctx context.Context, req *knowledge.DeleteDocumentReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.DeleteDocument(ctx, req.DocId, req.OperatorId)
+	success, err := s.knowledgeService.DeleteDocument(ctx, req.GetTenantId(), req.DocId, req.OperatorId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]删除文档[%d]失败: %v", req.OperatorId, req.DocId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -144,7 +145,7 @@ func (s *KnowledgeServiceImpl) DeleteDocument(ctx context.Context, req *knowledg
 }
 
 func (s *KnowledgeServiceImpl) RetryDocument(ctx context.Context, req *knowledge.RetryDocumentReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.RetryDocument(ctx, req.DocId, req.OperatorId)
+	success, err := s.knowledgeService.RetryDocument(ctx, req.GetTenantId(), req.DocId, req.OperatorId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]重试文档[%d]解析失败: %v", req.OperatorId, req.DocId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -153,7 +154,7 @@ func (s *KnowledgeServiceImpl) RetryDocument(ctx context.Context, req *knowledge
 }
 
 func (s *KnowledgeServiceImpl) BindKnowledgeBase(ctx context.Context, req *knowledge.BindKnowledgeBaseReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.BindKnowledgeBase(req.BotId, req.OperatorId, req.KbId)
+	success, err := s.knowledgeService.BindKnowledgeBase(req.GetTenantId(), req.BotId, req.OperatorId, req.KbId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]绑定Bot[%d]与知识库[%d]失败: %v", req.OperatorId, req.BotId, req.KbId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -162,7 +163,7 @@ func (s *KnowledgeServiceImpl) BindKnowledgeBase(ctx context.Context, req *knowl
 }
 
 func (s *KnowledgeServiceImpl) UnbindKnowledgeBase(ctx context.Context, req *knowledge.UnbindKnowledgeBaseReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.UnbindKnowledgeBase(req.BotId, req.OperatorId, req.KbId)
+	success, err := s.knowledgeService.UnbindKnowledgeBase(req.GetTenantId(), req.BotId, req.OperatorId, req.KbId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]解绑Bot[%d]与知识库[%d]失败: %v", req.OperatorId, req.BotId, req.KbId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -171,7 +172,7 @@ func (s *KnowledgeServiceImpl) UnbindKnowledgeBase(ctx context.Context, req *kno
 }
 
 func (s *KnowledgeServiceImpl) GetBotKnowledgeBases(ctx context.Context, req *knowledge.GetBotKnowledgeBasesReq) (resp *knowledge.GetBotKnowledgeBasesRes, err error) {
-	kbs, err := s.knowledgeService.GetBotKnowledgeBases(req.BotId)
+	kbs, err := s.knowledgeService.GetBotKnowledgeBases(req.GetTenantId(), req.BotId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询Bot[%d]关联的知识库失败: %v", req.BotId, err)
 		return &knowledge.GetBotKnowledgeBasesRes{Success: false}, err
@@ -196,7 +197,7 @@ func (s *KnowledgeServiceImpl) SearchKnowledge(ctx context.Context, req *knowled
 	if topK <= 0 {
 		topK = 5
 	}
-	results, err := s.knowledgeService.SearchKnowledge(ctx, req.KbIds, req.Query, topK)
+	results, err := s.knowledgeService.SearchKnowledge(ctx, req.GetTenantId(), req.KbIds, req.Query, topK)
 	if err != nil {
 		klog.CtxErrorf(ctx, "知识库检索失败: %v", err)
 		return &knowledge.SearchKnowledgeRes{Success: false}, err
@@ -222,7 +223,7 @@ func (s *KnowledgeServiceImpl) SearchKnowledge(ctx context.Context, req *knowled
 
 // BindSystemKnowledgeBase implements the KnowledgeServiceImpl interface.
 func (s *KnowledgeServiceImpl) BindSystemKnowledgeBase(ctx context.Context, req *knowledge.BindSystemKnowledgeBaseReq) (resp *knowledge.CommonRes, err error) {
-	success, err := s.knowledgeService.BindSystemKnowledgeBase(req.BotId, req.KbId)
+	success, err := s.knowledgeService.BindSystemKnowledgeBase(tenant.PlatformTenantID, req.BotId, req.KbId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "系统Bot[%d]绑定知识库[%d]失败: %v", req.BotId, req.KbId, err)
 		return &knowledge.CommonRes{Success: false}, err
@@ -232,7 +233,7 @@ func (s *KnowledgeServiceImpl) BindSystemKnowledgeBase(ctx context.Context, req 
 
 // AddSystemDocument implements the KnowledgeServiceImpl interface.
 func (s *KnowledgeServiceImpl) AddSystemDocument(ctx context.Context, req *knowledge.AddSystemDocumentReq) (resp *knowledge.AddDocumentRes, err error) {
-	docID, err := s.knowledgeService.AddSystemDocument(ctx, req.KbId, req.FileName, req.FileUrl, req.FileType, req.FileSize)
+	docID, err := s.knowledgeService.AddSystemDocument(ctx, tenant.PlatformTenantID, req.KbId, req.FileName, req.FileUrl, req.FileType, req.FileSize)
 	if err != nil {
 		klog.CtxErrorf(ctx, "系统知识库[%d]添加文档[%s]失败: %v", req.KbId, req.FileName, err)
 		return &knowledge.AddDocumentRes{Success: false}, err

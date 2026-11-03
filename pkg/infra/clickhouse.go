@@ -57,6 +57,7 @@ func InitClickHouseDB(conn clickhouse.Conn) error {
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS answer_cold.cold_message (
 		msg_id Int64,
+		tenant_id Int64,
 		client_seq Int64,
 		sender_id Int64,
 		conversation_id Int64,
@@ -74,6 +75,10 @@ func InitClickHouseDB(conn clickhouse.Conn) error {
 	`
 	if err := conn.Exec(ctx, createTableSQL); err != nil {
 		return fmt.Errorf("创建ClickHouse冷库表失败: %w", err)
+	}
+	// 存量表补列：老版本冷库表没有 tenant_id，这里幂等补上，回填见迁移脚本
+	if err := conn.Exec(ctx, "ALTER TABLE answer_cold.cold_message ADD COLUMN IF NOT EXISTS tenant_id Int64 DEFAULT 0 AFTER msg_id"); err != nil {
+		return fmt.Errorf("冷库表补列 tenant_id 失败: %w", err)
 	}
 	return nil
 }

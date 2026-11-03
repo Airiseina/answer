@@ -7,3 +7,11 @@ node_modules
 dist
 
 deploy/.env
+
+.gocache
+
+.scratch
+
+.tools
+
+.npm-cache

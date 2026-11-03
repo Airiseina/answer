@@ -43,6 +43,9 @@ type CreateBotReq struct {
 	ApiKey       string  `thrift:"api_key,4" frugal:"4,default,string" json:"api_key"`
 	Model        string  `thrift:"model,5" frugal:"5,default,string" json:"model"`
 	BaseUrl      *string `thrift:"base_url,6,optional" frugal:"6,optional,string" json:"base_url,omitempty"`
+	TenantId     *int64  `thrift:"tenant_id,7,optional" frugal:"7,optional,i64" json:"tenant_id,omitempty"`
+	Origin       *int16  `thrift:"origin,8,optional" frugal:"8,optional,i16" json:"origin,omitempty"`
+	AppId        *string `thrift:"app_id,9,optional" frugal:"9,optional,string" json:"app_id,omitempty"`
 }
 
 func NewCreateBotReq() *CreateBotReq {
@@ -80,6 +83,33 @@ func (p *CreateBotReq) GetBaseUrl() (v string) {
 	}
 	return *p.BaseUrl
 }
+
+var CreateBotReq_TenantId_DEFAULT int64
+
+func (p *CreateBotReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CreateBotReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
+
+var CreateBotReq_Origin_DEFAULT int16
+
+func (p *CreateBotReq) GetOrigin() (v int16) {
+	if !p.IsSetOrigin() {
+		return CreateBotReq_Origin_DEFAULT
+	}
+	return *p.Origin
+}
+
+var CreateBotReq_AppId_DEFAULT string
+
+func (p *CreateBotReq) GetAppId() (v string) {
+	if !p.IsSetAppId() {
+		return CreateBotReq_AppId_DEFAULT
+	}
+	return *p.AppId
+}
 func (p *CreateBotReq) SetCreatorId(val int64) {
 	p.CreatorId = val
 }
@@ -98,9 +128,30 @@ func (p *CreateBotReq) SetModel(val string) {
 func (p *CreateBotReq) SetBaseUrl(val *string) {
 	p.BaseUrl = val
 }
+func (p *CreateBotReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+func (p *CreateBotReq) SetOrigin(val *int16) {
+	p.Origin = val
+}
+func (p *CreateBotReq) SetAppId(val *string) {
+	p.AppId = val
+}
 
 func (p *CreateBotReq) IsSetBaseUrl() bool {
 	return p.BaseUrl != nil
+}
+
+func (p *CreateBotReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
+func (p *CreateBotReq) IsSetOrigin() bool {
+	return p.Origin != nil
+}
+
+func (p *CreateBotReq) IsSetAppId() bool {
+	return p.AppId != nil
 }
 
 func (p *CreateBotReq) String() string {
@@ -117,6 +168,9 @@ var fieldIDToName_CreateBotReq = map[int16]string{
 	4: "api_key",
 	5: "model",
 	6: "base_url",
+	7: "tenant_id",
+	8: "origin",
+	9: "app_id",
 }
 
 type CreateBotRes struct {
@@ -167,6 +221,8 @@ type BotInfo struct {
 	IsSystem     bool    `thrift:"is_system,7" frugal:"7,default,bool" json:"is_system"`
 	CreatedAt    int64   `thrift:"created_at,8" frugal:"8,default,i64" json:"created_at"`
 	BaseUrl      *string `thrift:"base_url,9,optional" frugal:"9,optional,string" json:"base_url,omitempty"`
+	Origin       *int16  `thrift:"origin,10,optional" frugal:"10,optional,i16" json:"origin,omitempty"`
+	AppId        *string `thrift:"app_id,11,optional" frugal:"11,optional,string" json:"app_id,omitempty"`
 }
 
 func NewBotInfo() *BotInfo {
@@ -216,6 +272,24 @@ func (p *BotInfo) GetBaseUrl() (v string) {
 	}
 	return *p.BaseUrl
 }
+
+var BotInfo_Origin_DEFAULT int16
+
+func (p *BotInfo) GetOrigin() (v int16) {
+	if !p.IsSetOrigin() {
+		return BotInfo_Origin_DEFAULT
+	}
+	return *p.Origin
+}
+
+var BotInfo_AppId_DEFAULT string
+
+func (p *BotInfo) GetAppId() (v string) {
+	if !p.IsSetAppId() {
+		return BotInfo_AppId_DEFAULT
+	}
+	return *p.AppId
+}
 func (p *BotInfo) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -243,9 +317,23 @@ func (p *BotInfo) SetCreatedAt(val int64) {
 func (p *BotInfo) SetBaseUrl(val *string) {
 	p.BaseUrl = val
 }
+func (p *BotInfo) SetOrigin(val *int16) {
+	p.Origin = val
+}
+func (p *BotInfo) SetAppId(val *string) {
+	p.AppId = val
+}
 
 func (p *BotInfo) IsSetBaseUrl() bool {
 	return p.BaseUrl != nil
+}
+
+func (p *BotInfo) IsSetOrigin() bool {
+	return p.Origin != nil
+}
+
+func (p *BotInfo) IsSetAppId() bool {
+	return p.AppId != nil
 }
 
 func (p *BotInfo) String() string {
@@ -256,19 +344,22 @@ func (p *BotInfo) String() string {
 }
 
 var fieldIDToName_BotInfo = map[int16]string{
-	1: "bot_id",
-	2: "creator_id",
-	3: "name",
-	4: "avatar_url",
-	5: "system_prompt",
-	6: "model",
-	7: "is_system",
-	8: "created_at",
-	9: "base_url",
+	1:  "bot_id",
+	2:  "creator_id",
+	3:  "name",
+	4:  "avatar_url",
+	5:  "system_prompt",
+	6:  "model",
+	7:  "is_system",
+	8:  "created_at",
+	9:  "base_url",
+	10: "origin",
+	11: "app_id",
 }
 
 type GetBotReq struct {
-	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	BotId    int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetBotReq() *GetBotReq {
@@ -281,8 +372,24 @@ func (p *GetBotReq) InitDefault() {
 func (p *GetBotReq) GetBotId() (v int64) {
 	return p.BotId
 }
+
+var GetBotReq_TenantId_DEFAULT int64
+
+func (p *GetBotReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetBotReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetBotReq) SetBotId(val int64) {
 	p.BotId = val
+}
+func (p *GetBotReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetBotReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetBotReq) String() string {
@@ -294,6 +401,7 @@ func (p *GetBotReq) String() string {
 
 var fieldIDToName_GetBotReq = map[int16]string{
 	1: "bot_id",
+	2: "tenant_id",
 }
 
 type GetBotRes struct {
@@ -382,7 +490,8 @@ var fieldIDToName_GetSystemBotRes = map[int16]string{
 }
 
 type GetUserBotsReq struct {
-	CreatorId int64 `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
+	CreatorId int64  `thrift:"creator_id,1" frugal:"1,default,i64" json:"creator_id"`
+	TenantId  *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetUserBotsReq() *GetUserBotsReq {
@@ -395,8 +504,24 @@ func (p *GetUserBotsReq) InitDefault() {
 func (p *GetUserBotsReq) GetCreatorId() (v int64) {
 	return p.CreatorId
 }
+
+var GetUserBotsReq_TenantId_DEFAULT int64
+
+func (p *GetUserBotsReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetUserBotsReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetUserBotsReq) SetCreatorId(val int64) {
 	p.CreatorId = val
+}
+func (p *GetUserBotsReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetUserBotsReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetUserBotsReq) String() string {
@@ -408,6 +533,7 @@ func (p *GetUserBotsReq) String() string {
 
 var fieldIDToName_GetUserBotsReq = map[int16]string{
 	1: "creator_id",
+	2: "tenant_id",
 }
 
 type GetUserBotsRes struct {
@@ -457,6 +583,7 @@ type UpdateBotReq struct {
 	ApiKey       *string `thrift:"api_key,6,optional" frugal:"6,optional,string" json:"api_key,omitempty"`
 	Model        *string `thrift:"model,7,optional" frugal:"7,optional,string" json:"model,omitempty"`
 	BaseUrl      *string `thrift:"base_url,8,optional" frugal:"8,optional,string" json:"base_url,omitempty"`
+	TenantId     *int64  `thrift:"tenant_id,9,optional" frugal:"9,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewUpdateBotReq() *UpdateBotReq {
@@ -527,6 +654,15 @@ func (p *UpdateBotReq) GetBaseUrl() (v string) {
 	}
 	return *p.BaseUrl
 }
+
+var UpdateBotReq_TenantId_DEFAULT int64
+
+func (p *UpdateBotReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return UpdateBotReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *UpdateBotReq) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -550,6 +686,9 @@ func (p *UpdateBotReq) SetModel(val *string) {
 }
 func (p *UpdateBotReq) SetBaseUrl(val *string) {
 	p.BaseUrl = val
+}
+func (p *UpdateBotReq) SetTenantId(val *int64) {
+	p.TenantId = val
 }
 
 func (p *UpdateBotReq) IsSetName() bool {
@@ -576,6 +715,10 @@ func (p *UpdateBotReq) IsSetBaseUrl() bool {
 	return p.BaseUrl != nil
 }
 
+func (p *UpdateBotReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
 func (p *UpdateBotReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -592,11 +735,13 @@ var fieldIDToName_UpdateBotReq = map[int16]string{
 	6: "api_key",
 	7: "model",
 	8: "base_url",
+	9: "tenant_id",
 }
 
 type DeleteBotReq struct {
-	BotId      int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	BotId      int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	TenantId   *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewDeleteBotReq() *DeleteBotReq {
@@ -613,11 +758,27 @@ func (p *DeleteBotReq) GetBotId() (v int64) {
 func (p *DeleteBotReq) GetOperatorId() (v int64) {
 	return p.OperatorId
 }
+
+var DeleteBotReq_TenantId_DEFAULT int64
+
+func (p *DeleteBotReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return DeleteBotReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *DeleteBotReq) SetBotId(val int64) {
 	p.BotId = val
 }
 func (p *DeleteBotReq) SetOperatorId(val int64) {
 	p.OperatorId = val
+}
+func (p *DeleteBotReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *DeleteBotReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *DeleteBotReq) String() string {
@@ -630,6 +791,7 @@ func (p *DeleteBotReq) String() string {
 var fieldIDToName_DeleteBotReq = map[int16]string{
 	1: "bot_id",
 	2: "operator_id",
+	3: "tenant_id",
 }
 
 type IsBotReq struct {
@@ -709,7 +871,8 @@ var fieldIDToName_IsBotRes = map[int16]string{
 }
 
 type GetBotConfigReq struct {
-	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	BotId    int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetBotConfigReq() *GetBotConfigReq {
@@ -722,8 +885,24 @@ func (p *GetBotConfigReq) InitDefault() {
 func (p *GetBotConfigReq) GetBotId() (v int64) {
 	return p.BotId
 }
+
+var GetBotConfigReq_TenantId_DEFAULT int64
+
+func (p *GetBotConfigReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetBotConfigReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetBotConfigReq) SetBotId(val int64) {
 	p.BotId = val
+}
+func (p *GetBotConfigReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetBotConfigReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetBotConfigReq) String() string {
@@ -735,6 +914,7 @@ func (p *GetBotConfigReq) String() string {
 
 var fieldIDToName_GetBotConfigReq = map[int16]string{
 	1: "bot_id",
+	2: "tenant_id",
 }
 
 type GetBotConfigRes struct {
@@ -744,6 +924,7 @@ type GetBotConfigRes struct {
 	SystemPrompt *string `thrift:"system_prompt,4,optional" frugal:"4,optional,string" json:"system_prompt,omitempty"`
 	UserId       *int64  `thrift:"user_id,5,optional" frugal:"5,optional,i64" json:"user_id,omitempty"`
 	BaseUrl      *string `thrift:"base_url,6,optional" frugal:"6,optional,string" json:"base_url,omitempty"`
+	Origin       *int16  `thrift:"origin,7,optional" frugal:"7,optional,i16" json:"origin,omitempty"`
 }
 
 func NewGetBotConfigRes() *GetBotConfigRes {
@@ -801,6 +982,15 @@ func (p *GetBotConfigRes) GetBaseUrl() (v string) {
 	}
 	return *p.BaseUrl
 }
+
+var GetBotConfigRes_Origin_DEFAULT int16
+
+func (p *GetBotConfigRes) GetOrigin() (v int16) {
+	if !p.IsSetOrigin() {
+		return GetBotConfigRes_Origin_DEFAULT
+	}
+	return *p.Origin
+}
 func (p *GetBotConfigRes) SetSuccess(val bool) {
 	p.Success = val
 }
@@ -818,6 +1008,9 @@ func (p *GetBotConfigRes) SetUserId(val *int64) {
 }
 func (p *GetBotConfigRes) SetBaseUrl(val *string) {
 	p.BaseUrl = val
+}
+func (p *GetBotConfigRes) SetOrigin(val *int16) {
+	p.Origin = val
 }
 
 func (p *GetBotConfigRes) IsSetApiKey() bool {
@@ -840,6 +1033,10 @@ func (p *GetBotConfigRes) IsSetBaseUrl() bool {
 	return p.BaseUrl != nil
 }
 
+func (p *GetBotConfigRes) IsSetOrigin() bool {
+	return p.Origin != nil
+}
+
 func (p *GetBotConfigRes) String() string {
 	if p == nil {
 		return "<nil>"
@@ -854,13 +1051,15 @@ var fieldIDToName_GetBotConfigRes = map[int16]string{
 	4: "system_prompt",
 	5: "user_id",
 	6: "base_url",
+	7: "origin",
 }
 
 type AddBotToConversationReq struct {
-	OperatorId       int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
-	BotId            int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
-	ConversationId   int64 `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
-	ConversationType int16 `thrift:"conversation_type,4" frugal:"4,default,i16" json:"conversation_type"`
+	OperatorId       int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	BotId            int64  `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	ConversationId   int64  `thrift:"conversation_id,3" frugal:"3,default,i64" json:"conversation_id"`
+	ConversationType int16  `thrift:"conversation_type,4" frugal:"4,default,i16" json:"conversation_type"`
+	TenantId         *int64 `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewAddBotToConversationReq() *AddBotToConversationReq {
@@ -885,6 +1084,15 @@ func (p *AddBotToConversationReq) GetConversationId() (v int64) {
 func (p *AddBotToConversationReq) GetConversationType() (v int16) {
 	return p.ConversationType
 }
+
+var AddBotToConversationReq_TenantId_DEFAULT int64
+
+func (p *AddBotToConversationReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return AddBotToConversationReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *AddBotToConversationReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -896,6 +1104,13 @@ func (p *AddBotToConversationReq) SetConversationId(val int64) {
 }
 func (p *AddBotToConversationReq) SetConversationType(val int16) {
 	p.ConversationType = val
+}
+func (p *AddBotToConversationReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *AddBotToConversationReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *AddBotToConversationReq) String() string {
@@ -910,6 +1125,7 @@ var fieldIDToName_AddBotToConversationReq = map[int16]string{
 	2: "bot_id",
 	3: "conversation_id",
 	4: "conversation_type",
+	5: "tenant_id",
 }
 
 type AddBotToConversationRes struct {
@@ -1087,6 +1303,7 @@ type CreateMcpServerReq struct {
 	Transport   *string `thrift:"transport,6,optional" frugal:"6,optional,string" json:"transport,omitempty"`
 	AuthType    *string `thrift:"auth_type,7,optional" frugal:"7,optional,string" json:"auth_type,omitempty"`
 	AuthToken   *string `thrift:"auth_token,8,optional" frugal:"8,optional,string" json:"auth_token,omitempty"`
+	TenantId    *int64  `thrift:"tenant_id,9,optional" frugal:"9,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewCreateMcpServerReq() *CreateMcpServerReq {
@@ -1147,6 +1364,15 @@ func (p *CreateMcpServerReq) GetAuthToken() (v string) {
 	}
 	return *p.AuthToken
 }
+
+var CreateMcpServerReq_TenantId_DEFAULT int64
+
+func (p *CreateMcpServerReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CreateMcpServerReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *CreateMcpServerReq) SetOperatorId(val int64) {
 	p.OperatorId = val
 }
@@ -1171,6 +1397,9 @@ func (p *CreateMcpServerReq) SetAuthType(val *string) {
 func (p *CreateMcpServerReq) SetAuthToken(val *string) {
 	p.AuthToken = val
 }
+func (p *CreateMcpServerReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *CreateMcpServerReq) IsSetDescription() bool {
 	return p.Description != nil
@@ -1186,6 +1415,10 @@ func (p *CreateMcpServerReq) IsSetAuthType() bool {
 
 func (p *CreateMcpServerReq) IsSetAuthToken() bool {
 	return p.AuthToken != nil
+}
+
+func (p *CreateMcpServerReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *CreateMcpServerReq) String() string {
@@ -1204,6 +1437,7 @@ var fieldIDToName_CreateMcpServerReq = map[int16]string{
 	6: "transport",
 	7: "auth_type",
 	8: "auth_token",
+	9: "tenant_id",
 }
 
 type CreateMcpServerRes struct {
@@ -1245,7 +1479,8 @@ var fieldIDToName_CreateMcpServerRes = map[int16]string{
 }
 
 type GetBotMcpServersReq struct {
-	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	BotId    int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetBotMcpServersReq() *GetBotMcpServersReq {
@@ -1258,8 +1493,24 @@ func (p *GetBotMcpServersReq) InitDefault() {
 func (p *GetBotMcpServersReq) GetBotId() (v int64) {
 	return p.BotId
 }
+
+var GetBotMcpServersReq_TenantId_DEFAULT int64
+
+func (p *GetBotMcpServersReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetBotMcpServersReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetBotMcpServersReq) SetBotId(val int64) {
 	p.BotId = val
+}
+func (p *GetBotMcpServersReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetBotMcpServersReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetBotMcpServersReq) String() string {
@@ -1271,6 +1522,7 @@ func (p *GetBotMcpServersReq) String() string {
 
 var fieldIDToName_GetBotMcpServersReq = map[int16]string{
 	1: "bot_id",
+	2: "tenant_id",
 }
 
 type GetBotMcpServersRes struct {
@@ -1321,6 +1573,7 @@ type UpdateMcpServerReq struct {
 	AuthType    *string `thrift:"auth_type,7,optional" frugal:"7,optional,string" json:"auth_type,omitempty"`
 	AuthToken   *string `thrift:"auth_token,8,optional" frugal:"8,optional,string" json:"auth_token,omitempty"`
 	Enabled     *bool   `thrift:"enabled,9,optional" frugal:"9,optional,bool" json:"enabled,omitempty"`
+	TenantId    *int64  `thrift:"tenant_id,10,optional" frugal:"10,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewUpdateMcpServerReq() *UpdateMcpServerReq {
@@ -1400,6 +1653,15 @@ func (p *UpdateMcpServerReq) GetEnabled() (v bool) {
 	}
 	return *p.Enabled
 }
+
+var UpdateMcpServerReq_TenantId_DEFAULT int64
+
+func (p *UpdateMcpServerReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return UpdateMcpServerReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *UpdateMcpServerReq) SetId(val int64) {
 	p.Id = val
 }
@@ -1426,6 +1688,9 @@ func (p *UpdateMcpServerReq) SetAuthToken(val *string) {
 }
 func (p *UpdateMcpServerReq) SetEnabled(val *bool) {
 	p.Enabled = val
+}
+func (p *UpdateMcpServerReq) SetTenantId(val *int64) {
+	p.TenantId = val
 }
 
 func (p *UpdateMcpServerReq) IsSetName() bool {
@@ -1456,6 +1721,10 @@ func (p *UpdateMcpServerReq) IsSetEnabled() bool {
 	return p.Enabled != nil
 }
 
+func (p *UpdateMcpServerReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
 func (p *UpdateMcpServerReq) String() string {
 	if p == nil {
 		return "<nil>"
@@ -1464,20 +1733,22 @@ func (p *UpdateMcpServerReq) String() string {
 }
 
 var fieldIDToName_UpdateMcpServerReq = map[int16]string{
-	1: "id",
-	2: "operator_id",
-	3: "name",
-	4: "description",
-	5: "transport",
-	6: "url",
-	7: "auth_type",
-	8: "auth_token",
-	9: "enabled",
+	1:  "id",
+	2:  "operator_id",
+	3:  "name",
+	4:  "description",
+	5:  "transport",
+	6:  "url",
+	7:  "auth_type",
+	8:  "auth_token",
+	9:  "enabled",
+	10: "tenant_id",
 }
 
 type DeleteMcpServerReq struct {
-	Id         int64 `thrift:"id,1" frugal:"1,default,i64" json:"id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	Id         int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	TenantId   *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewDeleteMcpServerReq() *DeleteMcpServerReq {
@@ -1494,11 +1765,27 @@ func (p *DeleteMcpServerReq) GetId() (v int64) {
 func (p *DeleteMcpServerReq) GetOperatorId() (v int64) {
 	return p.OperatorId
 }
+
+var DeleteMcpServerReq_TenantId_DEFAULT int64
+
+func (p *DeleteMcpServerReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return DeleteMcpServerReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *DeleteMcpServerReq) SetId(val int64) {
 	p.Id = val
 }
 func (p *DeleteMcpServerReq) SetOperatorId(val int64) {
 	p.OperatorId = val
+}
+func (p *DeleteMcpServerReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *DeleteMcpServerReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *DeleteMcpServerReq) String() string {
@@ -1511,6 +1798,2771 @@ func (p *DeleteMcpServerReq) String() string {
 var fieldIDToName_DeleteMcpServerReq = map[int16]string{
 	1: "id",
 	2: "operator_id",
+	3: "tenant_id",
+}
+
+type MarketBotInfo struct {
+	MarketBotId   int64   `thrift:"market_bot_id,1" frugal:"1,default,i64" json:"market_bot_id"`
+	PublisherId   int64   `thrift:"publisher_id,2" frugal:"2,default,i64" json:"publisher_id"`
+	PublisherName string  `thrift:"publisher_name,3" frugal:"3,default,string" json:"publisher_name"`
+	Name          string  `thrift:"name,4" frugal:"4,default,string" json:"name"`
+	Description   string  `thrift:"description,5" frugal:"5,default,string" json:"description"`
+	AvatarUrl     string  `thrift:"avatar_url,6" frugal:"6,default,string" json:"avatar_url"`
+	SystemPrompt  string  `thrift:"system_prompt,7" frugal:"7,default,string" json:"system_prompt"`
+	Model         string  `thrift:"model,8" frugal:"8,default,string" json:"model"`
+	BaseUrl       *string `thrift:"base_url,9,optional" frugal:"9,optional,string" json:"base_url,omitempty"`
+	Category      string  `thrift:"category,10" frugal:"10,default,string" json:"category"`
+	Tags          string  `thrift:"tags,11" frugal:"11,default,string" json:"tags"`
+	Status        int16   `thrift:"status,12" frugal:"12,default,i16" json:"status"`
+	ReviewNote    string  `thrift:"review_note,13" frugal:"13,default,string" json:"review_note"`
+	InstallCount  int64   `thrift:"install_count,14" frugal:"14,default,i64" json:"install_count"`
+	Rating        float64 `thrift:"rating,15" frugal:"15,default,double" json:"rating"`
+	RatingCount   int32   `thrift:"rating_count,16" frugal:"16,default,i32" json:"rating_count"`
+	Version       int32   `thrift:"version,17" frugal:"17,default,i32" json:"version"`
+	CreatedAt     int64   `thrift:"created_at,18" frugal:"18,default,i64" json:"created_at"`
+	UpdatedAt     int64   `thrift:"updated_at,19" frugal:"19,default,i64" json:"updated_at"`
+}
+
+func NewMarketBotInfo() *MarketBotInfo {
+	return &MarketBotInfo{}
+}
+
+func (p *MarketBotInfo) InitDefault() {
+}
+
+func (p *MarketBotInfo) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *MarketBotInfo) GetPublisherId() (v int64) {
+	return p.PublisherId
+}
+
+func (p *MarketBotInfo) GetPublisherName() (v string) {
+	return p.PublisherName
+}
+
+func (p *MarketBotInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *MarketBotInfo) GetDescription() (v string) {
+	return p.Description
+}
+
+func (p *MarketBotInfo) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+
+func (p *MarketBotInfo) GetSystemPrompt() (v string) {
+	return p.SystemPrompt
+}
+
+func (p *MarketBotInfo) GetModel() (v string) {
+	return p.Model
+}
+
+var MarketBotInfo_BaseUrl_DEFAULT string
+
+func (p *MarketBotInfo) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return MarketBotInfo_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
+
+func (p *MarketBotInfo) GetCategory() (v string) {
+	return p.Category
+}
+
+func (p *MarketBotInfo) GetTags() (v string) {
+	return p.Tags
+}
+
+func (p *MarketBotInfo) GetStatus() (v int16) {
+	return p.Status
+}
+
+func (p *MarketBotInfo) GetReviewNote() (v string) {
+	return p.ReviewNote
+}
+
+func (p *MarketBotInfo) GetInstallCount() (v int64) {
+	return p.InstallCount
+}
+
+func (p *MarketBotInfo) GetRating() (v float64) {
+	return p.Rating
+}
+
+func (p *MarketBotInfo) GetRatingCount() (v int32) {
+	return p.RatingCount
+}
+
+func (p *MarketBotInfo) GetVersion() (v int32) {
+	return p.Version
+}
+
+func (p *MarketBotInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+
+func (p *MarketBotInfo) GetUpdatedAt() (v int64) {
+	return p.UpdatedAt
+}
+func (p *MarketBotInfo) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *MarketBotInfo) SetPublisherId(val int64) {
+	p.PublisherId = val
+}
+func (p *MarketBotInfo) SetPublisherName(val string) {
+	p.PublisherName = val
+}
+func (p *MarketBotInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *MarketBotInfo) SetDescription(val string) {
+	p.Description = val
+}
+func (p *MarketBotInfo) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+func (p *MarketBotInfo) SetSystemPrompt(val string) {
+	p.SystemPrompt = val
+}
+func (p *MarketBotInfo) SetModel(val string) {
+	p.Model = val
+}
+func (p *MarketBotInfo) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+func (p *MarketBotInfo) SetCategory(val string) {
+	p.Category = val
+}
+func (p *MarketBotInfo) SetTags(val string) {
+	p.Tags = val
+}
+func (p *MarketBotInfo) SetStatus(val int16) {
+	p.Status = val
+}
+func (p *MarketBotInfo) SetReviewNote(val string) {
+	p.ReviewNote = val
+}
+func (p *MarketBotInfo) SetInstallCount(val int64) {
+	p.InstallCount = val
+}
+func (p *MarketBotInfo) SetRating(val float64) {
+	p.Rating = val
+}
+func (p *MarketBotInfo) SetRatingCount(val int32) {
+	p.RatingCount = val
+}
+func (p *MarketBotInfo) SetVersion(val int32) {
+	p.Version = val
+}
+func (p *MarketBotInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+func (p *MarketBotInfo) SetUpdatedAt(val int64) {
+	p.UpdatedAt = val
+}
+
+func (p *MarketBotInfo) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
+func (p *MarketBotInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MarketBotInfo(%+v)", *p)
+}
+
+var fieldIDToName_MarketBotInfo = map[int16]string{
+	1:  "market_bot_id",
+	2:  "publisher_id",
+	3:  "publisher_name",
+	4:  "name",
+	5:  "description",
+	6:  "avatar_url",
+	7:  "system_prompt",
+	8:  "model",
+	9:  "base_url",
+	10: "category",
+	11: "tags",
+	12: "status",
+	13: "review_note",
+	14: "install_count",
+	15: "rating",
+	16: "rating_count",
+	17: "version",
+	18: "created_at",
+	19: "updated_at",
+}
+
+type PublishMarketBotReq struct {
+	TenantId     int64   `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	PublisherId  int64   `thrift:"publisher_id,2" frugal:"2,default,i64" json:"publisher_id"`
+	Name         string  `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	SystemPrompt string  `thrift:"system_prompt,4" frugal:"4,default,string" json:"system_prompt"`
+	Description  string  `thrift:"description,5" frugal:"5,default,string" json:"description"`
+	AvatarUrl    *string `thrift:"avatar_url,6,optional" frugal:"6,optional,string" json:"avatar_url,omitempty"`
+	Model        *string `thrift:"model,7,optional" frugal:"7,optional,string" json:"model,omitempty"`
+	BaseUrl      *string `thrift:"base_url,8,optional" frugal:"8,optional,string" json:"base_url,omitempty"`
+	Category     *string `thrift:"category,9,optional" frugal:"9,optional,string" json:"category,omitempty"`
+	Tags         *string `thrift:"tags,10,optional" frugal:"10,optional,string" json:"tags,omitempty"`
+}
+
+func NewPublishMarketBotReq() *PublishMarketBotReq {
+	return &PublishMarketBotReq{}
+}
+
+func (p *PublishMarketBotReq) InitDefault() {
+}
+
+func (p *PublishMarketBotReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *PublishMarketBotReq) GetPublisherId() (v int64) {
+	return p.PublisherId
+}
+
+func (p *PublishMarketBotReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *PublishMarketBotReq) GetSystemPrompt() (v string) {
+	return p.SystemPrompt
+}
+
+func (p *PublishMarketBotReq) GetDescription() (v string) {
+	return p.Description
+}
+
+var PublishMarketBotReq_AvatarUrl_DEFAULT string
+
+func (p *PublishMarketBotReq) GetAvatarUrl() (v string) {
+	if !p.IsSetAvatarUrl() {
+		return PublishMarketBotReq_AvatarUrl_DEFAULT
+	}
+	return *p.AvatarUrl
+}
+
+var PublishMarketBotReq_Model_DEFAULT string
+
+func (p *PublishMarketBotReq) GetModel() (v string) {
+	if !p.IsSetModel() {
+		return PublishMarketBotReq_Model_DEFAULT
+	}
+	return *p.Model
+}
+
+var PublishMarketBotReq_BaseUrl_DEFAULT string
+
+func (p *PublishMarketBotReq) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return PublishMarketBotReq_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
+
+var PublishMarketBotReq_Category_DEFAULT string
+
+func (p *PublishMarketBotReq) GetCategory() (v string) {
+	if !p.IsSetCategory() {
+		return PublishMarketBotReq_Category_DEFAULT
+	}
+	return *p.Category
+}
+
+var PublishMarketBotReq_Tags_DEFAULT string
+
+func (p *PublishMarketBotReq) GetTags() (v string) {
+	if !p.IsSetTags() {
+		return PublishMarketBotReq_Tags_DEFAULT
+	}
+	return *p.Tags
+}
+func (p *PublishMarketBotReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *PublishMarketBotReq) SetPublisherId(val int64) {
+	p.PublisherId = val
+}
+func (p *PublishMarketBotReq) SetName(val string) {
+	p.Name = val
+}
+func (p *PublishMarketBotReq) SetSystemPrompt(val string) {
+	p.SystemPrompt = val
+}
+func (p *PublishMarketBotReq) SetDescription(val string) {
+	p.Description = val
+}
+func (p *PublishMarketBotReq) SetAvatarUrl(val *string) {
+	p.AvatarUrl = val
+}
+func (p *PublishMarketBotReq) SetModel(val *string) {
+	p.Model = val
+}
+func (p *PublishMarketBotReq) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+func (p *PublishMarketBotReq) SetCategory(val *string) {
+	p.Category = val
+}
+func (p *PublishMarketBotReq) SetTags(val *string) {
+	p.Tags = val
+}
+
+func (p *PublishMarketBotReq) IsSetAvatarUrl() bool {
+	return p.AvatarUrl != nil
+}
+
+func (p *PublishMarketBotReq) IsSetModel() bool {
+	return p.Model != nil
+}
+
+func (p *PublishMarketBotReq) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
+func (p *PublishMarketBotReq) IsSetCategory() bool {
+	return p.Category != nil
+}
+
+func (p *PublishMarketBotReq) IsSetTags() bool {
+	return p.Tags != nil
+}
+
+func (p *PublishMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PublishMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_PublishMarketBotReq = map[int16]string{
+	1:  "tenant_id",
+	2:  "publisher_id",
+	3:  "name",
+	4:  "system_prompt",
+	5:  "description",
+	6:  "avatar_url",
+	7:  "model",
+	8:  "base_url",
+	9:  "category",
+	10: "tags",
+}
+
+type PublishMarketBotRes struct {
+	Success     bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	MarketBotId int64 `thrift:"market_bot_id,2" frugal:"2,default,i64" json:"market_bot_id"`
+	Status      int16 `thrift:"status,3" frugal:"3,default,i16" json:"status"`
+}
+
+func NewPublishMarketBotRes() *PublishMarketBotRes {
+	return &PublishMarketBotRes{}
+}
+
+func (p *PublishMarketBotRes) InitDefault() {
+}
+
+func (p *PublishMarketBotRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *PublishMarketBotRes) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *PublishMarketBotRes) GetStatus() (v int16) {
+	return p.Status
+}
+func (p *PublishMarketBotRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *PublishMarketBotRes) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *PublishMarketBotRes) SetStatus(val int16) {
+	p.Status = val
+}
+
+func (p *PublishMarketBotRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PublishMarketBotRes(%+v)", *p)
+}
+
+var fieldIDToName_PublishMarketBotRes = map[int16]string{
+	1: "success",
+	2: "market_bot_id",
+	3: "status",
+}
+
+type UpdateMarketBotReq struct {
+	TenantId     int64   `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	MarketBotId  int64   `thrift:"market_bot_id,2" frugal:"2,default,i64" json:"market_bot_id"`
+	OperatorId   int64   `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+	Name         *string `thrift:"name,4,optional" frugal:"4,optional,string" json:"name,omitempty"`
+	Description  *string `thrift:"description,5,optional" frugal:"5,optional,string" json:"description,omitempty"`
+	AvatarUrl    *string `thrift:"avatar_url,6,optional" frugal:"6,optional,string" json:"avatar_url,omitempty"`
+	SystemPrompt *string `thrift:"system_prompt,7,optional" frugal:"7,optional,string" json:"system_prompt,omitempty"`
+	Model        *string `thrift:"model,8,optional" frugal:"8,optional,string" json:"model,omitempty"`
+	BaseUrl      *string `thrift:"base_url,9,optional" frugal:"9,optional,string" json:"base_url,omitempty"`
+	Category     *string `thrift:"category,10,optional" frugal:"10,optional,string" json:"category,omitempty"`
+	Tags         *string `thrift:"tags,11,optional" frugal:"11,optional,string" json:"tags,omitempty"`
+}
+
+func NewUpdateMarketBotReq() *UpdateMarketBotReq {
+	return &UpdateMarketBotReq{}
+}
+
+func (p *UpdateMarketBotReq) InitDefault() {
+}
+
+func (p *UpdateMarketBotReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *UpdateMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *UpdateMarketBotReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+var UpdateMarketBotReq_Name_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetName() (v string) {
+	if !p.IsSetName() {
+		return UpdateMarketBotReq_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var UpdateMarketBotReq_Description_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetDescription() (v string) {
+	if !p.IsSetDescription() {
+		return UpdateMarketBotReq_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var UpdateMarketBotReq_AvatarUrl_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetAvatarUrl() (v string) {
+	if !p.IsSetAvatarUrl() {
+		return UpdateMarketBotReq_AvatarUrl_DEFAULT
+	}
+	return *p.AvatarUrl
+}
+
+var UpdateMarketBotReq_SystemPrompt_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetSystemPrompt() (v string) {
+	if !p.IsSetSystemPrompt() {
+		return UpdateMarketBotReq_SystemPrompt_DEFAULT
+	}
+	return *p.SystemPrompt
+}
+
+var UpdateMarketBotReq_Model_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetModel() (v string) {
+	if !p.IsSetModel() {
+		return UpdateMarketBotReq_Model_DEFAULT
+	}
+	return *p.Model
+}
+
+var UpdateMarketBotReq_BaseUrl_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return UpdateMarketBotReq_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
+
+var UpdateMarketBotReq_Category_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetCategory() (v string) {
+	if !p.IsSetCategory() {
+		return UpdateMarketBotReq_Category_DEFAULT
+	}
+	return *p.Category
+}
+
+var UpdateMarketBotReq_Tags_DEFAULT string
+
+func (p *UpdateMarketBotReq) GetTags() (v string) {
+	if !p.IsSetTags() {
+		return UpdateMarketBotReq_Tags_DEFAULT
+	}
+	return *p.Tags
+}
+func (p *UpdateMarketBotReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *UpdateMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *UpdateMarketBotReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *UpdateMarketBotReq) SetName(val *string) {
+	p.Name = val
+}
+func (p *UpdateMarketBotReq) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *UpdateMarketBotReq) SetAvatarUrl(val *string) {
+	p.AvatarUrl = val
+}
+func (p *UpdateMarketBotReq) SetSystemPrompt(val *string) {
+	p.SystemPrompt = val
+}
+func (p *UpdateMarketBotReq) SetModel(val *string) {
+	p.Model = val
+}
+func (p *UpdateMarketBotReq) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+func (p *UpdateMarketBotReq) SetCategory(val *string) {
+	p.Category = val
+}
+func (p *UpdateMarketBotReq) SetTags(val *string) {
+	p.Tags = val
+}
+
+func (p *UpdateMarketBotReq) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetAvatarUrl() bool {
+	return p.AvatarUrl != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetSystemPrompt() bool {
+	return p.SystemPrompt != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetModel() bool {
+	return p.Model != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetCategory() bool {
+	return p.Category != nil
+}
+
+func (p *UpdateMarketBotReq) IsSetTags() bool {
+	return p.Tags != nil
+}
+
+func (p *UpdateMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_UpdateMarketBotReq = map[int16]string{
+	1:  "tenant_id",
+	2:  "market_bot_id",
+	3:  "operator_id",
+	4:  "name",
+	5:  "description",
+	6:  "avatar_url",
+	7:  "system_prompt",
+	8:  "model",
+	9:  "base_url",
+	10: "category",
+	11: "tags",
+}
+
+type GetMarketBotReq struct {
+	MarketBotId int64  `thrift:"market_bot_id,1" frugal:"1,default,i64" json:"market_bot_id"`
+	ViewerId    *int64 `thrift:"viewer_id,2,optional" frugal:"2,optional,i64" json:"viewer_id,omitempty"`
+	TenantId    *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
+}
+
+func NewGetMarketBotReq() *GetMarketBotReq {
+	return &GetMarketBotReq{}
+}
+
+func (p *GetMarketBotReq) InitDefault() {
+}
+
+func (p *GetMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+var GetMarketBotReq_ViewerId_DEFAULT int64
+
+func (p *GetMarketBotReq) GetViewerId() (v int64) {
+	if !p.IsSetViewerId() {
+		return GetMarketBotReq_ViewerId_DEFAULT
+	}
+	return *p.ViewerId
+}
+
+var GetMarketBotReq_TenantId_DEFAULT int64
+
+func (p *GetMarketBotReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetMarketBotReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
+func (p *GetMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *GetMarketBotReq) SetViewerId(val *int64) {
+	p.ViewerId = val
+}
+func (p *GetMarketBotReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetMarketBotReq) IsSetViewerId() bool {
+	return p.ViewerId != nil
+}
+
+func (p *GetMarketBotReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
+
+func (p *GetMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_GetMarketBotReq = map[int16]string{
+	1: "market_bot_id",
+	2: "viewer_id",
+	3: "tenant_id",
+}
+
+type GetMarketBotRes struct {
+	Success bool           `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Bot     *MarketBotInfo `thrift:"bot,2,optional" frugal:"2,optional,MarketBotInfo" json:"bot,omitempty"`
+}
+
+func NewGetMarketBotRes() *GetMarketBotRes {
+	return &GetMarketBotRes{}
+}
+
+func (p *GetMarketBotRes) InitDefault() {
+}
+
+func (p *GetMarketBotRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GetMarketBotRes_Bot_DEFAULT *MarketBotInfo
+
+func (p *GetMarketBotRes) GetBot() (v *MarketBotInfo) {
+	if !p.IsSetBot() {
+		return GetMarketBotRes_Bot_DEFAULT
+	}
+	return p.Bot
+}
+func (p *GetMarketBotRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetMarketBotRes) SetBot(val *MarketBotInfo) {
+	p.Bot = val
+}
+
+func (p *GetMarketBotRes) IsSetBot() bool {
+	return p.Bot != nil
+}
+
+func (p *GetMarketBotRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetMarketBotRes(%+v)", *p)
+}
+
+var fieldIDToName_GetMarketBotRes = map[int16]string{
+	1: "success",
+	2: "bot",
+}
+
+type ListMarketBotsReq struct {
+	Keyword  *string `thrift:"keyword,1,optional" frugal:"1,optional,string" json:"keyword,omitempty"`
+	Category *string `thrift:"category,2,optional" frugal:"2,optional,string" json:"category,omitempty"`
+	Page     *int32  `thrift:"page,3,optional" frugal:"3,optional,i32" json:"page,omitempty"`
+	PageSize *int32  `thrift:"page_size,4,optional" frugal:"4,optional,i32" json:"page_size,omitempty"`
+}
+
+func NewListMarketBotsReq() *ListMarketBotsReq {
+	return &ListMarketBotsReq{}
+}
+
+func (p *ListMarketBotsReq) InitDefault() {
+}
+
+var ListMarketBotsReq_Keyword_DEFAULT string
+
+func (p *ListMarketBotsReq) GetKeyword() (v string) {
+	if !p.IsSetKeyword() {
+		return ListMarketBotsReq_Keyword_DEFAULT
+	}
+	return *p.Keyword
+}
+
+var ListMarketBotsReq_Category_DEFAULT string
+
+func (p *ListMarketBotsReq) GetCategory() (v string) {
+	if !p.IsSetCategory() {
+		return ListMarketBotsReq_Category_DEFAULT
+	}
+	return *p.Category
+}
+
+var ListMarketBotsReq_Page_DEFAULT int32
+
+func (p *ListMarketBotsReq) GetPage() (v int32) {
+	if !p.IsSetPage() {
+		return ListMarketBotsReq_Page_DEFAULT
+	}
+	return *p.Page
+}
+
+var ListMarketBotsReq_PageSize_DEFAULT int32
+
+func (p *ListMarketBotsReq) GetPageSize() (v int32) {
+	if !p.IsSetPageSize() {
+		return ListMarketBotsReq_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+func (p *ListMarketBotsReq) SetKeyword(val *string) {
+	p.Keyword = val
+}
+func (p *ListMarketBotsReq) SetCategory(val *string) {
+	p.Category = val
+}
+func (p *ListMarketBotsReq) SetPage(val *int32) {
+	p.Page = val
+}
+func (p *ListMarketBotsReq) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+
+func (p *ListMarketBotsReq) IsSetKeyword() bool {
+	return p.Keyword != nil
+}
+
+func (p *ListMarketBotsReq) IsSetCategory() bool {
+	return p.Category != nil
+}
+
+func (p *ListMarketBotsReq) IsSetPage() bool {
+	return p.Page != nil
+}
+
+func (p *ListMarketBotsReq) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListMarketBotsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMarketBotsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListMarketBotsReq = map[int16]string{
+	1: "keyword",
+	2: "category",
+	3: "page",
+	4: "page_size",
+}
+
+type ListMarketBotsRes struct {
+	Success bool             `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Bots    []*MarketBotInfo `thrift:"bots,2" frugal:"2,default,list<MarketBotInfo>" json:"bots"`
+	Total   int32            `thrift:"total,3" frugal:"3,default,i32" json:"total"`
+}
+
+func NewListMarketBotsRes() *ListMarketBotsRes {
+	return &ListMarketBotsRes{}
+}
+
+func (p *ListMarketBotsRes) InitDefault() {
+}
+
+func (p *ListMarketBotsRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListMarketBotsRes) GetBots() (v []*MarketBotInfo) {
+	return p.Bots
+}
+
+func (p *ListMarketBotsRes) GetTotal() (v int32) {
+	return p.Total
+}
+func (p *ListMarketBotsRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListMarketBotsRes) SetBots(val []*MarketBotInfo) {
+	p.Bots = val
+}
+func (p *ListMarketBotsRes) SetTotal(val int32) {
+	p.Total = val
+}
+
+func (p *ListMarketBotsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMarketBotsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListMarketBotsRes = map[int16]string{
+	1: "success",
+	2: "bots",
+	3: "total",
+}
+
+type ListMyMarketBotsReq struct {
+	TenantId    int64  `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	PublisherId int64  `thrift:"publisher_id,2" frugal:"2,default,i64" json:"publisher_id"`
+	Status      *int16 `thrift:"status,3,optional" frugal:"3,optional,i16" json:"status,omitempty"`
+	Page        *int32 `thrift:"page,4,optional" frugal:"4,optional,i32" json:"page,omitempty"`
+	PageSize    *int32 `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty"`
+}
+
+func NewListMyMarketBotsReq() *ListMyMarketBotsReq {
+	return &ListMyMarketBotsReq{}
+}
+
+func (p *ListMyMarketBotsReq) InitDefault() {
+}
+
+func (p *ListMyMarketBotsReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *ListMyMarketBotsReq) GetPublisherId() (v int64) {
+	return p.PublisherId
+}
+
+var ListMyMarketBotsReq_Status_DEFAULT int16
+
+func (p *ListMyMarketBotsReq) GetStatus() (v int16) {
+	if !p.IsSetStatus() {
+		return ListMyMarketBotsReq_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var ListMyMarketBotsReq_Page_DEFAULT int32
+
+func (p *ListMyMarketBotsReq) GetPage() (v int32) {
+	if !p.IsSetPage() {
+		return ListMyMarketBotsReq_Page_DEFAULT
+	}
+	return *p.Page
+}
+
+var ListMyMarketBotsReq_PageSize_DEFAULT int32
+
+func (p *ListMyMarketBotsReq) GetPageSize() (v int32) {
+	if !p.IsSetPageSize() {
+		return ListMyMarketBotsReq_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+func (p *ListMyMarketBotsReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *ListMyMarketBotsReq) SetPublisherId(val int64) {
+	p.PublisherId = val
+}
+func (p *ListMyMarketBotsReq) SetStatus(val *int16) {
+	p.Status = val
+}
+func (p *ListMyMarketBotsReq) SetPage(val *int32) {
+	p.Page = val
+}
+func (p *ListMyMarketBotsReq) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+
+func (p *ListMyMarketBotsReq) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *ListMyMarketBotsReq) IsSetPage() bool {
+	return p.Page != nil
+}
+
+func (p *ListMyMarketBotsReq) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListMyMarketBotsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMyMarketBotsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListMyMarketBotsReq = map[int16]string{
+	1: "tenant_id",
+	2: "publisher_id",
+	3: "status",
+	4: "page",
+	5: "page_size",
+}
+
+type ListMyMarketBotsRes struct {
+	Success bool             `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Bots    []*MarketBotInfo `thrift:"bots,2" frugal:"2,default,list<MarketBotInfo>" json:"bots"`
+	Total   int32            `thrift:"total,3" frugal:"3,default,i32" json:"total"`
+}
+
+func NewListMyMarketBotsRes() *ListMyMarketBotsRes {
+	return &ListMyMarketBotsRes{}
+}
+
+func (p *ListMyMarketBotsRes) InitDefault() {
+}
+
+func (p *ListMyMarketBotsRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListMyMarketBotsRes) GetBots() (v []*MarketBotInfo) {
+	return p.Bots
+}
+
+func (p *ListMyMarketBotsRes) GetTotal() (v int32) {
+	return p.Total
+}
+func (p *ListMyMarketBotsRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListMyMarketBotsRes) SetBots(val []*MarketBotInfo) {
+	p.Bots = val
+}
+func (p *ListMyMarketBotsRes) SetTotal(val int32) {
+	p.Total = val
+}
+
+func (p *ListMyMarketBotsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMyMarketBotsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListMyMarketBotsRes = map[int16]string{
+	1: "success",
+	2: "bots",
+	3: "total",
+}
+
+type InstallMarketBotReq struct {
+	TenantId    int64   `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	UserId      int64   `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	MarketBotId int64   `thrift:"market_bot_id,3" frugal:"3,default,i64" json:"market_bot_id"`
+	Name        string  `thrift:"name,4" frugal:"4,default,string" json:"name"`
+	ApiKey      string  `thrift:"api_key,5" frugal:"5,default,string" json:"api_key"`
+	Model       string  `thrift:"model,6" frugal:"6,default,string" json:"model"`
+	BaseUrl     *string `thrift:"base_url,7,optional" frugal:"7,optional,string" json:"base_url,omitempty"`
+}
+
+func NewInstallMarketBotReq() *InstallMarketBotReq {
+	return &InstallMarketBotReq{}
+}
+
+func (p *InstallMarketBotReq) InitDefault() {
+}
+
+func (p *InstallMarketBotReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *InstallMarketBotReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *InstallMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *InstallMarketBotReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *InstallMarketBotReq) GetApiKey() (v string) {
+	return p.ApiKey
+}
+
+func (p *InstallMarketBotReq) GetModel() (v string) {
+	return p.Model
+}
+
+var InstallMarketBotReq_BaseUrl_DEFAULT string
+
+func (p *InstallMarketBotReq) GetBaseUrl() (v string) {
+	if !p.IsSetBaseUrl() {
+		return InstallMarketBotReq_BaseUrl_DEFAULT
+	}
+	return *p.BaseUrl
+}
+func (p *InstallMarketBotReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *InstallMarketBotReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *InstallMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *InstallMarketBotReq) SetName(val string) {
+	p.Name = val
+}
+func (p *InstallMarketBotReq) SetApiKey(val string) {
+	p.ApiKey = val
+}
+func (p *InstallMarketBotReq) SetModel(val string) {
+	p.Model = val
+}
+func (p *InstallMarketBotReq) SetBaseUrl(val *string) {
+	p.BaseUrl = val
+}
+
+func (p *InstallMarketBotReq) IsSetBaseUrl() bool {
+	return p.BaseUrl != nil
+}
+
+func (p *InstallMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("InstallMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_InstallMarketBotReq = map[int16]string{
+	1: "tenant_id",
+	2: "user_id",
+	3: "market_bot_id",
+	4: "name",
+	5: "api_key",
+	6: "model",
+	7: "base_url",
+}
+
+type InstallMarketBotRes struct {
+	Success bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	BotId   int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	Version int32 `thrift:"version,3" frugal:"3,default,i32" json:"version"`
+}
+
+func NewInstallMarketBotRes() *InstallMarketBotRes {
+	return &InstallMarketBotRes{}
+}
+
+func (p *InstallMarketBotRes) InitDefault() {
+}
+
+func (p *InstallMarketBotRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *InstallMarketBotRes) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *InstallMarketBotRes) GetVersion() (v int32) {
+	return p.Version
+}
+func (p *InstallMarketBotRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *InstallMarketBotRes) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *InstallMarketBotRes) SetVersion(val int32) {
+	p.Version = val
+}
+
+func (p *InstallMarketBotRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("InstallMarketBotRes(%+v)", *p)
+}
+
+var fieldIDToName_InstallMarketBotRes = map[int16]string{
+	1: "success",
+	2: "bot_id",
+	3: "version",
+}
+
+type RateMarketBotReq struct {
+	TenantId    int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	UserId      int64 `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	MarketBotId int64 `thrift:"market_bot_id,3" frugal:"3,default,i64" json:"market_bot_id"`
+	Score       int32 `thrift:"score,4" frugal:"4,default,i32" json:"score"`
+}
+
+func NewRateMarketBotReq() *RateMarketBotReq {
+	return &RateMarketBotReq{}
+}
+
+func (p *RateMarketBotReq) InitDefault() {
+}
+
+func (p *RateMarketBotReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *RateMarketBotReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *RateMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *RateMarketBotReq) GetScore() (v int32) {
+	return p.Score
+}
+func (p *RateMarketBotReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *RateMarketBotReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *RateMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *RateMarketBotReq) SetScore(val int32) {
+	p.Score = val
+}
+
+func (p *RateMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RateMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_RateMarketBotReq = map[int16]string{
+	1: "tenant_id",
+	2: "user_id",
+	3: "market_bot_id",
+	4: "score",
+}
+
+type OfflineMarketBotReq struct {
+	TenantId    int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	MarketBotId int64 `thrift:"market_bot_id,2" frugal:"2,default,i64" json:"market_bot_id"`
+	OperatorId  int64 `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+}
+
+func NewOfflineMarketBotReq() *OfflineMarketBotReq {
+	return &OfflineMarketBotReq{}
+}
+
+func (p *OfflineMarketBotReq) InitDefault() {
+}
+
+func (p *OfflineMarketBotReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *OfflineMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *OfflineMarketBotReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+func (p *OfflineMarketBotReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *OfflineMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *OfflineMarketBotReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+
+func (p *OfflineMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("OfflineMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_OfflineMarketBotReq = map[int16]string{
+	1: "tenant_id",
+	2: "market_bot_id",
+	3: "operator_id",
+}
+
+type ReviewMarketBotReq struct {
+	AdminId     int64   `thrift:"admin_id,1" frugal:"1,default,i64" json:"admin_id"`
+	MarketBotId int64   `thrift:"market_bot_id,2" frugal:"2,default,i64" json:"market_bot_id"`
+	Approve     bool    `thrift:"approve,3" frugal:"3,default,bool" json:"approve"`
+	Note        *string `thrift:"note,4,optional" frugal:"4,optional,string" json:"note,omitempty"`
+}
+
+func NewReviewMarketBotReq() *ReviewMarketBotReq {
+	return &ReviewMarketBotReq{}
+}
+
+func (p *ReviewMarketBotReq) InitDefault() {
+}
+
+func (p *ReviewMarketBotReq) GetAdminId() (v int64) {
+	return p.AdminId
+}
+
+func (p *ReviewMarketBotReq) GetMarketBotId() (v int64) {
+	return p.MarketBotId
+}
+
+func (p *ReviewMarketBotReq) GetApprove() (v bool) {
+	return p.Approve
+}
+
+var ReviewMarketBotReq_Note_DEFAULT string
+
+func (p *ReviewMarketBotReq) GetNote() (v string) {
+	if !p.IsSetNote() {
+		return ReviewMarketBotReq_Note_DEFAULT
+	}
+	return *p.Note
+}
+func (p *ReviewMarketBotReq) SetAdminId(val int64) {
+	p.AdminId = val
+}
+func (p *ReviewMarketBotReq) SetMarketBotId(val int64) {
+	p.MarketBotId = val
+}
+func (p *ReviewMarketBotReq) SetApprove(val bool) {
+	p.Approve = val
+}
+func (p *ReviewMarketBotReq) SetNote(val *string) {
+	p.Note = val
+}
+
+func (p *ReviewMarketBotReq) IsSetNote() bool {
+	return p.Note != nil
+}
+
+func (p *ReviewMarketBotReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ReviewMarketBotReq(%+v)", *p)
+}
+
+var fieldIDToName_ReviewMarketBotReq = map[int16]string{
+	1: "admin_id",
+	2: "market_bot_id",
+	3: "approve",
+	4: "note",
+}
+
+type ListMarketReviewsReq struct {
+	Status   *int16 `thrift:"status,1,optional" frugal:"1,optional,i16" json:"status,omitempty"`
+	Page     *int32 `thrift:"page,2,optional" frugal:"2,optional,i32" json:"page,omitempty"`
+	PageSize *int32 `thrift:"page_size,3,optional" frugal:"3,optional,i32" json:"page_size,omitempty"`
+}
+
+func NewListMarketReviewsReq() *ListMarketReviewsReq {
+	return &ListMarketReviewsReq{}
+}
+
+func (p *ListMarketReviewsReq) InitDefault() {
+}
+
+var ListMarketReviewsReq_Status_DEFAULT int16
+
+func (p *ListMarketReviewsReq) GetStatus() (v int16) {
+	if !p.IsSetStatus() {
+		return ListMarketReviewsReq_Status_DEFAULT
+	}
+	return *p.Status
+}
+
+var ListMarketReviewsReq_Page_DEFAULT int32
+
+func (p *ListMarketReviewsReq) GetPage() (v int32) {
+	if !p.IsSetPage() {
+		return ListMarketReviewsReq_Page_DEFAULT
+	}
+	return *p.Page
+}
+
+var ListMarketReviewsReq_PageSize_DEFAULT int32
+
+func (p *ListMarketReviewsReq) GetPageSize() (v int32) {
+	if !p.IsSetPageSize() {
+		return ListMarketReviewsReq_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+func (p *ListMarketReviewsReq) SetStatus(val *int16) {
+	p.Status = val
+}
+func (p *ListMarketReviewsReq) SetPage(val *int32) {
+	p.Page = val
+}
+func (p *ListMarketReviewsReq) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+
+func (p *ListMarketReviewsReq) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *ListMarketReviewsReq) IsSetPage() bool {
+	return p.Page != nil
+}
+
+func (p *ListMarketReviewsReq) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListMarketReviewsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMarketReviewsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListMarketReviewsReq = map[int16]string{
+	1: "status",
+	2: "page",
+	3: "page_size",
+}
+
+type ListMarketReviewsRes struct {
+	Success bool             `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Bots    []*MarketBotInfo `thrift:"bots,2" frugal:"2,default,list<MarketBotInfo>" json:"bots"`
+	Total   int32            `thrift:"total,3" frugal:"3,default,i32" json:"total"`
+}
+
+func NewListMarketReviewsRes() *ListMarketReviewsRes {
+	return &ListMarketReviewsRes{}
+}
+
+func (p *ListMarketReviewsRes) InitDefault() {
+}
+
+func (p *ListMarketReviewsRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListMarketReviewsRes) GetBots() (v []*MarketBotInfo) {
+	return p.Bots
+}
+
+func (p *ListMarketReviewsRes) GetTotal() (v int32) {
+	return p.Total
+}
+func (p *ListMarketReviewsRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListMarketReviewsRes) SetBots(val []*MarketBotInfo) {
+	p.Bots = val
+}
+func (p *ListMarketReviewsRes) SetTotal(val int32) {
+	p.Total = val
+}
+
+func (p *ListMarketReviewsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListMarketReviewsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListMarketReviewsRes = map[int16]string{
+	1: "success",
+	2: "bots",
+	3: "total",
+}
+
+type AgentGraphInfo struct {
+	GraphId   int64  `thrift:"graph_id,1" frugal:"1,default,i64" json:"graph_id"`
+	BotId     int64  `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	Name      string `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	GraphJson string `thrift:"graph_json,4" frugal:"4,default,string" json:"graph_json"`
+	Status    int16  `thrift:"status,5" frugal:"5,default,i16" json:"status"`
+	Version   int32  `thrift:"version,6" frugal:"6,default,i32" json:"version"`
+	CreatedAt int64  `thrift:"created_at,7" frugal:"7,default,i64" json:"created_at"`
+	UpdatedAt int64  `thrift:"updated_at,8" frugal:"8,default,i64" json:"updated_at"`
+}
+
+func NewAgentGraphInfo() *AgentGraphInfo {
+	return &AgentGraphInfo{}
+}
+
+func (p *AgentGraphInfo) InitDefault() {
+}
+
+func (p *AgentGraphInfo) GetGraphId() (v int64) {
+	return p.GraphId
+}
+
+func (p *AgentGraphInfo) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *AgentGraphInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *AgentGraphInfo) GetGraphJson() (v string) {
+	return p.GraphJson
+}
+
+func (p *AgentGraphInfo) GetStatus() (v int16) {
+	return p.Status
+}
+
+func (p *AgentGraphInfo) GetVersion() (v int32) {
+	return p.Version
+}
+
+func (p *AgentGraphInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+
+func (p *AgentGraphInfo) GetUpdatedAt() (v int64) {
+	return p.UpdatedAt
+}
+func (p *AgentGraphInfo) SetGraphId(val int64) {
+	p.GraphId = val
+}
+func (p *AgentGraphInfo) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *AgentGraphInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *AgentGraphInfo) SetGraphJson(val string) {
+	p.GraphJson = val
+}
+func (p *AgentGraphInfo) SetStatus(val int16) {
+	p.Status = val
+}
+func (p *AgentGraphInfo) SetVersion(val int32) {
+	p.Version = val
+}
+func (p *AgentGraphInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+func (p *AgentGraphInfo) SetUpdatedAt(val int64) {
+	p.UpdatedAt = val
+}
+
+func (p *AgentGraphInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AgentGraphInfo(%+v)", *p)
+}
+
+var fieldIDToName_AgentGraphInfo = map[int16]string{
+	1: "graph_id",
+	2: "bot_id",
+	3: "name",
+	4: "graph_json",
+	5: "status",
+	6: "version",
+	7: "created_at",
+	8: "updated_at",
+}
+
+type AgentGraphHistoryInfo struct {
+	Id         int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	GraphId    int64  `thrift:"graph_id,2" frugal:"2,default,i64" json:"graph_id"`
+	Version    int32  `thrift:"version,3" frugal:"3,default,i32" json:"version"`
+	GraphJson  string `thrift:"graph_json,4" frugal:"4,default,string" json:"graph_json"`
+	OperatorId int64  `thrift:"operator_id,5" frugal:"5,default,i64" json:"operator_id"`
+	CreatedAt  int64  `thrift:"created_at,6" frugal:"6,default,i64" json:"created_at"`
+}
+
+func NewAgentGraphHistoryInfo() *AgentGraphHistoryInfo {
+	return &AgentGraphHistoryInfo{}
+}
+
+func (p *AgentGraphHistoryInfo) InitDefault() {
+}
+
+func (p *AgentGraphHistoryInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *AgentGraphHistoryInfo) GetGraphId() (v int64) {
+	return p.GraphId
+}
+
+func (p *AgentGraphHistoryInfo) GetVersion() (v int32) {
+	return p.Version
+}
+
+func (p *AgentGraphHistoryInfo) GetGraphJson() (v string) {
+	return p.GraphJson
+}
+
+func (p *AgentGraphHistoryInfo) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *AgentGraphHistoryInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+func (p *AgentGraphHistoryInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *AgentGraphHistoryInfo) SetGraphId(val int64) {
+	p.GraphId = val
+}
+func (p *AgentGraphHistoryInfo) SetVersion(val int32) {
+	p.Version = val
+}
+func (p *AgentGraphHistoryInfo) SetGraphJson(val string) {
+	p.GraphJson = val
+}
+func (p *AgentGraphHistoryInfo) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *AgentGraphHistoryInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+
+func (p *AgentGraphHistoryInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AgentGraphHistoryInfo(%+v)", *p)
+}
+
+var fieldIDToName_AgentGraphHistoryInfo = map[int16]string{
+	1: "id",
+	2: "graph_id",
+	3: "version",
+	4: "graph_json",
+	5: "operator_id",
+	6: "created_at",
+}
+
+type SaveAgentGraphReq struct {
+	TenantId   int64  `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	BotId      int64  `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	OperatorId int64  `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+	GraphId    *int64 `thrift:"graph_id,4,optional" frugal:"4,optional,i64" json:"graph_id,omitempty"`
+	Name       string `thrift:"name,5" frugal:"5,default,string" json:"name"`
+	GraphJson  string `thrift:"graph_json,6" frugal:"6,default,string" json:"graph_json"`
+}
+
+func NewSaveAgentGraphReq() *SaveAgentGraphReq {
+	return &SaveAgentGraphReq{}
+}
+
+func (p *SaveAgentGraphReq) InitDefault() {
+}
+
+func (p *SaveAgentGraphReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *SaveAgentGraphReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *SaveAgentGraphReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+var SaveAgentGraphReq_GraphId_DEFAULT int64
+
+func (p *SaveAgentGraphReq) GetGraphId() (v int64) {
+	if !p.IsSetGraphId() {
+		return SaveAgentGraphReq_GraphId_DEFAULT
+	}
+	return *p.GraphId
+}
+
+func (p *SaveAgentGraphReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *SaveAgentGraphReq) GetGraphJson() (v string) {
+	return p.GraphJson
+}
+func (p *SaveAgentGraphReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *SaveAgentGraphReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *SaveAgentGraphReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *SaveAgentGraphReq) SetGraphId(val *int64) {
+	p.GraphId = val
+}
+func (p *SaveAgentGraphReq) SetName(val string) {
+	p.Name = val
+}
+func (p *SaveAgentGraphReq) SetGraphJson(val string) {
+	p.GraphJson = val
+}
+
+func (p *SaveAgentGraphReq) IsSetGraphId() bool {
+	return p.GraphId != nil
+}
+
+func (p *SaveAgentGraphReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SaveAgentGraphReq(%+v)", *p)
+}
+
+var fieldIDToName_SaveAgentGraphReq = map[int16]string{
+	1: "tenant_id",
+	2: "bot_id",
+	3: "operator_id",
+	4: "graph_id",
+	5: "name",
+	6: "graph_json",
+}
+
+type SaveAgentGraphRes struct {
+	Success bool     `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	GraphId int64    `thrift:"graph_id,2" frugal:"2,default,i64" json:"graph_id"`
+	Version int32    `thrift:"version,3" frugal:"3,default,i32" json:"version"`
+	Status  int16    `thrift:"status,4" frugal:"4,default,i16" json:"status"`
+	Errors  []string `thrift:"errors,5" frugal:"5,default,list<string>" json:"errors"`
+}
+
+func NewSaveAgentGraphRes() *SaveAgentGraphRes {
+	return &SaveAgentGraphRes{}
+}
+
+func (p *SaveAgentGraphRes) InitDefault() {
+}
+
+func (p *SaveAgentGraphRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *SaveAgentGraphRes) GetGraphId() (v int64) {
+	return p.GraphId
+}
+
+func (p *SaveAgentGraphRes) GetVersion() (v int32) {
+	return p.Version
+}
+
+func (p *SaveAgentGraphRes) GetStatus() (v int16) {
+	return p.Status
+}
+
+func (p *SaveAgentGraphRes) GetErrors() (v []string) {
+	return p.Errors
+}
+func (p *SaveAgentGraphRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *SaveAgentGraphRes) SetGraphId(val int64) {
+	p.GraphId = val
+}
+func (p *SaveAgentGraphRes) SetVersion(val int32) {
+	p.Version = val
+}
+func (p *SaveAgentGraphRes) SetStatus(val int16) {
+	p.Status = val
+}
+func (p *SaveAgentGraphRes) SetErrors(val []string) {
+	p.Errors = val
+}
+
+func (p *SaveAgentGraphRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SaveAgentGraphRes(%+v)", *p)
+}
+
+var fieldIDToName_SaveAgentGraphRes = map[int16]string{
+	1: "success",
+	2: "graph_id",
+	3: "version",
+	4: "status",
+	5: "errors",
+}
+
+type GetAgentGraphReq struct {
+	TenantId int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	BotId    int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+}
+
+func NewGetAgentGraphReq() *GetAgentGraphReq {
+	return &GetAgentGraphReq{}
+}
+
+func (p *GetAgentGraphReq) InitDefault() {
+}
+
+func (p *GetAgentGraphReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *GetAgentGraphReq) GetBotId() (v int64) {
+	return p.BotId
+}
+func (p *GetAgentGraphReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *GetAgentGraphReq) SetBotId(val int64) {
+	p.BotId = val
+}
+
+func (p *GetAgentGraphReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetAgentGraphReq(%+v)", *p)
+}
+
+var fieldIDToName_GetAgentGraphReq = map[int16]string{
+	1: "tenant_id",
+	2: "bot_id",
+}
+
+type GetAgentGraphRes struct {
+	Success bool            `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Graph   *AgentGraphInfo `thrift:"graph,2,optional" frugal:"2,optional,AgentGraphInfo" json:"graph,omitempty"`
+}
+
+func NewGetAgentGraphRes() *GetAgentGraphRes {
+	return &GetAgentGraphRes{}
+}
+
+func (p *GetAgentGraphRes) InitDefault() {
+}
+
+func (p *GetAgentGraphRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GetAgentGraphRes_Graph_DEFAULT *AgentGraphInfo
+
+func (p *GetAgentGraphRes) GetGraph() (v *AgentGraphInfo) {
+	if !p.IsSetGraph() {
+		return GetAgentGraphRes_Graph_DEFAULT
+	}
+	return p.Graph
+}
+func (p *GetAgentGraphRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetAgentGraphRes) SetGraph(val *AgentGraphInfo) {
+	p.Graph = val
+}
+
+func (p *GetAgentGraphRes) IsSetGraph() bool {
+	return p.Graph != nil
+}
+
+func (p *GetAgentGraphRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetAgentGraphRes(%+v)", *p)
+}
+
+var fieldIDToName_GetAgentGraphRes = map[int16]string{
+	1: "success",
+	2: "graph",
+}
+
+type ValidateAgentGraphReq struct {
+	BotId     int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	GraphJson string `thrift:"graph_json,2" frugal:"2,default,string" json:"graph_json"`
+}
+
+func NewValidateAgentGraphReq() *ValidateAgentGraphReq {
+	return &ValidateAgentGraphReq{}
+}
+
+func (p *ValidateAgentGraphReq) InitDefault() {
+}
+
+func (p *ValidateAgentGraphReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *ValidateAgentGraphReq) GetGraphJson() (v string) {
+	return p.GraphJson
+}
+func (p *ValidateAgentGraphReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *ValidateAgentGraphReq) SetGraphJson(val string) {
+	p.GraphJson = val
+}
+
+func (p *ValidateAgentGraphReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ValidateAgentGraphReq(%+v)", *p)
+}
+
+var fieldIDToName_ValidateAgentGraphReq = map[int16]string{
+	1: "bot_id",
+	2: "graph_json",
+}
+
+type ValidateAgentGraphRes struct {
+	Valid  bool     `thrift:"valid,1" frugal:"1,default,bool" json:"valid"`
+	Errors []string `thrift:"errors,2" frugal:"2,default,list<string>" json:"errors"`
+}
+
+func NewValidateAgentGraphRes() *ValidateAgentGraphRes {
+	return &ValidateAgentGraphRes{}
+}
+
+func (p *ValidateAgentGraphRes) InitDefault() {
+}
+
+func (p *ValidateAgentGraphRes) GetValid() (v bool) {
+	return p.Valid
+}
+
+func (p *ValidateAgentGraphRes) GetErrors() (v []string) {
+	return p.Errors
+}
+func (p *ValidateAgentGraphRes) SetValid(val bool) {
+	p.Valid = val
+}
+func (p *ValidateAgentGraphRes) SetErrors(val []string) {
+	p.Errors = val
+}
+
+func (p *ValidateAgentGraphRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ValidateAgentGraphRes(%+v)", *p)
+}
+
+var fieldIDToName_ValidateAgentGraphRes = map[int16]string{
+	1: "valid",
+	2: "errors",
+}
+
+type PublishAgentGraphReq struct {
+	TenantId   int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	BotId      int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	OperatorId int64 `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+}
+
+func NewPublishAgentGraphReq() *PublishAgentGraphReq {
+	return &PublishAgentGraphReq{}
+}
+
+func (p *PublishAgentGraphReq) InitDefault() {
+}
+
+func (p *PublishAgentGraphReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *PublishAgentGraphReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *PublishAgentGraphReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+func (p *PublishAgentGraphReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *PublishAgentGraphReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *PublishAgentGraphReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+
+func (p *PublishAgentGraphReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PublishAgentGraphReq(%+v)", *p)
+}
+
+var fieldIDToName_PublishAgentGraphReq = map[int16]string{
+	1: "tenant_id",
+	2: "bot_id",
+	3: "operator_id",
+}
+
+type ListAgentGraphHistoryReq struct {
+	TenantId int64  `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	BotId    int64  `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	Limit    *int32 `thrift:"limit,3,optional" frugal:"3,optional,i32" json:"limit,omitempty"`
+}
+
+func NewListAgentGraphHistoryReq() *ListAgentGraphHistoryReq {
+	return &ListAgentGraphHistoryReq{}
+}
+
+func (p *ListAgentGraphHistoryReq) InitDefault() {
+}
+
+func (p *ListAgentGraphHistoryReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *ListAgentGraphHistoryReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+var ListAgentGraphHistoryReq_Limit_DEFAULT int32
+
+func (p *ListAgentGraphHistoryReq) GetLimit() (v int32) {
+	if !p.IsSetLimit() {
+		return ListAgentGraphHistoryReq_Limit_DEFAULT
+	}
+	return *p.Limit
+}
+func (p *ListAgentGraphHistoryReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *ListAgentGraphHistoryReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *ListAgentGraphHistoryReq) SetLimit(val *int32) {
+	p.Limit = val
+}
+
+func (p *ListAgentGraphHistoryReq) IsSetLimit() bool {
+	return p.Limit != nil
+}
+
+func (p *ListAgentGraphHistoryReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListAgentGraphHistoryReq(%+v)", *p)
+}
+
+var fieldIDToName_ListAgentGraphHistoryReq = map[int16]string{
+	1: "tenant_id",
+	2: "bot_id",
+	3: "limit",
+}
+
+type ListAgentGraphHistoryRes struct {
+	Success bool                     `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Items   []*AgentGraphHistoryInfo `thrift:"items,2" frugal:"2,default,list<AgentGraphHistoryInfo>" json:"items"`
+}
+
+func NewListAgentGraphHistoryRes() *ListAgentGraphHistoryRes {
+	return &ListAgentGraphHistoryRes{}
+}
+
+func (p *ListAgentGraphHistoryRes) InitDefault() {
+}
+
+func (p *ListAgentGraphHistoryRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListAgentGraphHistoryRes) GetItems() (v []*AgentGraphHistoryInfo) {
+	return p.Items
+}
+func (p *ListAgentGraphHistoryRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListAgentGraphHistoryRes) SetItems(val []*AgentGraphHistoryInfo) {
+	p.Items = val
+}
+
+func (p *ListAgentGraphHistoryRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListAgentGraphHistoryRes(%+v)", *p)
+}
+
+var fieldIDToName_ListAgentGraphHistoryRes = map[int16]string{
+	1: "success",
+	2: "items",
+}
+
+type UserSkillInfo struct {
+	SkillId     int64  `thrift:"skill_id,1" frugal:"1,default,i64" json:"skill_id"`
+	OwnerId     int64  `thrift:"owner_id,2" frugal:"2,default,i64" json:"owner_id"`
+	Name        string `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	Description string `thrift:"description,4" frugal:"4,default,string" json:"description"`
+	Version     string `thrift:"version,5" frugal:"5,default,string" json:"version"`
+	Status      int16  `thrift:"status,6" frugal:"6,default,i16" json:"status"`
+	KbId        int64  `thrift:"kb_id,7" frugal:"7,default,i64" json:"kb_id"`
+	SizeBytes   int64  `thrift:"size_bytes,8" frugal:"8,default,i64" json:"size_bytes"`
+	FileCount   int32  `thrift:"file_count,9" frugal:"9,default,i32" json:"file_count"`
+	CreatedAt   int64  `thrift:"created_at,10" frugal:"10,default,i64" json:"created_at"`
+	UpdatedAt   int64  `thrift:"updated_at,11" frugal:"11,default,i64" json:"updated_at"`
+}
+
+func NewUserSkillInfo() *UserSkillInfo {
+	return &UserSkillInfo{}
+}
+
+func (p *UserSkillInfo) InitDefault() {
+}
+
+func (p *UserSkillInfo) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *UserSkillInfo) GetOwnerId() (v int64) {
+	return p.OwnerId
+}
+
+func (p *UserSkillInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *UserSkillInfo) GetDescription() (v string) {
+	return p.Description
+}
+
+func (p *UserSkillInfo) GetVersion() (v string) {
+	return p.Version
+}
+
+func (p *UserSkillInfo) GetStatus() (v int16) {
+	return p.Status
+}
+
+func (p *UserSkillInfo) GetKbId() (v int64) {
+	return p.KbId
+}
+
+func (p *UserSkillInfo) GetSizeBytes() (v int64) {
+	return p.SizeBytes
+}
+
+func (p *UserSkillInfo) GetFileCount() (v int32) {
+	return p.FileCount
+}
+
+func (p *UserSkillInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+
+func (p *UserSkillInfo) GetUpdatedAt() (v int64) {
+	return p.UpdatedAt
+}
+func (p *UserSkillInfo) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *UserSkillInfo) SetOwnerId(val int64) {
+	p.OwnerId = val
+}
+func (p *UserSkillInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *UserSkillInfo) SetDescription(val string) {
+	p.Description = val
+}
+func (p *UserSkillInfo) SetVersion(val string) {
+	p.Version = val
+}
+func (p *UserSkillInfo) SetStatus(val int16) {
+	p.Status = val
+}
+func (p *UserSkillInfo) SetKbId(val int64) {
+	p.KbId = val
+}
+func (p *UserSkillInfo) SetSizeBytes(val int64) {
+	p.SizeBytes = val
+}
+func (p *UserSkillInfo) SetFileCount(val int32) {
+	p.FileCount = val
+}
+func (p *UserSkillInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+func (p *UserSkillInfo) SetUpdatedAt(val int64) {
+	p.UpdatedAt = val
+}
+
+func (p *UserSkillInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserSkillInfo(%+v)", *p)
+}
+
+var fieldIDToName_UserSkillInfo = map[int16]string{
+	1:  "skill_id",
+	2:  "owner_id",
+	3:  "name",
+	4:  "description",
+	5:  "version",
+	6:  "status",
+	7:  "kb_id",
+	8:  "size_bytes",
+	9:  "file_count",
+	10: "created_at",
+	11: "updated_at",
+}
+
+type UserSkillFileInfo struct {
+	FileId    int64  `thrift:"file_id,1" frugal:"1,default,i64" json:"file_id"`
+	SkillId   int64  `thrift:"skill_id,2" frugal:"2,default,i64" json:"skill_id"`
+	RelPath   string `thrift:"rel_path,3" frugal:"3,default,string" json:"rel_path"`
+	ObjectUrl string `thrift:"object_url,4" frugal:"4,default,string" json:"object_url"`
+	SizeBytes int64  `thrift:"size_bytes,5" frugal:"5,default,i64" json:"size_bytes"`
+}
+
+func NewUserSkillFileInfo() *UserSkillFileInfo {
+	return &UserSkillFileInfo{}
+}
+
+func (p *UserSkillFileInfo) InitDefault() {
+}
+
+func (p *UserSkillFileInfo) GetFileId() (v int64) {
+	return p.FileId
+}
+
+func (p *UserSkillFileInfo) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *UserSkillFileInfo) GetRelPath() (v string) {
+	return p.RelPath
+}
+
+func (p *UserSkillFileInfo) GetObjectUrl() (v string) {
+	return p.ObjectUrl
+}
+
+func (p *UserSkillFileInfo) GetSizeBytes() (v int64) {
+	return p.SizeBytes
+}
+func (p *UserSkillFileInfo) SetFileId(val int64) {
+	p.FileId = val
+}
+func (p *UserSkillFileInfo) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *UserSkillFileInfo) SetRelPath(val string) {
+	p.RelPath = val
+}
+func (p *UserSkillFileInfo) SetObjectUrl(val string) {
+	p.ObjectUrl = val
+}
+func (p *UserSkillFileInfo) SetSizeBytes(val int64) {
+	p.SizeBytes = val
+}
+
+func (p *UserSkillFileInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UserSkillFileInfo(%+v)", *p)
+}
+
+var fieldIDToName_UserSkillFileInfo = map[int16]string{
+	1: "file_id",
+	2: "skill_id",
+	3: "rel_path",
+	4: "object_url",
+	5: "size_bytes",
+}
+
+type UploadUserSkillReq struct {
+	TenantId int64  `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	OwnerId  int64  `thrift:"owner_id,2" frugal:"2,default,i64" json:"owner_id"`
+	FileName string `thrift:"file_name,3" frugal:"3,default,string" json:"file_name"`
+	Data     []byte `thrift:"data,4" frugal:"4,default,binary" json:"data"`
+}
+
+func NewUploadUserSkillReq() *UploadUserSkillReq {
+	return &UploadUserSkillReq{}
+}
+
+func (p *UploadUserSkillReq) InitDefault() {
+}
+
+func (p *UploadUserSkillReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *UploadUserSkillReq) GetOwnerId() (v int64) {
+	return p.OwnerId
+}
+
+func (p *UploadUserSkillReq) GetFileName() (v string) {
+	return p.FileName
+}
+
+func (p *UploadUserSkillReq) GetData() (v []byte) {
+	return p.Data
+}
+func (p *UploadUserSkillReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *UploadUserSkillReq) SetOwnerId(val int64) {
+	p.OwnerId = val
+}
+func (p *UploadUserSkillReq) SetFileName(val string) {
+	p.FileName = val
+}
+func (p *UploadUserSkillReq) SetData(val []byte) {
+	p.Data = val
+}
+
+func (p *UploadUserSkillReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UploadUserSkillReq(%+v)", *p)
+}
+
+var fieldIDToName_UploadUserSkillReq = map[int16]string{
+	1: "tenant_id",
+	2: "owner_id",
+	3: "file_name",
+	4: "data",
+}
+
+type UploadUserSkillRes struct {
+	Success   bool     `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	SkillId   int64    `thrift:"skill_id,2" frugal:"2,default,i64" json:"skill_id"`
+	FileCount int32    `thrift:"file_count,3" frugal:"3,default,i32" json:"file_count"`
+	SizeBytes int64    `thrift:"size_bytes,4" frugal:"4,default,i64" json:"size_bytes"`
+	Warnings  []string `thrift:"warnings,5" frugal:"5,default,list<string>" json:"warnings"`
+}
+
+func NewUploadUserSkillRes() *UploadUserSkillRes {
+	return &UploadUserSkillRes{}
+}
+
+func (p *UploadUserSkillRes) InitDefault() {
+}
+
+func (p *UploadUserSkillRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *UploadUserSkillRes) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *UploadUserSkillRes) GetFileCount() (v int32) {
+	return p.FileCount
+}
+
+func (p *UploadUserSkillRes) GetSizeBytes() (v int64) {
+	return p.SizeBytes
+}
+
+func (p *UploadUserSkillRes) GetWarnings() (v []string) {
+	return p.Warnings
+}
+func (p *UploadUserSkillRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *UploadUserSkillRes) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *UploadUserSkillRes) SetFileCount(val int32) {
+	p.FileCount = val
+}
+func (p *UploadUserSkillRes) SetSizeBytes(val int64) {
+	p.SizeBytes = val
+}
+func (p *UploadUserSkillRes) SetWarnings(val []string) {
+	p.Warnings = val
+}
+
+func (p *UploadUserSkillRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UploadUserSkillRes(%+v)", *p)
+}
+
+var fieldIDToName_UploadUserSkillRes = map[int16]string{
+	1: "success",
+	2: "skill_id",
+	3: "file_count",
+	4: "size_bytes",
+	5: "warnings",
+}
+
+type ListUserSkillsReq struct {
+	TenantId int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	OwnerId  int64 `thrift:"owner_id,2" frugal:"2,default,i64" json:"owner_id"`
+}
+
+func NewListUserSkillsReq() *ListUserSkillsReq {
+	return &ListUserSkillsReq{}
+}
+
+func (p *ListUserSkillsReq) InitDefault() {
+}
+
+func (p *ListUserSkillsReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *ListUserSkillsReq) GetOwnerId() (v int64) {
+	return p.OwnerId
+}
+func (p *ListUserSkillsReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *ListUserSkillsReq) SetOwnerId(val int64) {
+	p.OwnerId = val
+}
+
+func (p *ListUserSkillsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListUserSkillsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListUserSkillsReq = map[int16]string{
+	1: "tenant_id",
+	2: "owner_id",
+}
+
+type ListUserSkillsRes struct {
+	Success bool             `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Skills  []*UserSkillInfo `thrift:"skills,2" frugal:"2,default,list<UserSkillInfo>" json:"skills"`
+}
+
+func NewListUserSkillsRes() *ListUserSkillsRes {
+	return &ListUserSkillsRes{}
+}
+
+func (p *ListUserSkillsRes) InitDefault() {
+}
+
+func (p *ListUserSkillsRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListUserSkillsRes) GetSkills() (v []*UserSkillInfo) {
+	return p.Skills
+}
+func (p *ListUserSkillsRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListUserSkillsRes) SetSkills(val []*UserSkillInfo) {
+	p.Skills = val
+}
+
+func (p *ListUserSkillsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListUserSkillsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListUserSkillsRes = map[int16]string{
+	1: "success",
+	2: "skills",
+}
+
+type GetUserSkillReq struct {
+	TenantId int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	SkillId  int64 `thrift:"skill_id,2" frugal:"2,default,i64" json:"skill_id"`
+}
+
+func NewGetUserSkillReq() *GetUserSkillReq {
+	return &GetUserSkillReq{}
+}
+
+func (p *GetUserSkillReq) InitDefault() {
+}
+
+func (p *GetUserSkillReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *GetUserSkillReq) GetSkillId() (v int64) {
+	return p.SkillId
+}
+func (p *GetUserSkillReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *GetUserSkillReq) SetSkillId(val int64) {
+	p.SkillId = val
+}
+
+func (p *GetUserSkillReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserSkillReq(%+v)", *p)
+}
+
+var fieldIDToName_GetUserSkillReq = map[int16]string{
+	1: "tenant_id",
+	2: "skill_id",
+}
+
+type GetUserSkillRes struct {
+	Success bool                 `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Skill   *UserSkillInfo       `thrift:"skill,2,optional" frugal:"2,optional,UserSkillInfo" json:"skill,omitempty"`
+	Files   []*UserSkillFileInfo `thrift:"files,3" frugal:"3,default,list<UserSkillFileInfo>" json:"files"`
+}
+
+func NewGetUserSkillRes() *GetUserSkillRes {
+	return &GetUserSkillRes{}
+}
+
+func (p *GetUserSkillRes) InitDefault() {
+}
+
+func (p *GetUserSkillRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GetUserSkillRes_Skill_DEFAULT *UserSkillInfo
+
+func (p *GetUserSkillRes) GetSkill() (v *UserSkillInfo) {
+	if !p.IsSetSkill() {
+		return GetUserSkillRes_Skill_DEFAULT
+	}
+	return p.Skill
+}
+
+func (p *GetUserSkillRes) GetFiles() (v []*UserSkillFileInfo) {
+	return p.Files
+}
+func (p *GetUserSkillRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetUserSkillRes) SetSkill(val *UserSkillInfo) {
+	p.Skill = val
+}
+func (p *GetUserSkillRes) SetFiles(val []*UserSkillFileInfo) {
+	p.Files = val
+}
+
+func (p *GetUserSkillRes) IsSetSkill() bool {
+	return p.Skill != nil
+}
+
+func (p *GetUserSkillRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetUserSkillRes(%+v)", *p)
+}
+
+var fieldIDToName_GetUserSkillRes = map[int16]string{
+	1: "success",
+	2: "skill",
+	3: "files",
+}
+
+type DeleteUserSkillReq struct {
+	TenantId   int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	SkillId    int64 `thrift:"skill_id,2" frugal:"2,default,i64" json:"skill_id"`
+	OperatorId int64 `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+}
+
+func NewDeleteUserSkillReq() *DeleteUserSkillReq {
+	return &DeleteUserSkillReq{}
+}
+
+func (p *DeleteUserSkillReq) InitDefault() {
+}
+
+func (p *DeleteUserSkillReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *DeleteUserSkillReq) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *DeleteUserSkillReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+func (p *DeleteUserSkillReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *DeleteUserSkillReq) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *DeleteUserSkillReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+
+func (p *DeleteUserSkillReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DeleteUserSkillReq(%+v)", *p)
+}
+
+var fieldIDToName_DeleteUserSkillReq = map[int16]string{
+	1: "tenant_id",
+	2: "skill_id",
+	3: "operator_id",
+}
+
+type BindUserSkillReq struct {
+	TenantId int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	OwnerId  int64 `thrift:"owner_id,2" frugal:"2,default,i64" json:"owner_id"`
+	BotId    int64 `thrift:"bot_id,3" frugal:"3,default,i64" json:"bot_id"`
+	SkillId  int64 `thrift:"skill_id,4" frugal:"4,default,i64" json:"skill_id"`
+	Enabled  bool  `thrift:"enabled,5" frugal:"5,default,bool" json:"enabled"`
+}
+
+func NewBindUserSkillReq() *BindUserSkillReq {
+	return &BindUserSkillReq{}
+}
+
+func (p *BindUserSkillReq) InitDefault() {
+}
+
+func (p *BindUserSkillReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *BindUserSkillReq) GetOwnerId() (v int64) {
+	return p.OwnerId
+}
+
+func (p *BindUserSkillReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *BindUserSkillReq) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *BindUserSkillReq) GetEnabled() (v bool) {
+	return p.Enabled
+}
+func (p *BindUserSkillReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *BindUserSkillReq) SetOwnerId(val int64) {
+	p.OwnerId = val
+}
+func (p *BindUserSkillReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *BindUserSkillReq) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *BindUserSkillReq) SetEnabled(val bool) {
+	p.Enabled = val
+}
+
+func (p *BindUserSkillReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BindUserSkillReq(%+v)", *p)
+}
+
+var fieldIDToName_BindUserSkillReq = map[int16]string{
+	1: "tenant_id",
+	2: "owner_id",
+	3: "bot_id",
+	4: "skill_id",
+	5: "enabled",
+}
+
+type BotSkillInfo struct {
+	SkillId     int64  `thrift:"skill_id,1" frugal:"1,default,i64" json:"skill_id"`
+	Name        string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	Description string `thrift:"description,3" frugal:"3,default,string" json:"description"`
+	Version     string `thrift:"version,4" frugal:"4,default,string" json:"version"`
+	Enabled     bool   `thrift:"enabled,5" frugal:"5,default,bool" json:"enabled"`
+}
+
+func NewBotSkillInfo() *BotSkillInfo {
+	return &BotSkillInfo{}
+}
+
+func (p *BotSkillInfo) InitDefault() {
+}
+
+func (p *BotSkillInfo) GetSkillId() (v int64) {
+	return p.SkillId
+}
+
+func (p *BotSkillInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *BotSkillInfo) GetDescription() (v string) {
+	return p.Description
+}
+
+func (p *BotSkillInfo) GetVersion() (v string) {
+	return p.Version
+}
+
+func (p *BotSkillInfo) GetEnabled() (v bool) {
+	return p.Enabled
+}
+func (p *BotSkillInfo) SetSkillId(val int64) {
+	p.SkillId = val
+}
+func (p *BotSkillInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *BotSkillInfo) SetDescription(val string) {
+	p.Description = val
+}
+func (p *BotSkillInfo) SetVersion(val string) {
+	p.Version = val
+}
+func (p *BotSkillInfo) SetEnabled(val bool) {
+	p.Enabled = val
+}
+
+func (p *BotSkillInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotSkillInfo(%+v)", *p)
+}
+
+var fieldIDToName_BotSkillInfo = map[int16]string{
+	1: "skill_id",
+	2: "name",
+	3: "description",
+	4: "version",
+	5: "enabled",
+}
+
+type ListBotSkillsReq struct {
+	TenantId   int64 `thrift:"tenant_id,1" frugal:"1,default,i64" json:"tenant_id"`
+	BotId      int64 `thrift:"bot_id,2" frugal:"2,default,i64" json:"bot_id"`
+	OperatorId int64 `thrift:"operator_id,3" frugal:"3,default,i64" json:"operator_id"`
+}
+
+func NewListBotSkillsReq() *ListBotSkillsReq {
+	return &ListBotSkillsReq{}
+}
+
+func (p *ListBotSkillsReq) InitDefault() {
+}
+
+func (p *ListBotSkillsReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *ListBotSkillsReq) GetBotId() (v int64) {
+	return p.BotId
+}
+
+func (p *ListBotSkillsReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+func (p *ListBotSkillsReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *ListBotSkillsReq) SetBotId(val int64) {
+	p.BotId = val
+}
+func (p *ListBotSkillsReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+
+func (p *ListBotSkillsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListBotSkillsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListBotSkillsReq = map[int16]string{
+	1: "tenant_id",
+	2: "bot_id",
+	3: "operator_id",
+}
+
+type ListBotSkillsRes struct {
+	Success bool            `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Skills  []*BotSkillInfo `thrift:"skills,2" frugal:"2,default,list<BotSkillInfo>" json:"skills"`
+}
+
+func NewListBotSkillsRes() *ListBotSkillsRes {
+	return &ListBotSkillsRes{}
+}
+
+func (p *ListBotSkillsRes) InitDefault() {
+}
+
+func (p *ListBotSkillsRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *ListBotSkillsRes) GetSkills() (v []*BotSkillInfo) {
+	return p.Skills
+}
+func (p *ListBotSkillsRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *ListBotSkillsRes) SetSkills(val []*BotSkillInfo) {
+	p.Skills = val
+}
+
+func (p *ListBotSkillsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListBotSkillsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListBotSkillsRes = map[int16]string{
+	1: "success",
+	2: "skills",
 }
 
 type BotService interface {
@@ -1539,6 +4591,48 @@ type BotService interface {
 	UpdateMcpServer(ctx context.Context, req *UpdateMcpServerReq) (r *CommonRes, err error)
 
 	DeleteMcpServer(ctx context.Context, req *DeleteMcpServerReq) (r *CommonRes, err error)
+
+	PublishMarketBot(ctx context.Context, req *PublishMarketBotReq) (r *PublishMarketBotRes, err error)
+
+	UpdateMarketBot(ctx context.Context, req *UpdateMarketBotReq) (r *CommonRes, err error)
+
+	GetMarketBot(ctx context.Context, req *GetMarketBotReq) (r *GetMarketBotRes, err error)
+
+	ListMarketBots(ctx context.Context, req *ListMarketBotsReq) (r *ListMarketBotsRes, err error)
+
+	ListMyMarketBots(ctx context.Context, req *ListMyMarketBotsReq) (r *ListMyMarketBotsRes, err error)
+
+	InstallMarketBot(ctx context.Context, req *InstallMarketBotReq) (r *InstallMarketBotRes, err error)
+
+	RateMarketBot(ctx context.Context, req *RateMarketBotReq) (r *CommonRes, err error)
+
+	OfflineMarketBot(ctx context.Context, req *OfflineMarketBotReq) (r *CommonRes, err error)
+
+	ListMarketReviews(ctx context.Context, req *ListMarketReviewsReq) (r *ListMarketReviewsRes, err error)
+
+	ReviewMarketBot(ctx context.Context, req *ReviewMarketBotReq) (r *CommonRes, err error)
+
+	UploadUserSkill(ctx context.Context, req *UploadUserSkillReq) (r *UploadUserSkillRes, err error)
+
+	ListUserSkills(ctx context.Context, req *ListUserSkillsReq) (r *ListUserSkillsRes, err error)
+
+	GetUserSkill(ctx context.Context, req *GetUserSkillReq) (r *GetUserSkillRes, err error)
+
+	DeleteUserSkill(ctx context.Context, req *DeleteUserSkillReq) (r *CommonRes, err error)
+
+	BindUserSkill(ctx context.Context, req *BindUserSkillReq) (r *CommonRes, err error)
+
+	ListBotSkills(ctx context.Context, req *ListBotSkillsReq) (r *ListBotSkillsRes, err error)
+
+	SaveAgentGraph(ctx context.Context, req *SaveAgentGraphReq) (r *SaveAgentGraphRes, err error)
+
+	GetAgentGraph(ctx context.Context, req *GetAgentGraphReq) (r *GetAgentGraphRes, err error)
+
+	ValidateAgentGraph(ctx context.Context, req *ValidateAgentGraphReq) (r *ValidateAgentGraphRes, err error)
+
+	PublishAgentGraph(ctx context.Context, req *PublishAgentGraphReq) (r *CommonRes, err error)
+
+	ListAgentGraphHistory(ctx context.Context, req *ListAgentGraphHistoryReq) (r *ListAgentGraphHistoryRes, err error)
 }
 
 type BotServiceCreateBotArgs struct {
@@ -2507,5 +5601,1601 @@ func (p *BotServiceDeleteMcpServerResult) String() string {
 }
 
 var fieldIDToName_BotServiceDeleteMcpServerResult = map[int16]string{
+	0: "success",
+}
+
+type BotServicePublishMarketBotArgs struct {
+	Req *PublishMarketBotReq `thrift:"req,1" frugal:"1,default,PublishMarketBotReq" json:"req"`
+}
+
+func NewBotServicePublishMarketBotArgs() *BotServicePublishMarketBotArgs {
+	return &BotServicePublishMarketBotArgs{}
+}
+
+func (p *BotServicePublishMarketBotArgs) InitDefault() {
+}
+
+var BotServicePublishMarketBotArgs_Req_DEFAULT *PublishMarketBotReq
+
+func (p *BotServicePublishMarketBotArgs) GetReq() (v *PublishMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServicePublishMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServicePublishMarketBotArgs) SetReq(val *PublishMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServicePublishMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServicePublishMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServicePublishMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServicePublishMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServicePublishMarketBotResult struct {
+	Success *PublishMarketBotRes `thrift:"success,0,optional" frugal:"0,optional,PublishMarketBotRes" json:"success,omitempty"`
+}
+
+func NewBotServicePublishMarketBotResult() *BotServicePublishMarketBotResult {
+	return &BotServicePublishMarketBotResult{}
+}
+
+func (p *BotServicePublishMarketBotResult) InitDefault() {
+}
+
+var BotServicePublishMarketBotResult_Success_DEFAULT *PublishMarketBotRes
+
+func (p *BotServicePublishMarketBotResult) GetSuccess() (v *PublishMarketBotRes) {
+	if !p.IsSetSuccess() {
+		return BotServicePublishMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServicePublishMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*PublishMarketBotRes)
+}
+
+func (p *BotServicePublishMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServicePublishMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServicePublishMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServicePublishMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceUpdateMarketBotArgs struct {
+	Req *UpdateMarketBotReq `thrift:"req,1" frugal:"1,default,UpdateMarketBotReq" json:"req"`
+}
+
+func NewBotServiceUpdateMarketBotArgs() *BotServiceUpdateMarketBotArgs {
+	return &BotServiceUpdateMarketBotArgs{}
+}
+
+func (p *BotServiceUpdateMarketBotArgs) InitDefault() {
+}
+
+var BotServiceUpdateMarketBotArgs_Req_DEFAULT *UpdateMarketBotReq
+
+func (p *BotServiceUpdateMarketBotArgs) GetReq() (v *UpdateMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceUpdateMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceUpdateMarketBotArgs) SetReq(val *UpdateMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceUpdateMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceUpdateMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUpdateMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUpdateMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceUpdateMarketBotResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceUpdateMarketBotResult() *BotServiceUpdateMarketBotResult {
+	return &BotServiceUpdateMarketBotResult{}
+}
+
+func (p *BotServiceUpdateMarketBotResult) InitDefault() {
+}
+
+var BotServiceUpdateMarketBotResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceUpdateMarketBotResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceUpdateMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceUpdateMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceUpdateMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceUpdateMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUpdateMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUpdateMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceGetMarketBotArgs struct {
+	Req *GetMarketBotReq `thrift:"req,1" frugal:"1,default,GetMarketBotReq" json:"req"`
+}
+
+func NewBotServiceGetMarketBotArgs() *BotServiceGetMarketBotArgs {
+	return &BotServiceGetMarketBotArgs{}
+}
+
+func (p *BotServiceGetMarketBotArgs) InitDefault() {
+}
+
+var BotServiceGetMarketBotArgs_Req_DEFAULT *GetMarketBotReq
+
+func (p *BotServiceGetMarketBotArgs) GetReq() (v *GetMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceGetMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceGetMarketBotArgs) SetReq(val *GetMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceGetMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceGetMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceGetMarketBotResult struct {
+	Success *GetMarketBotRes `thrift:"success,0,optional" frugal:"0,optional,GetMarketBotRes" json:"success,omitempty"`
+}
+
+func NewBotServiceGetMarketBotResult() *BotServiceGetMarketBotResult {
+	return &BotServiceGetMarketBotResult{}
+}
+
+func (p *BotServiceGetMarketBotResult) InitDefault() {
+}
+
+var BotServiceGetMarketBotResult_Success_DEFAULT *GetMarketBotRes
+
+func (p *BotServiceGetMarketBotResult) GetSuccess() (v *GetMarketBotRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceGetMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceGetMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetMarketBotRes)
+}
+
+func (p *BotServiceGetMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceGetMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListMarketBotsArgs struct {
+	Req *ListMarketBotsReq `thrift:"req,1" frugal:"1,default,ListMarketBotsReq" json:"req"`
+}
+
+func NewBotServiceListMarketBotsArgs() *BotServiceListMarketBotsArgs {
+	return &BotServiceListMarketBotsArgs{}
+}
+
+func (p *BotServiceListMarketBotsArgs) InitDefault() {
+}
+
+var BotServiceListMarketBotsArgs_Req_DEFAULT *ListMarketBotsReq
+
+func (p *BotServiceListMarketBotsArgs) GetReq() (v *ListMarketBotsReq) {
+	if !p.IsSetReq() {
+		return BotServiceListMarketBotsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListMarketBotsArgs) SetReq(val *ListMarketBotsReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListMarketBotsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListMarketBotsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMarketBotsArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMarketBotsArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListMarketBotsResult struct {
+	Success *ListMarketBotsRes `thrift:"success,0,optional" frugal:"0,optional,ListMarketBotsRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListMarketBotsResult() *BotServiceListMarketBotsResult {
+	return &BotServiceListMarketBotsResult{}
+}
+
+func (p *BotServiceListMarketBotsResult) InitDefault() {
+}
+
+var BotServiceListMarketBotsResult_Success_DEFAULT *ListMarketBotsRes
+
+func (p *BotServiceListMarketBotsResult) GetSuccess() (v *ListMarketBotsRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListMarketBotsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListMarketBotsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListMarketBotsRes)
+}
+
+func (p *BotServiceListMarketBotsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListMarketBotsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMarketBotsResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMarketBotsResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListMyMarketBotsArgs struct {
+	Req *ListMyMarketBotsReq `thrift:"req,1" frugal:"1,default,ListMyMarketBotsReq" json:"req"`
+}
+
+func NewBotServiceListMyMarketBotsArgs() *BotServiceListMyMarketBotsArgs {
+	return &BotServiceListMyMarketBotsArgs{}
+}
+
+func (p *BotServiceListMyMarketBotsArgs) InitDefault() {
+}
+
+var BotServiceListMyMarketBotsArgs_Req_DEFAULT *ListMyMarketBotsReq
+
+func (p *BotServiceListMyMarketBotsArgs) GetReq() (v *ListMyMarketBotsReq) {
+	if !p.IsSetReq() {
+		return BotServiceListMyMarketBotsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListMyMarketBotsArgs) SetReq(val *ListMyMarketBotsReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListMyMarketBotsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListMyMarketBotsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMyMarketBotsArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMyMarketBotsArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListMyMarketBotsResult struct {
+	Success *ListMyMarketBotsRes `thrift:"success,0,optional" frugal:"0,optional,ListMyMarketBotsRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListMyMarketBotsResult() *BotServiceListMyMarketBotsResult {
+	return &BotServiceListMyMarketBotsResult{}
+}
+
+func (p *BotServiceListMyMarketBotsResult) InitDefault() {
+}
+
+var BotServiceListMyMarketBotsResult_Success_DEFAULT *ListMyMarketBotsRes
+
+func (p *BotServiceListMyMarketBotsResult) GetSuccess() (v *ListMyMarketBotsRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListMyMarketBotsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListMyMarketBotsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListMyMarketBotsRes)
+}
+
+func (p *BotServiceListMyMarketBotsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListMyMarketBotsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMyMarketBotsResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMyMarketBotsResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceInstallMarketBotArgs struct {
+	Req *InstallMarketBotReq `thrift:"req,1" frugal:"1,default,InstallMarketBotReq" json:"req"`
+}
+
+func NewBotServiceInstallMarketBotArgs() *BotServiceInstallMarketBotArgs {
+	return &BotServiceInstallMarketBotArgs{}
+}
+
+func (p *BotServiceInstallMarketBotArgs) InitDefault() {
+}
+
+var BotServiceInstallMarketBotArgs_Req_DEFAULT *InstallMarketBotReq
+
+func (p *BotServiceInstallMarketBotArgs) GetReq() (v *InstallMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceInstallMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceInstallMarketBotArgs) SetReq(val *InstallMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceInstallMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceInstallMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceInstallMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceInstallMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceInstallMarketBotResult struct {
+	Success *InstallMarketBotRes `thrift:"success,0,optional" frugal:"0,optional,InstallMarketBotRes" json:"success,omitempty"`
+}
+
+func NewBotServiceInstallMarketBotResult() *BotServiceInstallMarketBotResult {
+	return &BotServiceInstallMarketBotResult{}
+}
+
+func (p *BotServiceInstallMarketBotResult) InitDefault() {
+}
+
+var BotServiceInstallMarketBotResult_Success_DEFAULT *InstallMarketBotRes
+
+func (p *BotServiceInstallMarketBotResult) GetSuccess() (v *InstallMarketBotRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceInstallMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceInstallMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*InstallMarketBotRes)
+}
+
+func (p *BotServiceInstallMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceInstallMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceInstallMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceInstallMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceRateMarketBotArgs struct {
+	Req *RateMarketBotReq `thrift:"req,1" frugal:"1,default,RateMarketBotReq" json:"req"`
+}
+
+func NewBotServiceRateMarketBotArgs() *BotServiceRateMarketBotArgs {
+	return &BotServiceRateMarketBotArgs{}
+}
+
+func (p *BotServiceRateMarketBotArgs) InitDefault() {
+}
+
+var BotServiceRateMarketBotArgs_Req_DEFAULT *RateMarketBotReq
+
+func (p *BotServiceRateMarketBotArgs) GetReq() (v *RateMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceRateMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceRateMarketBotArgs) SetReq(val *RateMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceRateMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceRateMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceRateMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceRateMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceRateMarketBotResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceRateMarketBotResult() *BotServiceRateMarketBotResult {
+	return &BotServiceRateMarketBotResult{}
+}
+
+func (p *BotServiceRateMarketBotResult) InitDefault() {
+}
+
+var BotServiceRateMarketBotResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceRateMarketBotResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceRateMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceRateMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceRateMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceRateMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceRateMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceRateMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceOfflineMarketBotArgs struct {
+	Req *OfflineMarketBotReq `thrift:"req,1" frugal:"1,default,OfflineMarketBotReq" json:"req"`
+}
+
+func NewBotServiceOfflineMarketBotArgs() *BotServiceOfflineMarketBotArgs {
+	return &BotServiceOfflineMarketBotArgs{}
+}
+
+func (p *BotServiceOfflineMarketBotArgs) InitDefault() {
+}
+
+var BotServiceOfflineMarketBotArgs_Req_DEFAULT *OfflineMarketBotReq
+
+func (p *BotServiceOfflineMarketBotArgs) GetReq() (v *OfflineMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceOfflineMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceOfflineMarketBotArgs) SetReq(val *OfflineMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceOfflineMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceOfflineMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceOfflineMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceOfflineMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceOfflineMarketBotResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceOfflineMarketBotResult() *BotServiceOfflineMarketBotResult {
+	return &BotServiceOfflineMarketBotResult{}
+}
+
+func (p *BotServiceOfflineMarketBotResult) InitDefault() {
+}
+
+var BotServiceOfflineMarketBotResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceOfflineMarketBotResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceOfflineMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceOfflineMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceOfflineMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceOfflineMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceOfflineMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceOfflineMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListMarketReviewsArgs struct {
+	Req *ListMarketReviewsReq `thrift:"req,1" frugal:"1,default,ListMarketReviewsReq" json:"req"`
+}
+
+func NewBotServiceListMarketReviewsArgs() *BotServiceListMarketReviewsArgs {
+	return &BotServiceListMarketReviewsArgs{}
+}
+
+func (p *BotServiceListMarketReviewsArgs) InitDefault() {
+}
+
+var BotServiceListMarketReviewsArgs_Req_DEFAULT *ListMarketReviewsReq
+
+func (p *BotServiceListMarketReviewsArgs) GetReq() (v *ListMarketReviewsReq) {
+	if !p.IsSetReq() {
+		return BotServiceListMarketReviewsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListMarketReviewsArgs) SetReq(val *ListMarketReviewsReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListMarketReviewsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListMarketReviewsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMarketReviewsArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMarketReviewsArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListMarketReviewsResult struct {
+	Success *ListMarketReviewsRes `thrift:"success,0,optional" frugal:"0,optional,ListMarketReviewsRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListMarketReviewsResult() *BotServiceListMarketReviewsResult {
+	return &BotServiceListMarketReviewsResult{}
+}
+
+func (p *BotServiceListMarketReviewsResult) InitDefault() {
+}
+
+var BotServiceListMarketReviewsResult_Success_DEFAULT *ListMarketReviewsRes
+
+func (p *BotServiceListMarketReviewsResult) GetSuccess() (v *ListMarketReviewsRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListMarketReviewsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListMarketReviewsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListMarketReviewsRes)
+}
+
+func (p *BotServiceListMarketReviewsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListMarketReviewsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListMarketReviewsResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListMarketReviewsResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceReviewMarketBotArgs struct {
+	Req *ReviewMarketBotReq `thrift:"req,1" frugal:"1,default,ReviewMarketBotReq" json:"req"`
+}
+
+func NewBotServiceReviewMarketBotArgs() *BotServiceReviewMarketBotArgs {
+	return &BotServiceReviewMarketBotArgs{}
+}
+
+func (p *BotServiceReviewMarketBotArgs) InitDefault() {
+}
+
+var BotServiceReviewMarketBotArgs_Req_DEFAULT *ReviewMarketBotReq
+
+func (p *BotServiceReviewMarketBotArgs) GetReq() (v *ReviewMarketBotReq) {
+	if !p.IsSetReq() {
+		return BotServiceReviewMarketBotArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceReviewMarketBotArgs) SetReq(val *ReviewMarketBotReq) {
+	p.Req = val
+}
+
+func (p *BotServiceReviewMarketBotArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceReviewMarketBotArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceReviewMarketBotArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceReviewMarketBotArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceReviewMarketBotResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceReviewMarketBotResult() *BotServiceReviewMarketBotResult {
+	return &BotServiceReviewMarketBotResult{}
+}
+
+func (p *BotServiceReviewMarketBotResult) InitDefault() {
+}
+
+var BotServiceReviewMarketBotResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceReviewMarketBotResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceReviewMarketBotResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceReviewMarketBotResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceReviewMarketBotResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceReviewMarketBotResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceReviewMarketBotResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceReviewMarketBotResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceUploadUserSkillArgs struct {
+	Req *UploadUserSkillReq `thrift:"req,1" frugal:"1,default,UploadUserSkillReq" json:"req"`
+}
+
+func NewBotServiceUploadUserSkillArgs() *BotServiceUploadUserSkillArgs {
+	return &BotServiceUploadUserSkillArgs{}
+}
+
+func (p *BotServiceUploadUserSkillArgs) InitDefault() {
+}
+
+var BotServiceUploadUserSkillArgs_Req_DEFAULT *UploadUserSkillReq
+
+func (p *BotServiceUploadUserSkillArgs) GetReq() (v *UploadUserSkillReq) {
+	if !p.IsSetReq() {
+		return BotServiceUploadUserSkillArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceUploadUserSkillArgs) SetReq(val *UploadUserSkillReq) {
+	p.Req = val
+}
+
+func (p *BotServiceUploadUserSkillArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceUploadUserSkillArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUploadUserSkillArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUploadUserSkillArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceUploadUserSkillResult struct {
+	Success *UploadUserSkillRes `thrift:"success,0,optional" frugal:"0,optional,UploadUserSkillRes" json:"success,omitempty"`
+}
+
+func NewBotServiceUploadUserSkillResult() *BotServiceUploadUserSkillResult {
+	return &BotServiceUploadUserSkillResult{}
+}
+
+func (p *BotServiceUploadUserSkillResult) InitDefault() {
+}
+
+var BotServiceUploadUserSkillResult_Success_DEFAULT *UploadUserSkillRes
+
+func (p *BotServiceUploadUserSkillResult) GetSuccess() (v *UploadUserSkillRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceUploadUserSkillResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceUploadUserSkillResult) SetSuccess(x interface{}) {
+	p.Success = x.(*UploadUserSkillRes)
+}
+
+func (p *BotServiceUploadUserSkillResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceUploadUserSkillResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceUploadUserSkillResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceUploadUserSkillResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListUserSkillsArgs struct {
+	Req *ListUserSkillsReq `thrift:"req,1" frugal:"1,default,ListUserSkillsReq" json:"req"`
+}
+
+func NewBotServiceListUserSkillsArgs() *BotServiceListUserSkillsArgs {
+	return &BotServiceListUserSkillsArgs{}
+}
+
+func (p *BotServiceListUserSkillsArgs) InitDefault() {
+}
+
+var BotServiceListUserSkillsArgs_Req_DEFAULT *ListUserSkillsReq
+
+func (p *BotServiceListUserSkillsArgs) GetReq() (v *ListUserSkillsReq) {
+	if !p.IsSetReq() {
+		return BotServiceListUserSkillsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListUserSkillsArgs) SetReq(val *ListUserSkillsReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListUserSkillsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListUserSkillsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListUserSkillsArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListUserSkillsArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListUserSkillsResult struct {
+	Success *ListUserSkillsRes `thrift:"success,0,optional" frugal:"0,optional,ListUserSkillsRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListUserSkillsResult() *BotServiceListUserSkillsResult {
+	return &BotServiceListUserSkillsResult{}
+}
+
+func (p *BotServiceListUserSkillsResult) InitDefault() {
+}
+
+var BotServiceListUserSkillsResult_Success_DEFAULT *ListUserSkillsRes
+
+func (p *BotServiceListUserSkillsResult) GetSuccess() (v *ListUserSkillsRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListUserSkillsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListUserSkillsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListUserSkillsRes)
+}
+
+func (p *BotServiceListUserSkillsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListUserSkillsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListUserSkillsResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListUserSkillsResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceGetUserSkillArgs struct {
+	Req *GetUserSkillReq `thrift:"req,1" frugal:"1,default,GetUserSkillReq" json:"req"`
+}
+
+func NewBotServiceGetUserSkillArgs() *BotServiceGetUserSkillArgs {
+	return &BotServiceGetUserSkillArgs{}
+}
+
+func (p *BotServiceGetUserSkillArgs) InitDefault() {
+}
+
+var BotServiceGetUserSkillArgs_Req_DEFAULT *GetUserSkillReq
+
+func (p *BotServiceGetUserSkillArgs) GetReq() (v *GetUserSkillReq) {
+	if !p.IsSetReq() {
+		return BotServiceGetUserSkillArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceGetUserSkillArgs) SetReq(val *GetUserSkillReq) {
+	p.Req = val
+}
+
+func (p *BotServiceGetUserSkillArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceGetUserSkillArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetUserSkillArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetUserSkillArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceGetUserSkillResult struct {
+	Success *GetUserSkillRes `thrift:"success,0,optional" frugal:"0,optional,GetUserSkillRes" json:"success,omitempty"`
+}
+
+func NewBotServiceGetUserSkillResult() *BotServiceGetUserSkillResult {
+	return &BotServiceGetUserSkillResult{}
+}
+
+func (p *BotServiceGetUserSkillResult) InitDefault() {
+}
+
+var BotServiceGetUserSkillResult_Success_DEFAULT *GetUserSkillRes
+
+func (p *BotServiceGetUserSkillResult) GetSuccess() (v *GetUserSkillRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceGetUserSkillResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceGetUserSkillResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetUserSkillRes)
+}
+
+func (p *BotServiceGetUserSkillResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceGetUserSkillResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetUserSkillResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetUserSkillResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceDeleteUserSkillArgs struct {
+	Req *DeleteUserSkillReq `thrift:"req,1" frugal:"1,default,DeleteUserSkillReq" json:"req"`
+}
+
+func NewBotServiceDeleteUserSkillArgs() *BotServiceDeleteUserSkillArgs {
+	return &BotServiceDeleteUserSkillArgs{}
+}
+
+func (p *BotServiceDeleteUserSkillArgs) InitDefault() {
+}
+
+var BotServiceDeleteUserSkillArgs_Req_DEFAULT *DeleteUserSkillReq
+
+func (p *BotServiceDeleteUserSkillArgs) GetReq() (v *DeleteUserSkillReq) {
+	if !p.IsSetReq() {
+		return BotServiceDeleteUserSkillArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceDeleteUserSkillArgs) SetReq(val *DeleteUserSkillReq) {
+	p.Req = val
+}
+
+func (p *BotServiceDeleteUserSkillArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceDeleteUserSkillArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceDeleteUserSkillArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceDeleteUserSkillArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceDeleteUserSkillResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceDeleteUserSkillResult() *BotServiceDeleteUserSkillResult {
+	return &BotServiceDeleteUserSkillResult{}
+}
+
+func (p *BotServiceDeleteUserSkillResult) InitDefault() {
+}
+
+var BotServiceDeleteUserSkillResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceDeleteUserSkillResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceDeleteUserSkillResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceDeleteUserSkillResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceDeleteUserSkillResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceDeleteUserSkillResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceDeleteUserSkillResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceDeleteUserSkillResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceBindUserSkillArgs struct {
+	Req *BindUserSkillReq `thrift:"req,1" frugal:"1,default,BindUserSkillReq" json:"req"`
+}
+
+func NewBotServiceBindUserSkillArgs() *BotServiceBindUserSkillArgs {
+	return &BotServiceBindUserSkillArgs{}
+}
+
+func (p *BotServiceBindUserSkillArgs) InitDefault() {
+}
+
+var BotServiceBindUserSkillArgs_Req_DEFAULT *BindUserSkillReq
+
+func (p *BotServiceBindUserSkillArgs) GetReq() (v *BindUserSkillReq) {
+	if !p.IsSetReq() {
+		return BotServiceBindUserSkillArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceBindUserSkillArgs) SetReq(val *BindUserSkillReq) {
+	p.Req = val
+}
+
+func (p *BotServiceBindUserSkillArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceBindUserSkillArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceBindUserSkillArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceBindUserSkillArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceBindUserSkillResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServiceBindUserSkillResult() *BotServiceBindUserSkillResult {
+	return &BotServiceBindUserSkillResult{}
+}
+
+func (p *BotServiceBindUserSkillResult) InitDefault() {
+}
+
+var BotServiceBindUserSkillResult_Success_DEFAULT *CommonRes
+
+func (p *BotServiceBindUserSkillResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceBindUserSkillResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceBindUserSkillResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServiceBindUserSkillResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceBindUserSkillResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceBindUserSkillResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceBindUserSkillResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListBotSkillsArgs struct {
+	Req *ListBotSkillsReq `thrift:"req,1" frugal:"1,default,ListBotSkillsReq" json:"req"`
+}
+
+func NewBotServiceListBotSkillsArgs() *BotServiceListBotSkillsArgs {
+	return &BotServiceListBotSkillsArgs{}
+}
+
+func (p *BotServiceListBotSkillsArgs) InitDefault() {
+}
+
+var BotServiceListBotSkillsArgs_Req_DEFAULT *ListBotSkillsReq
+
+func (p *BotServiceListBotSkillsArgs) GetReq() (v *ListBotSkillsReq) {
+	if !p.IsSetReq() {
+		return BotServiceListBotSkillsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListBotSkillsArgs) SetReq(val *ListBotSkillsReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListBotSkillsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListBotSkillsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListBotSkillsArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListBotSkillsArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListBotSkillsResult struct {
+	Success *ListBotSkillsRes `thrift:"success,0,optional" frugal:"0,optional,ListBotSkillsRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListBotSkillsResult() *BotServiceListBotSkillsResult {
+	return &BotServiceListBotSkillsResult{}
+}
+
+func (p *BotServiceListBotSkillsResult) InitDefault() {
+}
+
+var BotServiceListBotSkillsResult_Success_DEFAULT *ListBotSkillsRes
+
+func (p *BotServiceListBotSkillsResult) GetSuccess() (v *ListBotSkillsRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListBotSkillsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListBotSkillsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListBotSkillsRes)
+}
+
+func (p *BotServiceListBotSkillsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListBotSkillsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListBotSkillsResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListBotSkillsResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceSaveAgentGraphArgs struct {
+	Req *SaveAgentGraphReq `thrift:"req,1" frugal:"1,default,SaveAgentGraphReq" json:"req"`
+}
+
+func NewBotServiceSaveAgentGraphArgs() *BotServiceSaveAgentGraphArgs {
+	return &BotServiceSaveAgentGraphArgs{}
+}
+
+func (p *BotServiceSaveAgentGraphArgs) InitDefault() {
+}
+
+var BotServiceSaveAgentGraphArgs_Req_DEFAULT *SaveAgentGraphReq
+
+func (p *BotServiceSaveAgentGraphArgs) GetReq() (v *SaveAgentGraphReq) {
+	if !p.IsSetReq() {
+		return BotServiceSaveAgentGraphArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceSaveAgentGraphArgs) SetReq(val *SaveAgentGraphReq) {
+	p.Req = val
+}
+
+func (p *BotServiceSaveAgentGraphArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceSaveAgentGraphArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceSaveAgentGraphArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceSaveAgentGraphArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceSaveAgentGraphResult struct {
+	Success *SaveAgentGraphRes `thrift:"success,0,optional" frugal:"0,optional,SaveAgentGraphRes" json:"success,omitempty"`
+}
+
+func NewBotServiceSaveAgentGraphResult() *BotServiceSaveAgentGraphResult {
+	return &BotServiceSaveAgentGraphResult{}
+}
+
+func (p *BotServiceSaveAgentGraphResult) InitDefault() {
+}
+
+var BotServiceSaveAgentGraphResult_Success_DEFAULT *SaveAgentGraphRes
+
+func (p *BotServiceSaveAgentGraphResult) GetSuccess() (v *SaveAgentGraphRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceSaveAgentGraphResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceSaveAgentGraphResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SaveAgentGraphRes)
+}
+
+func (p *BotServiceSaveAgentGraphResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceSaveAgentGraphResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceSaveAgentGraphResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceSaveAgentGraphResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceGetAgentGraphArgs struct {
+	Req *GetAgentGraphReq `thrift:"req,1" frugal:"1,default,GetAgentGraphReq" json:"req"`
+}
+
+func NewBotServiceGetAgentGraphArgs() *BotServiceGetAgentGraphArgs {
+	return &BotServiceGetAgentGraphArgs{}
+}
+
+func (p *BotServiceGetAgentGraphArgs) InitDefault() {
+}
+
+var BotServiceGetAgentGraphArgs_Req_DEFAULT *GetAgentGraphReq
+
+func (p *BotServiceGetAgentGraphArgs) GetReq() (v *GetAgentGraphReq) {
+	if !p.IsSetReq() {
+		return BotServiceGetAgentGraphArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceGetAgentGraphArgs) SetReq(val *GetAgentGraphReq) {
+	p.Req = val
+}
+
+func (p *BotServiceGetAgentGraphArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceGetAgentGraphArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetAgentGraphArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetAgentGraphArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceGetAgentGraphResult struct {
+	Success *GetAgentGraphRes `thrift:"success,0,optional" frugal:"0,optional,GetAgentGraphRes" json:"success,omitempty"`
+}
+
+func NewBotServiceGetAgentGraphResult() *BotServiceGetAgentGraphResult {
+	return &BotServiceGetAgentGraphResult{}
+}
+
+func (p *BotServiceGetAgentGraphResult) InitDefault() {
+}
+
+var BotServiceGetAgentGraphResult_Success_DEFAULT *GetAgentGraphRes
+
+func (p *BotServiceGetAgentGraphResult) GetSuccess() (v *GetAgentGraphRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceGetAgentGraphResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceGetAgentGraphResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetAgentGraphRes)
+}
+
+func (p *BotServiceGetAgentGraphResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceGetAgentGraphResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceGetAgentGraphResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceGetAgentGraphResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceValidateAgentGraphArgs struct {
+	Req *ValidateAgentGraphReq `thrift:"req,1" frugal:"1,default,ValidateAgentGraphReq" json:"req"`
+}
+
+func NewBotServiceValidateAgentGraphArgs() *BotServiceValidateAgentGraphArgs {
+	return &BotServiceValidateAgentGraphArgs{}
+}
+
+func (p *BotServiceValidateAgentGraphArgs) InitDefault() {
+}
+
+var BotServiceValidateAgentGraphArgs_Req_DEFAULT *ValidateAgentGraphReq
+
+func (p *BotServiceValidateAgentGraphArgs) GetReq() (v *ValidateAgentGraphReq) {
+	if !p.IsSetReq() {
+		return BotServiceValidateAgentGraphArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceValidateAgentGraphArgs) SetReq(val *ValidateAgentGraphReq) {
+	p.Req = val
+}
+
+func (p *BotServiceValidateAgentGraphArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceValidateAgentGraphArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceValidateAgentGraphArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceValidateAgentGraphArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceValidateAgentGraphResult struct {
+	Success *ValidateAgentGraphRes `thrift:"success,0,optional" frugal:"0,optional,ValidateAgentGraphRes" json:"success,omitempty"`
+}
+
+func NewBotServiceValidateAgentGraphResult() *BotServiceValidateAgentGraphResult {
+	return &BotServiceValidateAgentGraphResult{}
+}
+
+func (p *BotServiceValidateAgentGraphResult) InitDefault() {
+}
+
+var BotServiceValidateAgentGraphResult_Success_DEFAULT *ValidateAgentGraphRes
+
+func (p *BotServiceValidateAgentGraphResult) GetSuccess() (v *ValidateAgentGraphRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceValidateAgentGraphResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceValidateAgentGraphResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ValidateAgentGraphRes)
+}
+
+func (p *BotServiceValidateAgentGraphResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceValidateAgentGraphResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceValidateAgentGraphResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceValidateAgentGraphResult = map[int16]string{
+	0: "success",
+}
+
+type BotServicePublishAgentGraphArgs struct {
+	Req *PublishAgentGraphReq `thrift:"req,1" frugal:"1,default,PublishAgentGraphReq" json:"req"`
+}
+
+func NewBotServicePublishAgentGraphArgs() *BotServicePublishAgentGraphArgs {
+	return &BotServicePublishAgentGraphArgs{}
+}
+
+func (p *BotServicePublishAgentGraphArgs) InitDefault() {
+}
+
+var BotServicePublishAgentGraphArgs_Req_DEFAULT *PublishAgentGraphReq
+
+func (p *BotServicePublishAgentGraphArgs) GetReq() (v *PublishAgentGraphReq) {
+	if !p.IsSetReq() {
+		return BotServicePublishAgentGraphArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServicePublishAgentGraphArgs) SetReq(val *PublishAgentGraphReq) {
+	p.Req = val
+}
+
+func (p *BotServicePublishAgentGraphArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServicePublishAgentGraphArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServicePublishAgentGraphArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServicePublishAgentGraphArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServicePublishAgentGraphResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewBotServicePublishAgentGraphResult() *BotServicePublishAgentGraphResult {
+	return &BotServicePublishAgentGraphResult{}
+}
+
+func (p *BotServicePublishAgentGraphResult) InitDefault() {
+}
+
+var BotServicePublishAgentGraphResult_Success_DEFAULT *CommonRes
+
+func (p *BotServicePublishAgentGraphResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return BotServicePublishAgentGraphResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServicePublishAgentGraphResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *BotServicePublishAgentGraphResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServicePublishAgentGraphResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServicePublishAgentGraphResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServicePublishAgentGraphResult = map[int16]string{
+	0: "success",
+}
+
+type BotServiceListAgentGraphHistoryArgs struct {
+	Req *ListAgentGraphHistoryReq `thrift:"req,1" frugal:"1,default,ListAgentGraphHistoryReq" json:"req"`
+}
+
+func NewBotServiceListAgentGraphHistoryArgs() *BotServiceListAgentGraphHistoryArgs {
+	return &BotServiceListAgentGraphHistoryArgs{}
+}
+
+func (p *BotServiceListAgentGraphHistoryArgs) InitDefault() {
+}
+
+var BotServiceListAgentGraphHistoryArgs_Req_DEFAULT *ListAgentGraphHistoryReq
+
+func (p *BotServiceListAgentGraphHistoryArgs) GetReq() (v *ListAgentGraphHistoryReq) {
+	if !p.IsSetReq() {
+		return BotServiceListAgentGraphHistoryArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *BotServiceListAgentGraphHistoryArgs) SetReq(val *ListAgentGraphHistoryReq) {
+	p.Req = val
+}
+
+func (p *BotServiceListAgentGraphHistoryArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *BotServiceListAgentGraphHistoryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListAgentGraphHistoryArgs(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListAgentGraphHistoryArgs = map[int16]string{
+	1: "req",
+}
+
+type BotServiceListAgentGraphHistoryResult struct {
+	Success *ListAgentGraphHistoryRes `thrift:"success,0,optional" frugal:"0,optional,ListAgentGraphHistoryRes" json:"success,omitempty"`
+}
+
+func NewBotServiceListAgentGraphHistoryResult() *BotServiceListAgentGraphHistoryResult {
+	return &BotServiceListAgentGraphHistoryResult{}
+}
+
+func (p *BotServiceListAgentGraphHistoryResult) InitDefault() {
+}
+
+var BotServiceListAgentGraphHistoryResult_Success_DEFAULT *ListAgentGraphHistoryRes
+
+func (p *BotServiceListAgentGraphHistoryResult) GetSuccess() (v *ListAgentGraphHistoryRes) {
+	if !p.IsSetSuccess() {
+		return BotServiceListAgentGraphHistoryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *BotServiceListAgentGraphHistoryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListAgentGraphHistoryRes)
+}
+
+func (p *BotServiceListAgentGraphHistoryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *BotServiceListAgentGraphHistoryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BotServiceListAgentGraphHistoryResult(%+v)", *p)
+}
+
+var fieldIDToName_BotServiceListAgentGraphHistoryResult = map[int16]string{
 	0: "success",
 }

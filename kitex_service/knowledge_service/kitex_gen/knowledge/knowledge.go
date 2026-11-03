@@ -40,6 +40,7 @@ type CreateKnowledgeBaseReq struct {
 	OwnerId     int64   `thrift:"owner_id,1" frugal:"1,default,i64" json:"owner_id"`
 	Name        string  `thrift:"name,2" frugal:"2,default,string" json:"name"`
 	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" json:"description,omitempty"`
+	TenantId    *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewCreateKnowledgeBaseReq() *CreateKnowledgeBaseReq {
@@ -65,6 +66,15 @@ func (p *CreateKnowledgeBaseReq) GetDescription() (v string) {
 	}
 	return *p.Description
 }
+
+var CreateKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *CreateKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return CreateKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *CreateKnowledgeBaseReq) SetOwnerId(val int64) {
 	p.OwnerId = val
 }
@@ -74,9 +84,16 @@ func (p *CreateKnowledgeBaseReq) SetName(val string) {
 func (p *CreateKnowledgeBaseReq) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *CreateKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *CreateKnowledgeBaseReq) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *CreateKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *CreateKnowledgeBaseReq) String() string {
@@ -90,6 +107,7 @@ var fieldIDToName_CreateKnowledgeBaseReq = map[int16]string{
 	1: "owner_id",
 	2: "name",
 	3: "description",
+	4: "tenant_id",
 }
 
 type CreateKnowledgeBaseRes struct {
@@ -214,7 +232,8 @@ var fieldIDToName_KnowledgeBaseInfo = map[int16]string{
 }
 
 type GetKnowledgeBaseReq struct {
-	KbId int64 `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	KbId     int64  `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetKnowledgeBaseReq() *GetKnowledgeBaseReq {
@@ -227,8 +246,24 @@ func (p *GetKnowledgeBaseReq) InitDefault() {
 func (p *GetKnowledgeBaseReq) GetKbId() (v int64) {
 	return p.KbId
 }
+
+var GetKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *GetKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetKnowledgeBaseReq) SetKbId(val int64) {
 	p.KbId = val
+}
+func (p *GetKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetKnowledgeBaseReq) String() string {
@@ -240,6 +275,7 @@ func (p *GetKnowledgeBaseReq) String() string {
 
 var fieldIDToName_GetKnowledgeBaseReq = map[int16]string{
 	1: "kb_id",
+	2: "tenant_id",
 }
 
 type GetKnowledgeBaseRes struct {
@@ -290,7 +326,8 @@ var fieldIDToName_GetKnowledgeBaseRes = map[int16]string{
 }
 
 type GetUserKnowledgeBasesReq struct {
-	OwnerId int64 `thrift:"owner_id,1" frugal:"1,default,i64" json:"owner_id"`
+	OwnerId  int64  `thrift:"owner_id,1" frugal:"1,default,i64" json:"owner_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetUserKnowledgeBasesReq() *GetUserKnowledgeBasesReq {
@@ -303,8 +340,24 @@ func (p *GetUserKnowledgeBasesReq) InitDefault() {
 func (p *GetUserKnowledgeBasesReq) GetOwnerId() (v int64) {
 	return p.OwnerId
 }
+
+var GetUserKnowledgeBasesReq_TenantId_DEFAULT int64
+
+func (p *GetUserKnowledgeBasesReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetUserKnowledgeBasesReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetUserKnowledgeBasesReq) SetOwnerId(val int64) {
 	p.OwnerId = val
+}
+func (p *GetUserKnowledgeBasesReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetUserKnowledgeBasesReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetUserKnowledgeBasesReq) String() string {
@@ -316,6 +369,7 @@ func (p *GetUserKnowledgeBasesReq) String() string {
 
 var fieldIDToName_GetUserKnowledgeBasesReq = map[int16]string{
 	1: "owner_id",
+	2: "tenant_id",
 }
 
 type GetUserKnowledgeBasesRes struct {
@@ -361,6 +415,7 @@ type UpdateKnowledgeBaseReq struct {
 	OperatorId  int64   `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
 	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" json:"name,omitempty"`
 	Description *string `thrift:"description,4,optional" frugal:"4,optional,string" json:"description,omitempty"`
+	TenantId    *int64  `thrift:"tenant_id,5,optional" frugal:"5,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewUpdateKnowledgeBaseReq() *UpdateKnowledgeBaseReq {
@@ -395,6 +450,15 @@ func (p *UpdateKnowledgeBaseReq) GetDescription() (v string) {
 	}
 	return *p.Description
 }
+
+var UpdateKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *UpdateKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return UpdateKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *UpdateKnowledgeBaseReq) SetKbId(val int64) {
 	p.KbId = val
 }
@@ -407,6 +471,9 @@ func (p *UpdateKnowledgeBaseReq) SetName(val *string) {
 func (p *UpdateKnowledgeBaseReq) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *UpdateKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
 
 func (p *UpdateKnowledgeBaseReq) IsSetName() bool {
 	return p.Name != nil
@@ -414,6 +481,10 @@ func (p *UpdateKnowledgeBaseReq) IsSetName() bool {
 
 func (p *UpdateKnowledgeBaseReq) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *UpdateKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *UpdateKnowledgeBaseReq) String() string {
@@ -428,11 +499,13 @@ var fieldIDToName_UpdateKnowledgeBaseReq = map[int16]string{
 	2: "operator_id",
 	3: "name",
 	4: "description",
+	5: "tenant_id",
 }
 
 type DeleteKnowledgeBaseReq struct {
-	KbId       int64 `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	KbId       int64  `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	TenantId   *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewDeleteKnowledgeBaseReq() *DeleteKnowledgeBaseReq {
@@ -449,11 +522,27 @@ func (p *DeleteKnowledgeBaseReq) GetKbId() (v int64) {
 func (p *DeleteKnowledgeBaseReq) GetOperatorId() (v int64) {
 	return p.OperatorId
 }
+
+var DeleteKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *DeleteKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return DeleteKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *DeleteKnowledgeBaseReq) SetKbId(val int64) {
 	p.KbId = val
 }
 func (p *DeleteKnowledgeBaseReq) SetOperatorId(val int64) {
 	p.OperatorId = val
+}
+func (p *DeleteKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *DeleteKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *DeleteKnowledgeBaseReq) String() string {
@@ -466,6 +555,7 @@ func (p *DeleteKnowledgeBaseReq) String() string {
 var fieldIDToName_DeleteKnowledgeBaseReq = map[int16]string{
 	1: "kb_id",
 	2: "operator_id",
+	3: "tenant_id",
 }
 
 type AddDocumentReq struct {
@@ -475,6 +565,7 @@ type AddDocumentReq struct {
 	FileUrl    string `thrift:"file_url,4" frugal:"4,default,string" json:"file_url"`
 	FileType   string `thrift:"file_type,5" frugal:"5,default,string" json:"file_type"`
 	FileSize   int64  `thrift:"file_size,6" frugal:"6,default,i64" json:"file_size"`
+	TenantId   *int64 `thrift:"tenant_id,7,optional" frugal:"7,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewAddDocumentReq() *AddDocumentReq {
@@ -507,6 +598,15 @@ func (p *AddDocumentReq) GetFileType() (v string) {
 func (p *AddDocumentReq) GetFileSize() (v int64) {
 	return p.FileSize
 }
+
+var AddDocumentReq_TenantId_DEFAULT int64
+
+func (p *AddDocumentReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return AddDocumentReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *AddDocumentReq) SetKbId(val int64) {
 	p.KbId = val
 }
@@ -525,6 +625,13 @@ func (p *AddDocumentReq) SetFileType(val string) {
 func (p *AddDocumentReq) SetFileSize(val int64) {
 	p.FileSize = val
 }
+func (p *AddDocumentReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *AddDocumentReq) IsSetTenantId() bool {
+	return p.TenantId != nil
+}
 
 func (p *AddDocumentReq) String() string {
 	if p == nil {
@@ -540,6 +647,7 @@ var fieldIDToName_AddDocumentReq = map[int16]string{
 	4: "file_url",
 	5: "file_type",
 	6: "file_size",
+	7: "tenant_id",
 }
 
 type AddDocumentRes struct {
@@ -700,7 +808,8 @@ var fieldIDToName_DocumentInfo = map[int16]string{
 }
 
 type GetDocumentsReq struct {
-	KbId int64 `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	KbId     int64  `thrift:"kb_id,1" frugal:"1,default,i64" json:"kb_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetDocumentsReq() *GetDocumentsReq {
@@ -713,8 +822,24 @@ func (p *GetDocumentsReq) InitDefault() {
 func (p *GetDocumentsReq) GetKbId() (v int64) {
 	return p.KbId
 }
+
+var GetDocumentsReq_TenantId_DEFAULT int64
+
+func (p *GetDocumentsReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetDocumentsReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetDocumentsReq) SetKbId(val int64) {
 	p.KbId = val
+}
+func (p *GetDocumentsReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetDocumentsReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetDocumentsReq) String() string {
@@ -726,6 +851,7 @@ func (p *GetDocumentsReq) String() string {
 
 var fieldIDToName_GetDocumentsReq = map[int16]string{
 	1: "kb_id",
+	2: "tenant_id",
 }
 
 type GetDocumentsRes struct {
@@ -767,8 +893,9 @@ var fieldIDToName_GetDocumentsRes = map[int16]string{
 }
 
 type DeleteDocumentReq struct {
-	DocId      int64 `thrift:"doc_id,1" frugal:"1,default,i64" json:"doc_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	DocId      int64  `thrift:"doc_id,1" frugal:"1,default,i64" json:"doc_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	TenantId   *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewDeleteDocumentReq() *DeleteDocumentReq {
@@ -785,11 +912,27 @@ func (p *DeleteDocumentReq) GetDocId() (v int64) {
 func (p *DeleteDocumentReq) GetOperatorId() (v int64) {
 	return p.OperatorId
 }
+
+var DeleteDocumentReq_TenantId_DEFAULT int64
+
+func (p *DeleteDocumentReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return DeleteDocumentReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *DeleteDocumentReq) SetDocId(val int64) {
 	p.DocId = val
 }
 func (p *DeleteDocumentReq) SetOperatorId(val int64) {
 	p.OperatorId = val
+}
+func (p *DeleteDocumentReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *DeleteDocumentReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *DeleteDocumentReq) String() string {
@@ -802,11 +945,13 @@ func (p *DeleteDocumentReq) String() string {
 var fieldIDToName_DeleteDocumentReq = map[int16]string{
 	1: "doc_id",
 	2: "operator_id",
+	3: "tenant_id",
 }
 
 type RetryDocumentReq struct {
-	DocId      int64 `thrift:"doc_id,1" frugal:"1,default,i64" json:"doc_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	DocId      int64  `thrift:"doc_id,1" frugal:"1,default,i64" json:"doc_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	TenantId   *int64 `thrift:"tenant_id,3,optional" frugal:"3,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewRetryDocumentReq() *RetryDocumentReq {
@@ -823,11 +968,27 @@ func (p *RetryDocumentReq) GetDocId() (v int64) {
 func (p *RetryDocumentReq) GetOperatorId() (v int64) {
 	return p.OperatorId
 }
+
+var RetryDocumentReq_TenantId_DEFAULT int64
+
+func (p *RetryDocumentReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return RetryDocumentReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *RetryDocumentReq) SetDocId(val int64) {
 	p.DocId = val
 }
 func (p *RetryDocumentReq) SetOperatorId(val int64) {
 	p.OperatorId = val
+}
+func (p *RetryDocumentReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *RetryDocumentReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *RetryDocumentReq) String() string {
@@ -840,12 +1001,14 @@ func (p *RetryDocumentReq) String() string {
 var fieldIDToName_RetryDocumentReq = map[int16]string{
 	1: "doc_id",
 	2: "operator_id",
+	3: "tenant_id",
 }
 
 type BindKnowledgeBaseReq struct {
-	BotId      int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
-	KbId       int64 `thrift:"kb_id,3" frugal:"3,default,i64" json:"kb_id"`
+	BotId      int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	KbId       int64  `thrift:"kb_id,3" frugal:"3,default,i64" json:"kb_id"`
+	TenantId   *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewBindKnowledgeBaseReq() *BindKnowledgeBaseReq {
@@ -866,6 +1029,15 @@ func (p *BindKnowledgeBaseReq) GetOperatorId() (v int64) {
 func (p *BindKnowledgeBaseReq) GetKbId() (v int64) {
 	return p.KbId
 }
+
+var BindKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *BindKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return BindKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *BindKnowledgeBaseReq) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -874,6 +1046,13 @@ func (p *BindKnowledgeBaseReq) SetOperatorId(val int64) {
 }
 func (p *BindKnowledgeBaseReq) SetKbId(val int64) {
 	p.KbId = val
+}
+func (p *BindKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *BindKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *BindKnowledgeBaseReq) String() string {
@@ -887,12 +1066,14 @@ var fieldIDToName_BindKnowledgeBaseReq = map[int16]string{
 	1: "bot_id",
 	2: "operator_id",
 	3: "kb_id",
+	4: "tenant_id",
 }
 
 type UnbindKnowledgeBaseReq struct {
-	BotId      int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
-	OperatorId int64 `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
-	KbId       int64 `thrift:"kb_id,3" frugal:"3,default,i64" json:"kb_id"`
+	BotId      int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	OperatorId int64  `thrift:"operator_id,2" frugal:"2,default,i64" json:"operator_id"`
+	KbId       int64  `thrift:"kb_id,3" frugal:"3,default,i64" json:"kb_id"`
+	TenantId   *int64 `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewUnbindKnowledgeBaseReq() *UnbindKnowledgeBaseReq {
@@ -913,6 +1094,15 @@ func (p *UnbindKnowledgeBaseReq) GetOperatorId() (v int64) {
 func (p *UnbindKnowledgeBaseReq) GetKbId() (v int64) {
 	return p.KbId
 }
+
+var UnbindKnowledgeBaseReq_TenantId_DEFAULT int64
+
+func (p *UnbindKnowledgeBaseReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return UnbindKnowledgeBaseReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *UnbindKnowledgeBaseReq) SetBotId(val int64) {
 	p.BotId = val
 }
@@ -921,6 +1111,13 @@ func (p *UnbindKnowledgeBaseReq) SetOperatorId(val int64) {
 }
 func (p *UnbindKnowledgeBaseReq) SetKbId(val int64) {
 	p.KbId = val
+}
+func (p *UnbindKnowledgeBaseReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *UnbindKnowledgeBaseReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *UnbindKnowledgeBaseReq) String() string {
@@ -934,10 +1131,12 @@ var fieldIDToName_UnbindKnowledgeBaseReq = map[int16]string{
 	1: "bot_id",
 	2: "operator_id",
 	3: "kb_id",
+	4: "tenant_id",
 }
 
 type GetBotKnowledgeBasesReq struct {
-	BotId int64 `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	BotId    int64  `thrift:"bot_id,1" frugal:"1,default,i64" json:"bot_id"`
+	TenantId *int64 `thrift:"tenant_id,2,optional" frugal:"2,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewGetBotKnowledgeBasesReq() *GetBotKnowledgeBasesReq {
@@ -950,8 +1149,24 @@ func (p *GetBotKnowledgeBasesReq) InitDefault() {
 func (p *GetBotKnowledgeBasesReq) GetBotId() (v int64) {
 	return p.BotId
 }
+
+var GetBotKnowledgeBasesReq_TenantId_DEFAULT int64
+
+func (p *GetBotKnowledgeBasesReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return GetBotKnowledgeBasesReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *GetBotKnowledgeBasesReq) SetBotId(val int64) {
 	p.BotId = val
+}
+func (p *GetBotKnowledgeBasesReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *GetBotKnowledgeBasesReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *GetBotKnowledgeBasesReq) String() string {
@@ -963,6 +1178,7 @@ func (p *GetBotKnowledgeBasesReq) String() string {
 
 var fieldIDToName_GetBotKnowledgeBasesReq = map[int16]string{
 	1: "bot_id",
+	2: "tenant_id",
 }
 
 type GetBotKnowledgeBasesRes struct {
@@ -1004,9 +1220,10 @@ var fieldIDToName_GetBotKnowledgeBasesRes = map[int16]string{
 }
 
 type SearchKnowledgeReq struct {
-	KbIds []int64 `thrift:"kb_ids,1" frugal:"1,default,list<i64>" json:"kb_ids"`
-	Query string  `thrift:"query,2" frugal:"2,default,string" json:"query"`
-	TopK  int32   `thrift:"top_k,3" frugal:"3,default,i32" json:"top_k"`
+	KbIds    []int64 `thrift:"kb_ids,1" frugal:"1,default,list<i64>" json:"kb_ids"`
+	Query    string  `thrift:"query,2" frugal:"2,default,string" json:"query"`
+	TopK     int32   `thrift:"top_k,3" frugal:"3,default,i32" json:"top_k"`
+	TenantId *int64  `thrift:"tenant_id,4,optional" frugal:"4,optional,i64" json:"tenant_id,omitempty"`
 }
 
 func NewSearchKnowledgeReq() *SearchKnowledgeReq {
@@ -1027,6 +1244,15 @@ func (p *SearchKnowledgeReq) GetQuery() (v string) {
 func (p *SearchKnowledgeReq) GetTopK() (v int32) {
 	return p.TopK
 }
+
+var SearchKnowledgeReq_TenantId_DEFAULT int64
+
+func (p *SearchKnowledgeReq) GetTenantId() (v int64) {
+	if !p.IsSetTenantId() {
+		return SearchKnowledgeReq_TenantId_DEFAULT
+	}
+	return *p.TenantId
+}
 func (p *SearchKnowledgeReq) SetKbIds(val []int64) {
 	p.KbIds = val
 }
@@ -1035,6 +1261,13 @@ func (p *SearchKnowledgeReq) SetQuery(val string) {
 }
 func (p *SearchKnowledgeReq) SetTopK(val int32) {
 	p.TopK = val
+}
+func (p *SearchKnowledgeReq) SetTenantId(val *int64) {
+	p.TenantId = val
+}
+
+func (p *SearchKnowledgeReq) IsSetTenantId() bool {
+	return p.TenantId != nil
 }
 
 func (p *SearchKnowledgeReq) String() string {
@@ -1048,6 +1281,7 @@ var fieldIDToName_SearchKnowledgeReq = map[int16]string{
 	1: "kb_ids",
 	2: "query",
 	3: "top_k",
+	4: "tenant_id",
 }
 
 type KnowledgeChunk struct {

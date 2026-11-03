@@ -161,34 +161,34 @@ services:
       - otel-collector
 
   knowledge-service:
-     build:
-       context: ..
-       dockerfile: kitex_service/knowledge_service/Dockerfile
-     container_name: answer_knowledge_service
-     restart: unless-stopped
-     env_file: .env
-     environment:
-       - MYSQL_HOST=${MYSQL_HOST:-mysql}
-       - MYSQL_PORT=${MYSQL_PORT:-3306}
-       - MYSQL_USER=${MYSQL_USER:-root}
-       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
-       - MYSQL_NAME=${MYSQL_NAME:-answer}
-       - ETCD_ADDR=etcd:2379
-       - OTEL_ADDR=otel-collector:4317
-       - KITEX_IP_TO_REGISTRY=answer_knowledge_service
-       - KAFKA_BROKERS=kafka-1:9092
-       - QDRANT_HOST=answer_qdrant
-       - QDRANT_PORT=6334
-       - MEILISEARCH_HOST=http://answer_meilisearch:7700
-       - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
-       - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
-       - RERANK_ENABLED=${RERANK_ENABLED:-false}
-       - RERANK_MODE=${RERANK_MODE:-jina}
-       - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.siliconflow.cn/v1}
-       - RERANK_MODEL=${RERANK_MODEL:-Qwen/Qwen3-Reranker-8B}
-       - RERANK_TOP_N=${RERANK_TOP_N:-3}
-       - RERANK_API_KEY=${RERANK_API_KEY:-}
-       - NEO4J_URI=bolt://neo4j:7687
+    build:
+      context: ..
+      dockerfile: kitex_service/knowledge_service/Dockerfile
+    container_name: answer_knowledge_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_HOST=${MYSQL_HOST:-mysql}
+      - MYSQL_PORT=${MYSQL_PORT:-3306}
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-123456}
+      - MYSQL_NAME=${MYSQL_NAME:-answer}
+      - ETCD_ADDR=etcd:2379
+      - OTEL_ADDR=otel-collector:4317
+      - KITEX_IP_TO_REGISTRY=answer_knowledge_service
+      - KAFKA_BROKERS=kafka-1:9092
+      - QDRANT_HOST=answer_qdrant
+      - QDRANT_PORT=6334
+      - MEILISEARCH_HOST=http://answer_meilisearch:7700
+      - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY:-answer_meilisearch_key}
+      - SEAWEEDFS_FILER_URL=http://seaweedfs-filer:8888
+      - RERANK_ENABLED=${RERANK_ENABLED:-false}
+      - RERANK_MODE=${RERANK_MODE:-jina}
+      - RERANK_BASE_URL=${RERANK_BASE_URL:-https://api.siliconflow.cn/v1}
+      - RERANK_MODEL=${RERANK_MODEL:-Qwen/Qwen3-Reranker-8B}
+      - RERANK_TOP_N=${RERANK_TOP_N:-3}
+      - RERANK_API_KEY=${RERANK_API_KEY:-}
+      - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USERNAME=neo4j
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
       - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-}
@@ -198,15 +198,15 @@ services:
       - LLM_BASE_URL=${LLM_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
       - LLM_MODEL=${LLM_MODEL:-}
     networks:
-       - answer-net
-     depends_on:
-       - mysql
-       - etcd
-       - kafka-1
-       - qdrant
-       - meilisearch
-       - neo4j
-       - otel-collector
+      - answer-net
+    depends_on:
+      - mysql
+      - etcd
+      - kafka-1
+      - qdrant
+      - meilisearch
+      - neo4j
+      - otel-collector
 
   bot-service:
     build:

@@ -51,10 +51,19 @@ type BotConfig struct {
 	UserID       int64
 	BaseUrl      string
 	Name         string
+	Origin       int16 // 0=用户自建 1=市场安装 2=OpenAPI 接入（OpenAPI 不计入用量统计）
 }
 
-func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
-	resp, err := botCli.GetBotConfig(ctx, &bot.GetBotConfigReq{BotId: botId})
+// Bot 来源，与 bot_service/internal/model 中的定义保持一致。
+const (
+	BotOriginUser    int16 = 0
+	BotOriginMarket  int16 = 1
+	BotOriginOpenAPI int16 = 2
+)
+
+// GetBotConfig 读取 Bot 的凭证配置。tenantId 用于强制租户过滤，0 表示系统内部调用（按 botId 全局查）。
+func GetBotConfig(ctx context.Context, tenantId, botId int64) (*BotConfig, error) {
+	resp, err := botCli.GetBotConfig(ctx, &bot.GetBotConfigReq{BotId: botId, TenantId: &tenantId})
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +86,40 @@ func GetBotConfig(ctx context.Context, botId int64) (*BotConfig, error) {
 	if resp.BaseUrl != nil {
 		cfg.BaseUrl = resp.GetBaseUrl()
 	}
+	cfg.Origin = resp.GetOrigin()
 	return cfg, nil
 }
 
-func GetBotMcpServers(ctx context.Context, botId int64) (*bot.GetBotMcpServersRes, error) {
-	return botCli.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: botId})
+func GetBotMcpServers(ctx context.Context, tenantId, botId int64) (*bot.GetBotMcpServersRes, error) {
+	return botCli.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: botId, TenantId: &tenantId})
+}
+
+// AgentGraphConfig 是 Bot 的协作编排图快照；Found=false 表示该 Bot 尚未发布编排图。
+type AgentGraphConfig struct {
+	GraphJSON string
+	Status    int16
+	Version   int32
+	Found     bool
+}
+
+// GetAgentGraph 读取 Bot 的编排图；未发布或不存在时返回 Found=false，不视为错误。
+//
+// 编排图是否可执行由调用方按 Status 判定：只有「已发布」才按图协作执行。
+func GetAgentGraph(ctx context.Context, tenantId, botId int64) (*AgentGraphConfig, error) {
+	resp, err := botCli.GetAgentGraph(ctx, &bot.GetAgentGraphReq{TenantId: tenantId, BotId: botId})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || !resp.GetSuccess() || resp.GetGraph() == nil {
+		return &AgentGraphConfig{}, nil
+	}
+	g := resp.GetGraph()
+	return &AgentGraphConfig{
+		GraphJSON: g.GetGraphJson(),
+		Status:    g.GetStatus(),
+		Version:   g.GetVersion(),
+		Found:     true,
+	}, nil
 }
 
 func GetSystemBot(ctx context.Context) (int64, error) {

@@ -33,9 +33,10 @@ type RateLimiter struct {
 
 func NewRateLimiter() *RateLimiter {
 	cfg := map[string]Config{
-		"translate":       {Rate: rate.Every(3 * time.Second), Burst: 3},
-		"suggest_replies": {Rate: rate.Every(10 * time.Second), Burst: 2},
-		"summarize":       {Rate: rate.Every(30 * time.Second), Burst: 1},
+		"translate":        {Rate: rate.Every(3 * time.Second), Burst: 3},
+		"suggest_replies":  {Rate: rate.Every(10 * time.Second), Burst: 2},
+		"summarize":        {Rate: rate.Every(30 * time.Second), Burst: 1},
+		"summary_generate": {Rate: rate.Every(30 * time.Second), Burst: 1},
 	}
 	return &RateLimiter{
 		configs: cfg,

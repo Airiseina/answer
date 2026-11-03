@@ -50,10 +50,11 @@ func ConnectGroupService() {
 	groupCli = c
 }
 
-func CheckMuted(ctx context.Context, groupId int64, userId int64) (bool, error) {
+func CheckMuted(ctx context.Context, tenantId int64, groupId int64, userId int64) (bool, error) {
 	resp, err := groupCli.CheckMuted(ctx, &group.CheckMutedReq{
-		GroupId: groupId,
-		UserId:  userId,
+		GroupId:  groupId,
+		UserId:   userId,
+		TenantId: &tenantId,
 	})
 	if err != nil {
 		return false, err
@@ -61,9 +62,10 @@ func CheckMuted(ctx context.Context, groupId int64, userId int64) (bool, error) 
 	return resp.IsMuted, nil
 }
 
-func GetMemberRole(ctx context.Context, groupId int64, userId int64) (int64, error) {
+func GetMemberRole(ctx context.Context, tenantId int64, groupId int64, userId int64) (int64, error) {
 	resp, err := groupCli.GetGroupInfo(ctx, &group.GetGroupInfoReq{
-		GroupId: groupId,
+		GroupId:  groupId,
+		TenantId: &tenantId,
 	})
 	if err != nil {
 		return -1, err

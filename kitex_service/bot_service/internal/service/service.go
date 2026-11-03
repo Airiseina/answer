@@ -16,6 +16,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
 	"github.com/Airiseina/answer/pkg/snowflake"
 	"github.com/Airiseina/answer/pkg/storage"
+	"github.com/Airiseina/answer/pkg/tenant"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 )
@@ -122,7 +123,9 @@ func NewBotService(dao dal.BotDao) *BotService {
 	}
 }
 
-func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, systemPrompt, apiKey, model_, baseURL string) (int64, error) {
+// CreateBot 创建用户 Bot。origin 标记来源（0=用户自建 1=市场安装 2=OpenAPI 接入），
+// appID 仅在 origin=2 时非空，用于把 Bot 归属到开放平台应用。
+func (svc *BotService) CreateBot(ctx context.Context, tenantId, creatorId int64, name, systemPrompt, apiKey, model_, baseURL string, origin int16, appID string) (int64, error) {
 	// 对用户提供的系统提示词进行安全审核
 	filtered, err := filterUserPrompt(systemPrompt)
 	if err != nil {
@@ -130,6 +133,9 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 	}
 	// 清洗用户prompt中的注入标记（只存用户原始prompt，安全词在运行时动态拼接）
 	cleaned := sanitizeUserPrompt(filtered)
+	if !model.ValidOrigin(origin) {
+		origin = model.BotOriginUser
+	}
 
 	botId := svc.snowNode.Generate()
 	userID, rpcErr := rpc.CreateBotUser(ctx, name, "")
@@ -138,6 +144,7 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 	}
 	bot := model.Bot{
 		ID:           botId,
+		TenantID:     tenantId,
 		UserID:       userID,
 		CreatorID:    creatorId,
 		SystemPrompt: cleaned,
@@ -145,6 +152,8 @@ func (svc *BotService) CreateBot(ctx context.Context, creatorId int64, name, sys
 		Model:        model_,
 		BaseURL:      baseURL,
 		IsSystem:     false,
+		Origin:       origin,
+		AppID:        appID,
 	}
 	err = svc.dao.CreateBot(bot)
 	if err != nil {
@@ -164,6 +173,8 @@ type BotInfoDTO struct {
 	Model        string
 	BaseURL      string
 	IsSystem     bool
+	Origin       int16
+	AppID        string
 	CreatedAt    int64
 }
 
@@ -177,6 +188,8 @@ func (svc *BotService) enrichBotInfo(ctx context.Context, info model.Bot) BotInf
 		Model:        info.Model,
 		BaseURL:      info.BaseURL,
 		IsSystem:     info.IsSystem,
+		Origin:       info.Origin,
+		AppID:        info.AppID,
 		CreatedAt:    info.CreatedAt.UnixMilli(),
 	}
 	if info.UserID > 0 {
@@ -189,8 +202,8 @@ func (svc *BotService) enrichBotInfo(ctx context.Context, info model.Bot) BotInf
 	return dto
 }
 
-func (svc *BotService) GetBot(botId int64) (BotInfoDTO, error) {
-	info, err := svc.dao.GetBot(botId)
+func (svc *BotService) GetBot(tenantId, botId int64) (BotInfoDTO, error) {
+	info, err := svc.dao.GetBot(tenantId, botId)
 	if err != nil {
 		return BotInfoDTO{}, err
 	}
@@ -205,8 +218,8 @@ func (svc *BotService) GetSystemBot() (int64, error) {
 	return info.ID, nil
 }
 
-func (svc *BotService) GetUserBots(creatorId int64) ([]BotInfoDTO, error) {
-	infos, err := svc.dao.GetUserBots(creatorId)
+func (svc *BotService) GetUserBots(tenantId, creatorId int64) ([]BotInfoDTO, error) {
+	infos, err := svc.dao.GetUserBots(tenantId, creatorId)
 	if err != nil {
 		return nil, err
 	}
@@ -218,8 +231,8 @@ func (svc *BotService) GetUserBots(creatorId int64) ([]BotInfoDTO, error) {
 	return dtos, nil
 }
 
-func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]interface{}) (bool, error) {
-	bot, err := svc.dao.GetBot(botId)
+func (svc *BotService) UpdateBot(tenantId, botId, operatorId int64, updates map[string]interface{}) (bool, error) {
+	bot, err := svc.dao.GetBot(tenantId, botId)
 	if err != nil {
 		return false, err
 	}
@@ -253,7 +266,7 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 		botUpdates[k] = v
 	}
 	if len(botUpdates) > 0 {
-		err = svc.dao.UpdateBot(botId, botUpdates)
+		err = svc.dao.UpdateBot(tenantId, botId, botUpdates)
 		if err != nil {
 			return false, err
 		}
@@ -271,8 +284,8 @@ func (svc *BotService) UpdateBot(botId, operatorId int64, updates map[string]int
 	return true, nil
 }
 
-func (svc *BotService) DeleteBot(botId, operatorId int64) (bool, error) {
-	bot, err := svc.dao.GetBot(botId)
+func (svc *BotService) DeleteBot(tenantId, botId, operatorId int64) (bool, error) {
+	bot, err := svc.dao.GetBot(tenantId, botId)
 	if err != nil {
 		return false, err
 	}
@@ -285,7 +298,7 @@ func (svc *BotService) DeleteBot(botId, operatorId int64) (bool, error) {
 	if bot.CreatorID != operatorId {
 		return false, nil
 	}
-	err = svc.dao.DeleteBot(botId)
+	err = svc.dao.DeleteBot(tenantId, botId)
 	if err != nil {
 		return false, err
 	}
@@ -308,8 +321,8 @@ const (
 	ConvTypeGroup   int16 = 2
 )
 
-func (svc *BotService) AddBotToConversation(ctx context.Context, operatorId, botId, conversationId int64, convType int16) (int64, error) {
-	bot, err := svc.dao.GetBot(botId)
+func (svc *BotService) AddBotToConversation(ctx context.Context, tenantId, operatorId, botId, conversationId int64, convType int16) (int64, error) {
+	bot, err := svc.dao.GetBot(tenantId, botId)
 	if err != nil {
 		return 0, fmt.Errorf("查询Bot失败: %w", err)
 	}
@@ -372,6 +385,7 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	}
 	systemBot := model.Bot{
 		ID:           botId,
+		TenantID:     tenant.PlatformTenantID,
 		CreatorID:    0,
 		SystemPrompt: systemPrompt,
 		ApiKey:       strings.TrimSpace(v.GetString("ai.system.bot_api_key")),
@@ -386,13 +400,13 @@ func (svc *BotService) InitSystemBot(ctx context.Context) (int64, error) {
 	avatarURL := svc.uploadSystemBotAvatar(ctx, botId)
 	userID, rpcErr := rpc.CreateBotUser(ctx, name, avatarURL)
 	if rpcErr != nil {
-		delErr := svc.dao.DeleteBot(botId)
+		delErr := svc.dao.DeleteBot(tenant.PlatformTenantID, botId)
 		if delErr != nil {
 			klog.Errorf("系统Bot[%d]创建用户记录失败后回滚删除也失败: %v", botId, delErr)
 		}
 		return 0, fmt.Errorf("系统Bot创建用户记录失败: %w", rpcErr)
 	}
-	err = svc.dao.UpdateBot(botId, map[string]interface{}{"user_id": userID})
+	err = svc.dao.UpdateBot(tenant.PlatformTenantID, botId, map[string]interface{}{"user_id": userID})
 	if err != nil {
 		klog.Errorf("系统Bot[%d]更新user_id失败: %v", botId, err)
 	}
@@ -444,7 +458,7 @@ func (svc *BotService) syncSystemBotFromFiles(ctx context.Context, bot model.Bot
 
 	// 更新数据库
 	if len(updates) > 0 {
-		if err := svc.dao.UpdateBot(bot.ID, updates); err != nil {
+		if err := svc.dao.UpdateBot(tenant.PlatformTenantID, bot.ID, updates); err != nil {
 			klog.Errorf("系统Bot[%d]同步更新失败: %v", bot.ID, err)
 		} else {
 			var keys []string

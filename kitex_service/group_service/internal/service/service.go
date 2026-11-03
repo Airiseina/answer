@@ -36,9 +36,10 @@ func NewGroupService(dao dal.GroupDao) *GroupService {
 //   - 统一会话模型下，群聊消息的收发依赖 conversation_id
 //   - 如果不同步创建会话，群组存在但无法发送消息
 //   - conversationID 回写到 Group 表，后续邀请/踢人时需要用它同步会话成员
-func (service GroupService) CreateGroup(ctx context.Context, createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, int64, error) {
+func (service GroupService) CreateGroup(ctx context.Context, tenantId int64, createId int64, name string, membersId []int64, nameMap map[int64]string) (int64, int64, int64, error) {
 	groupNumber := service.snowNode.Generate()
 	group := model.Group{
+		TenantID:    tenantId,
 		Name:        name,
 		OwnerID:     createId,
 		GroupNumber: groupNumber,
@@ -50,9 +51,10 @@ func (service GroupService) CreateGroup(ctx context.Context, createId int64, nam
 			role = 2
 		}
 		members = append(members, model.GroupMember{
-			UserID: memberId,
-			Name:   nameMap[memberId],
-			Role:   role,
+			TenantID: tenantId,
+			UserID:   memberId,
+			Name:     nameMap[memberId],
+			Role:     role,
 		})
 	}
 
@@ -61,15 +63,15 @@ func (service GroupService) CreateGroup(ctx context.Context, createId int64, nam
 		return 0, 0, 0, err
 	}
 
-	conversationID, rpcErr := rpc.CreateConversation(ctx, name, membersId, groupId)
+	conversationID, rpcErr := rpc.CreateConversation(ctx, tenantId, name, membersId, groupId)
 	if rpcErr != nil {
-		if delErr := service.dao.DeleteGroup(groupId); delErr != nil {
+		if delErr := service.dao.DeleteGroup(tenantId, groupId); delErr != nil {
 			klog.Errorf("补偿删除群组%d失败: %v", groupId, delErr)
 		}
 		return 0, 0, 0, fmt.Errorf("创建群聊会话失败: %w", rpcErr)
 	}
 
-	if updateErr := service.dao.UpdateConversationID(groupId, conversationID); updateErr != nil {
+	if updateErr := service.dao.UpdateConversationID(tenantId, groupId, conversationID); updateErr != nil {
 		klog.Errorf("回写conversationID到群组%d失败: %v", groupId, updateErr)
 	}
 
@@ -87,19 +89,19 @@ func (service GroupService) CreateGroup(ctx context.Context, createId int64, nam
 //   - 新成员加入群组后，应该能收到该群的消息推送
 //   - 如果不同步 conversation_member，新成员不在会话成员列表中
 //   - SendMessage 查询 GetConversationMembers 时会遗漏新成员
-func (service GroupService) InviteMembers(ctx context.Context, inviterId int64, groupId int64, membersId []int64, nameMap map[int64]string) (bool, error) {
-	info, err := service.dao.GetGroupInfo(groupId)
+func (service GroupService) InviteMembers(ctx context.Context, tenantId int64, inviterId int64, groupId int64, membersId []int64, nameMap map[int64]string) (bool, error) {
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
-	operatorRole, err := service.dao.GetMemberRole(groupId, inviterId)
+	operatorRole, err := service.dao.GetMemberRole(tenantId, groupId, inviterId)
 	if err != nil {
 		return false, err
 	}
 	if operatorRole < 1 && inviterId != info.OwnerID {
 		return false, nil
 	}
-	existingMembers, err := service.dao.FindMembers(groupId)
+	existingMembers, err := service.dao.FindMembers(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
@@ -113,9 +115,10 @@ func (service GroupService) InviteMembers(ctx context.Context, inviterId int64, 
 			return false, nil
 		}
 		members = append(members, model.GroupMember{
-			UserID:  memberId,
-			GroupID: groupId,
-			Name:    nameMap[memberId],
+			TenantID: tenantId,
+			UserID:   memberId,
+			GroupID:  groupId,
+			Name:     nameMap[memberId],
 		})
 	}
 	if len(members) == 0 {
@@ -133,7 +136,7 @@ func (service GroupService) InviteMembers(ctx context.Context, inviterId int64, 
 		for _, m := range members {
 			newMemberIDs = append(newMemberIDs, m.UserID)
 		}
-		if rpcErr := rpc.AddConversationMembers(ctx, info.ConversationID, newMemberIDs); rpcErr != nil {
+		if rpcErr := rpc.AddConversationMembers(ctx, tenantId, info.ConversationID, newMemberIDs); rpcErr != nil {
 			// RPC 失败不影响群组操作（群组成员已持久化），但记录错误
 			// 后续可通过定时任务补偿同步
 			_ = rpcErr
@@ -153,15 +156,15 @@ func (service GroupService) InviteMembers(ctx context.Context, inviterId int64, 
 //   - 被踢出的成员不应再收到该群的消息推送
 //   - 如果不同步移除 conversation_member，被踢用户仍在会话成员列表中
 //   - SendMessage 会继续向已退群的用户推送消息，造成数据不一致
-func (service GroupService) KickMembers(ctx context.Context, operatorId int64, groupId int64, membersId []int64) (bool, error) {
+func (service GroupService) KickMembers(ctx context.Context, tenantId int64, operatorId int64, groupId int64, membersId []int64) (bool, error) {
 	if len(membersId) == 0 {
 		return false, nil
 	}
-	info, err := service.dao.GetGroupInfo(groupId)
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
-	members, err := service.dao.FindMembers(groupId)
+	members, err := service.dao.FindMembers(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
@@ -182,13 +185,13 @@ func (service GroupService) KickMembers(ctx context.Context, operatorId int64, g
 			return false, nil
 		}
 	}
-	err = service.dao.KickMembers(groupId, membersId)
+	err = service.dao.KickMembers(tenantId, groupId, membersId)
 	if err != nil {
 		return false, err
 	}
 	// 同步会话成员：通知 chat_service 从对应会话中移除被踢成员
 	if info.ConversationID > 0 {
-		if rpcErr := rpc.RemoveConversationMembers(ctx, info.ConversationID, membersId); rpcErr != nil {
+		if rpcErr := rpc.RemoveConversationMembers(ctx, tenantId, info.ConversationID, membersId); rpcErr != nil {
 			// RPC 失败不影响群组操作（群组成员已持久化），但记录错误
 			// 后续可通过定时任务补偿同步
 			_ = rpcErr
@@ -225,8 +228,8 @@ type GroupNoticeDTO struct {
 	CreateTime time.Time
 }
 
-func (service GroupService) GetGroupInfo(groupId int64) (GroupDTO, error) {
-	group, err := service.dao.GetGroupAllInfo(groupId)
+func (service GroupService) GetGroupInfo(tenantId, groupId int64) (GroupDTO, error) {
+	group, err := service.dao.GetGroupAllInfo(tenantId, groupId)
 	if err != nil {
 		return GroupDTO{}, err
 	}
@@ -257,7 +260,7 @@ func (service GroupService) GetGroupInfo(groupId int64) (GroupDTO, error) {
 		GroupNumber: group.GroupNumber,
 		CreatedAt:   group.CreateTime,
 	}
-	notices, noticeErr := service.dao.GetNotices(groupId)
+	notices, noticeErr := service.dao.GetNotices(tenantId, groupId)
 	if noticeErr == nil && len(notices) > 0 {
 		for _, n := range notices {
 			groupDTO.Notices = append(groupDTO.Notices, GroupNoticeDTO{
@@ -271,15 +274,15 @@ func (service GroupService) GetGroupInfo(groupId int64) (GroupDTO, error) {
 	return groupDTO, nil
 }
 
-func (service GroupService) ChangeOwner(operatorId int64, groupId int64, newOwnerId int64) (bool, error) {
-	info, err := service.dao.GetGroupInfo(groupId)
+func (service GroupService) ChangeOwner(tenantId int64, operatorId int64, groupId int64, newOwnerId int64) (bool, error) {
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
 	if operatorId != info.OwnerID {
 		return false, nil
 	}
-	members, err := service.dao.FindMembers(groupId)
+	members, err := service.dao.FindMembers(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
@@ -293,22 +296,22 @@ func (service GroupService) ChangeOwner(operatorId int64, groupId int64, newOwne
 	if !isMember {
 		return false, nil
 	}
-	err = service.dao.TransferOwner(groupId, operatorId, newOwnerId)
+	err = service.dao.TransferOwner(tenantId, groupId, operatorId, newOwnerId)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (service GroupService) ChangeNotice(operatorId int64, groupId int64, notice string) (bool, error) {
-	info, err := service.dao.GetGroupInfo(groupId)
+func (service GroupService) ChangeNotice(tenantId int64, operatorId int64, groupId int64, notice string) (bool, error) {
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
 	isOwner := operatorId == info.OwnerID
 	isAdmin := false
 	if !isOwner {
-		members, err := service.dao.FindMembers(groupId)
+		members, err := service.dao.FindMembers(tenantId, groupId)
 		if err == nil {
 			for _, m := range members {
 				if m.UserID == operatorId && m.Role >= 1 {
@@ -321,11 +324,12 @@ func (service GroupService) ChangeNotice(operatorId int64, groupId int64, notice
 	if !isOwner && !isAdmin {
 		return false, nil
 	}
-	err = service.dao.ChangeNotice(groupId, notice)
+	err = service.dao.ChangeNotice(tenantId, groupId, notice)
 	if err != nil {
 		return false, err
 	}
 	noticeRecord := model.GroupNotice{
+		TenantID:   tenantId,
 		GroupID:    groupId,
 		Content:    notice,
 		OperatorID: operatorId,
@@ -336,12 +340,12 @@ func (service GroupService) ChangeNotice(operatorId int64, groupId int64, notice
 	return true, nil
 }
 
-func (service GroupService) Muted(operatorId int64, groupId int64, mutedId int64, isMute bool) (bool, error) {
-	info, err := service.dao.GetGroupInfo(groupId)
+func (service GroupService) Muted(tenantId int64, operatorId int64, groupId int64, mutedId int64, isMute bool) (bool, error) {
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
-	members, err := service.dao.FindMembers(groupId)
+	members, err := service.dao.FindMembers(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
@@ -363,25 +367,25 @@ func (service GroupService) Muted(operatorId int64, groupId int64, mutedId int64
 	if operatorId == mutedId || mutedId == info.OwnerID {
 		return false, nil
 	}
-	err = service.dao.Muted(groupId, mutedId, isMute)
+	err = service.dao.Muted(tenantId, groupId, mutedId, isMute)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (service GroupService) SetAdmin(operatorId int64, groupId int64, targetId int64, role int64) (bool, error) {
+func (service GroupService) SetAdmin(tenantId int64, operatorId int64, groupId int64, targetId int64, role int64) (bool, error) {
 	if role != 0 && role != 1 {
 		return false, nil
 	}
-	info, err := service.dao.GetGroupInfo(groupId)
+	info, err := service.dao.GetGroupInfo(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
 	if operatorId != info.OwnerID {
 		return false, nil
 	}
-	members, err := service.dao.FindMembers(groupId)
+	members, err := service.dao.FindMembers(tenantId, groupId)
 	if err != nil {
 		return false, err
 	}
@@ -398,7 +402,7 @@ func (service GroupService) SetAdmin(operatorId int64, groupId int64, targetId i
 	if targetId == info.OwnerID {
 		return false, nil
 	}
-	err = service.dao.SetAdmin(groupId, targetId, role)
+	err = service.dao.SetAdmin(tenantId, groupId, targetId, role)
 	if err != nil {
 		return false, err
 	}
@@ -411,8 +415,8 @@ type UserGroupDTO struct {
 	GroupNumber int64
 }
 
-func (service GroupService) GetUserGroups(userId int64) ([]UserGroupDTO, error) {
-	groups, err := service.dao.GetUserGroups(userId)
+func (service GroupService) GetUserGroups(tenantId, userId int64) ([]UserGroupDTO, error) {
+	groups, err := service.dao.GetUserGroups(tenantId, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -435,8 +439,8 @@ type GroupSearchResultDTO struct {
 	GroupNumber int64
 }
 
-func (service GroupService) SearchGroupByNumber(groupNumber int64) (GroupSearchResultDTO, error) {
-	group, err := service.dao.SearchGroupByNumber(groupNumber)
+func (service GroupService) SearchGroupByNumber(tenantId, groupNumber int64) (GroupSearchResultDTO, error) {
+	group, err := service.dao.SearchGroupByNumber(tenantId, groupNumber)
 	if err != nil {
 		return GroupSearchResultDTO{}, err
 	}
@@ -444,7 +448,7 @@ func (service GroupService) SearchGroupByNumber(groupNumber int64) (GroupSearchR
 		return GroupSearchResultDTO{}, nil
 	}
 	ownerName := ""
-	members, err := service.dao.FindMembers(group.ID)
+	members, err := service.dao.FindMembers(tenantId, group.ID)
 	if err == nil {
 		for _, m := range members {
 			if m.UserID == group.OwnerID {
@@ -462,15 +466,15 @@ func (service GroupService) SearchGroupByNumber(groupNumber int64) (GroupSearchR
 	}, nil
 }
 
-func (service GroupService) JoinGroup(userId int64, groupNumber int64, message string) (bool, error) {
-	group, err := service.dao.SearchGroupByNumber(groupNumber)
+func (service GroupService) JoinGroup(tenantId int64, userId int64, groupNumber int64, message string) (bool, error) {
+	group, err := service.dao.SearchGroupByNumber(tenantId, groupNumber)
 	if err != nil {
 		return false, err
 	}
 	if group.ID == 0 {
 		return false, fmt.Errorf("群不存在")
 	}
-	isMember, err := service.dao.IsGroupMember(group.ID, userId)
+	isMember, err := service.dao.IsGroupMember(tenantId, group.ID, userId)
 	if err != nil {
 		return false, err
 	}
@@ -478,10 +482,11 @@ func (service GroupService) JoinGroup(userId int64, groupNumber int64, message s
 		return false, fmt.Errorf("已是群成员")
 	}
 	req := model.GroupJoinRequest{
-		GroupID: group.ID,
-		UserID:  userId,
-		Message: message,
-		Status:  model.JoinRequestPending,
+		TenantID: tenantId,
+		GroupID:  group.ID,
+		UserID:   userId,
+		Message:  message,
+		Status:   model.JoinRequestPending,
 	}
 	err = service.dao.CreateJoinRequest(req)
 	if err != nil {
@@ -490,22 +495,22 @@ func (service GroupService) JoinGroup(userId int64, groupNumber int64, message s
 	return true, nil
 }
 
-func (service GroupService) HandleJoinRequest(ctx context.Context, operatorId int64, groupId int64, userId int64, accept bool, userName string) (bool, error) {
-	operatorRole, err := service.dao.GetMemberRole(groupId, operatorId)
+func (service GroupService) HandleJoinRequest(ctx context.Context, tenantId int64, operatorId int64, groupId int64, userId int64, accept bool, userName string) (bool, error) {
+	operatorRole, err := service.dao.GetMemberRole(tenantId, groupId, operatorId)
 	if err != nil {
 		return false, err
 	}
 	if operatorRole < 1 {
 		return false, nil
 	}
-	err = service.dao.HandleJoinRequest(groupId, userId, accept, userName)
+	err = service.dao.HandleJoinRequest(tenantId, groupId, userId, accept, userName)
 	if err != nil {
 		return false, err
 	}
 	if accept {
-		info, getInfoErr := service.dao.GetGroupInfo(groupId)
+		info, getInfoErr := service.dao.GetGroupInfo(tenantId, groupId)
 		if getInfoErr == nil && info.ConversationID > 0 {
-			if rpcErr := rpc.AddConversationMembers(ctx, info.ConversationID, []int64{userId}); rpcErr != nil {
+			if rpcErr := rpc.AddConversationMembers(ctx, tenantId, info.ConversationID, []int64{userId}); rpcErr != nil {
 				_ = rpcErr
 			}
 		}
@@ -520,8 +525,8 @@ type JoinRequestDTO struct {
 	Status  int64
 }
 
-func (service GroupService) GetJoinRequests(groupId int64) ([]JoinRequestDTO, error) {
-	requests, err := service.dao.GetJoinRequests(groupId)
+func (service GroupService) GetJoinRequests(tenantId, groupId int64) ([]JoinRequestDTO, error) {
+	requests, err := service.dao.GetJoinRequests(tenantId, groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -536,6 +541,6 @@ func (service GroupService) GetJoinRequests(groupId int64) ([]JoinRequestDTO, er
 	return result, nil
 }
 
-func (service GroupService) CheckMuted(groupId int64, userId int64) (bool, error) {
-	return service.dao.CheckMuted(groupId, userId)
+func (service GroupService) CheckMuted(tenantId, groupId int64, userId int64) (bool, error) {
+	return service.dao.CheckMuted(tenantId, groupId, userId)
 }

@@ -287,6 +287,21 @@ func (db *gor) GetUsersByAccounts(accounts []string) ([]model.User, error) {
 	return users, nil
 }
 
+// ListActiveUsers 按主键升序游标分页返回非 Bot 用户。
+// 使用 id > afterUserID 的游标而非 offset，避免大数据量下的深分页开销，
+// 也保证新增用户不会打乱正在进行的遍历。
+func (db *gor) ListActiveUsers(afterUserID int64, limit int) ([]model.User, error) {
+	var users []model.User
+	err := db.db.Where("id > ? AND is_bot = ?", afterUserID, false).
+		Order("id ASC").
+		Limit(limit).
+		Find(&users).Error
+	if err != nil {
+		return nil, fmt.Errorf("枚举用户列表失败: %w", err)
+	}
+	return users, nil
+}
+
 func (db *gor) UpdateAvatar(userID int64, avatarURL string) error {
 	err := db.db.Model(&model.User{}).Where("id = ?", userID).Update("avatar_url", avatarURL).Error
 	if err != nil {

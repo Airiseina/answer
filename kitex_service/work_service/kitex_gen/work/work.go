@@ -235,12 +235,640 @@ var fieldIDToName_TranslateMessageRes = map[int16]string{
 	2: "translated_content",
 }
 
+type SummaryReportInfo struct {
+	Id          int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	UserId      int64  `thrift:"user_id,2" frugal:"2,default,i64" json:"user_id"`
+	Type        string `thrift:"type,3" frugal:"3,default,string" json:"type"`
+	PeriodStart int64  `thrift:"period_start,4" frugal:"4,default,i64" json:"period_start"`
+	PeriodEnd   int64  `thrift:"period_end,5" frugal:"5,default,i64" json:"period_end"`
+	Content     string `thrift:"content,6" frugal:"6,default,string" json:"content"`
+	Model       string `thrift:"model,7" frugal:"7,default,string" json:"model"`
+	Status      int16  `thrift:"status,8" frugal:"8,default,i16" json:"status"`
+	Error       string `thrift:"error,9" frugal:"9,default,string" json:"error"`
+	CreatedAt   int64  `thrift:"created_at,10" frugal:"10,default,i64" json:"created_at"`
+}
+
+func NewSummaryReportInfo() *SummaryReportInfo {
+	return &SummaryReportInfo{}
+}
+
+func (p *SummaryReportInfo) InitDefault() {
+}
+
+func (p *SummaryReportInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *SummaryReportInfo) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SummaryReportInfo) GetType() (v string) {
+	return p.Type
+}
+
+func (p *SummaryReportInfo) GetPeriodStart() (v int64) {
+	return p.PeriodStart
+}
+
+func (p *SummaryReportInfo) GetPeriodEnd() (v int64) {
+	return p.PeriodEnd
+}
+
+func (p *SummaryReportInfo) GetContent() (v string) {
+	return p.Content
+}
+
+func (p *SummaryReportInfo) GetModel() (v string) {
+	return p.Model
+}
+
+func (p *SummaryReportInfo) GetStatus() (v int16) {
+	return p.Status
+}
+
+func (p *SummaryReportInfo) GetError() (v string) {
+	return p.Error
+}
+
+func (p *SummaryReportInfo) GetCreatedAt() (v int64) {
+	return p.CreatedAt
+}
+func (p *SummaryReportInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *SummaryReportInfo) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SummaryReportInfo) SetType(val string) {
+	p.Type = val
+}
+func (p *SummaryReportInfo) SetPeriodStart(val int64) {
+	p.PeriodStart = val
+}
+func (p *SummaryReportInfo) SetPeriodEnd(val int64) {
+	p.PeriodEnd = val
+}
+func (p *SummaryReportInfo) SetContent(val string) {
+	p.Content = val
+}
+func (p *SummaryReportInfo) SetModel(val string) {
+	p.Model = val
+}
+func (p *SummaryReportInfo) SetStatus(val int16) {
+	p.Status = val
+}
+func (p *SummaryReportInfo) SetError(val string) {
+	p.Error = val
+}
+func (p *SummaryReportInfo) SetCreatedAt(val int64) {
+	p.CreatedAt = val
+}
+
+func (p *SummaryReportInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SummaryReportInfo(%+v)", *p)
+}
+
+var fieldIDToName_SummaryReportInfo = map[int16]string{
+	1:  "id",
+	2:  "user_id",
+	3:  "type",
+	4:  "period_start",
+	5:  "period_end",
+	6:  "content",
+	7:  "model",
+	8:  "status",
+	9:  "error",
+	10: "created_at",
+}
+
+type GenerateSummaryReq struct {
+	UserId      int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Type        string `thrift:"type,2" frugal:"2,default,string" json:"type"`
+	PeriodStart *int64 `thrift:"period_start,3,optional" frugal:"3,optional,i64" json:"period_start,omitempty"`
+	PeriodEnd   *int64 `thrift:"period_end,4,optional" frugal:"4,optional,i64" json:"period_end,omitempty"`
+}
+
+func NewGenerateSummaryReq() *GenerateSummaryReq {
+	return &GenerateSummaryReq{}
+}
+
+func (p *GenerateSummaryReq) InitDefault() {
+}
+
+func (p *GenerateSummaryReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *GenerateSummaryReq) GetType() (v string) {
+	return p.Type
+}
+
+var GenerateSummaryReq_PeriodStart_DEFAULT int64
+
+func (p *GenerateSummaryReq) GetPeriodStart() (v int64) {
+	if !p.IsSetPeriodStart() {
+		return GenerateSummaryReq_PeriodStart_DEFAULT
+	}
+	return *p.PeriodStart
+}
+
+var GenerateSummaryReq_PeriodEnd_DEFAULT int64
+
+func (p *GenerateSummaryReq) GetPeriodEnd() (v int64) {
+	if !p.IsSetPeriodEnd() {
+		return GenerateSummaryReq_PeriodEnd_DEFAULT
+	}
+	return *p.PeriodEnd
+}
+func (p *GenerateSummaryReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *GenerateSummaryReq) SetType(val string) {
+	p.Type = val
+}
+func (p *GenerateSummaryReq) SetPeriodStart(val *int64) {
+	p.PeriodStart = val
+}
+func (p *GenerateSummaryReq) SetPeriodEnd(val *int64) {
+	p.PeriodEnd = val
+}
+
+func (p *GenerateSummaryReq) IsSetPeriodStart() bool {
+	return p.PeriodStart != nil
+}
+
+func (p *GenerateSummaryReq) IsSetPeriodEnd() bool {
+	return p.PeriodEnd != nil
+}
+
+func (p *GenerateSummaryReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GenerateSummaryReq(%+v)", *p)
+}
+
+var fieldIDToName_GenerateSummaryReq = map[int16]string{
+	1: "user_id",
+	2: "type",
+	3: "period_start",
+	4: "period_end",
+}
+
+type GenerateSummaryRes struct {
+	Success bool               `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Report  *SummaryReportInfo `thrift:"report,2" frugal:"2,default,SummaryReportInfo" json:"report"`
+}
+
+func NewGenerateSummaryRes() *GenerateSummaryRes {
+	return &GenerateSummaryRes{}
+}
+
+func (p *GenerateSummaryRes) InitDefault() {
+}
+
+func (p *GenerateSummaryRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GenerateSummaryRes_Report_DEFAULT *SummaryReportInfo
+
+func (p *GenerateSummaryRes) GetReport() (v *SummaryReportInfo) {
+	if !p.IsSetReport() {
+		return GenerateSummaryRes_Report_DEFAULT
+	}
+	return p.Report
+}
+func (p *GenerateSummaryRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GenerateSummaryRes) SetReport(val *SummaryReportInfo) {
+	p.Report = val
+}
+
+func (p *GenerateSummaryRes) IsSetReport() bool {
+	return p.Report != nil
+}
+
+func (p *GenerateSummaryRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GenerateSummaryRes(%+v)", *p)
+}
+
+var fieldIDToName_GenerateSummaryRes = map[int16]string{
+	1: "success",
+	2: "report",
+}
+
+type GetSummaryReportReq struct {
+	UserId   int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	ReportId int64 `thrift:"report_id,2" frugal:"2,default,i64" json:"report_id"`
+}
+
+func NewGetSummaryReportReq() *GetSummaryReportReq {
+	return &GetSummaryReportReq{}
+}
+
+func (p *GetSummaryReportReq) InitDefault() {
+}
+
+func (p *GetSummaryReportReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *GetSummaryReportReq) GetReportId() (v int64) {
+	return p.ReportId
+}
+func (p *GetSummaryReportReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *GetSummaryReportReq) SetReportId(val int64) {
+	p.ReportId = val
+}
+
+func (p *GetSummaryReportReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetSummaryReportReq(%+v)", *p)
+}
+
+var fieldIDToName_GetSummaryReportReq = map[int16]string{
+	1: "user_id",
+	2: "report_id",
+}
+
+type GetSummaryReportRes struct {
+	Success bool               `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Report  *SummaryReportInfo `thrift:"report,2" frugal:"2,default,SummaryReportInfo" json:"report"`
+}
+
+func NewGetSummaryReportRes() *GetSummaryReportRes {
+	return &GetSummaryReportRes{}
+}
+
+func (p *GetSummaryReportRes) InitDefault() {
+}
+
+func (p *GetSummaryReportRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GetSummaryReportRes_Report_DEFAULT *SummaryReportInfo
+
+func (p *GetSummaryReportRes) GetReport() (v *SummaryReportInfo) {
+	if !p.IsSetReport() {
+		return GetSummaryReportRes_Report_DEFAULT
+	}
+	return p.Report
+}
+func (p *GetSummaryReportRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetSummaryReportRes) SetReport(val *SummaryReportInfo) {
+	p.Report = val
+}
+
+func (p *GetSummaryReportRes) IsSetReport() bool {
+	return p.Report != nil
+}
+
+func (p *GetSummaryReportRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetSummaryReportRes(%+v)", *p)
+}
+
+var fieldIDToName_GetSummaryReportRes = map[int16]string{
+	1: "success",
+	2: "report",
+}
+
+type ListSummaryReportsReq struct {
+	UserId int64   `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Type   *string `thrift:"type,2,optional" frugal:"2,optional,string" json:"type,omitempty"`
+	Limit  *int32  `thrift:"limit,3,optional" frugal:"3,optional,i32" json:"limit,omitempty"`
+	Offset *int32  `thrift:"offset,4,optional" frugal:"4,optional,i32" json:"offset,omitempty"`
+}
+
+func NewListSummaryReportsReq() *ListSummaryReportsReq {
+	return &ListSummaryReportsReq{}
+}
+
+func (p *ListSummaryReportsReq) InitDefault() {
+}
+
+func (p *ListSummaryReportsReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+var ListSummaryReportsReq_Type_DEFAULT string
+
+func (p *ListSummaryReportsReq) GetType() (v string) {
+	if !p.IsSetType() {
+		return ListSummaryReportsReq_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var ListSummaryReportsReq_Limit_DEFAULT int32
+
+func (p *ListSummaryReportsReq) GetLimit() (v int32) {
+	if !p.IsSetLimit() {
+		return ListSummaryReportsReq_Limit_DEFAULT
+	}
+	return *p.Limit
+}
+
+var ListSummaryReportsReq_Offset_DEFAULT int32
+
+func (p *ListSummaryReportsReq) GetOffset() (v int32) {
+	if !p.IsSetOffset() {
+		return ListSummaryReportsReq_Offset_DEFAULT
+	}
+	return *p.Offset
+}
+func (p *ListSummaryReportsReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *ListSummaryReportsReq) SetType(val *string) {
+	p.Type = val
+}
+func (p *ListSummaryReportsReq) SetLimit(val *int32) {
+	p.Limit = val
+}
+func (p *ListSummaryReportsReq) SetOffset(val *int32) {
+	p.Offset = val
+}
+
+func (p *ListSummaryReportsReq) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *ListSummaryReportsReq) IsSetLimit() bool {
+	return p.Limit != nil
+}
+
+func (p *ListSummaryReportsReq) IsSetOffset() bool {
+	return p.Offset != nil
+}
+
+func (p *ListSummaryReportsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListSummaryReportsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListSummaryReportsReq = map[int16]string{
+	1: "user_id",
+	2: "type",
+	3: "limit",
+	4: "offset",
+}
+
+type ListSummaryReportsRes struct {
+	Reports []*SummaryReportInfo `thrift:"reports,1" frugal:"1,default,list<SummaryReportInfo>" json:"reports"`
+}
+
+func NewListSummaryReportsRes() *ListSummaryReportsRes {
+	return &ListSummaryReportsRes{}
+}
+
+func (p *ListSummaryReportsRes) InitDefault() {
+}
+
+func (p *ListSummaryReportsRes) GetReports() (v []*SummaryReportInfo) {
+	return p.Reports
+}
+func (p *ListSummaryReportsRes) SetReports(val []*SummaryReportInfo) {
+	p.Reports = val
+}
+
+func (p *ListSummaryReportsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListSummaryReportsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListSummaryReportsRes = map[int16]string{
+	1: "reports",
+}
+
+type SummaryScheduleInfo struct {
+	DailyEnabled  bool `thrift:"daily_enabled,1" frugal:"1,default,bool" json:"daily_enabled"`
+	WeeklyEnabled bool `thrift:"weekly_enabled,2" frugal:"2,default,bool" json:"weekly_enabled"`
+}
+
+func NewSummaryScheduleInfo() *SummaryScheduleInfo {
+	return &SummaryScheduleInfo{}
+}
+
+func (p *SummaryScheduleInfo) InitDefault() {
+}
+
+func (p *SummaryScheduleInfo) GetDailyEnabled() (v bool) {
+	return p.DailyEnabled
+}
+
+func (p *SummaryScheduleInfo) GetWeeklyEnabled() (v bool) {
+	return p.WeeklyEnabled
+}
+func (p *SummaryScheduleInfo) SetDailyEnabled(val bool) {
+	p.DailyEnabled = val
+}
+func (p *SummaryScheduleInfo) SetWeeklyEnabled(val bool) {
+	p.WeeklyEnabled = val
+}
+
+func (p *SummaryScheduleInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SummaryScheduleInfo(%+v)", *p)
+}
+
+var fieldIDToName_SummaryScheduleInfo = map[int16]string{
+	1: "daily_enabled",
+	2: "weekly_enabled",
+}
+
+type GetSummaryScheduleReq struct {
+	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+}
+
+func NewGetSummaryScheduleReq() *GetSummaryScheduleReq {
+	return &GetSummaryScheduleReq{}
+}
+
+func (p *GetSummaryScheduleReq) InitDefault() {
+}
+
+func (p *GetSummaryScheduleReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *GetSummaryScheduleReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *GetSummaryScheduleReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetSummaryScheduleReq(%+v)", *p)
+}
+
+var fieldIDToName_GetSummaryScheduleReq = map[int16]string{
+	1: "user_id",
+}
+
+type GetSummaryScheduleRes struct {
+	Success  bool                 `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Schedule *SummaryScheduleInfo `thrift:"schedule,2" frugal:"2,default,SummaryScheduleInfo" json:"schedule"`
+}
+
+func NewGetSummaryScheduleRes() *GetSummaryScheduleRes {
+	return &GetSummaryScheduleRes{}
+}
+
+func (p *GetSummaryScheduleRes) InitDefault() {
+}
+
+func (p *GetSummaryScheduleRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var GetSummaryScheduleRes_Schedule_DEFAULT *SummaryScheduleInfo
+
+func (p *GetSummaryScheduleRes) GetSchedule() (v *SummaryScheduleInfo) {
+	if !p.IsSetSchedule() {
+		return GetSummaryScheduleRes_Schedule_DEFAULT
+	}
+	return p.Schedule
+}
+func (p *GetSummaryScheduleRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *GetSummaryScheduleRes) SetSchedule(val *SummaryScheduleInfo) {
+	p.Schedule = val
+}
+
+func (p *GetSummaryScheduleRes) IsSetSchedule() bool {
+	return p.Schedule != nil
+}
+
+func (p *GetSummaryScheduleRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetSummaryScheduleRes(%+v)", *p)
+}
+
+var fieldIDToName_GetSummaryScheduleRes = map[int16]string{
+	1: "success",
+	2: "schedule",
+}
+
+type SetSummaryScheduleReq struct {
+	UserId        int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	DailyEnabled  bool  `thrift:"daily_enabled,2" frugal:"2,default,bool" json:"daily_enabled"`
+	WeeklyEnabled bool  `thrift:"weekly_enabled,3" frugal:"3,default,bool" json:"weekly_enabled"`
+}
+
+func NewSetSummaryScheduleReq() *SetSummaryScheduleReq {
+	return &SetSummaryScheduleReq{}
+}
+
+func (p *SetSummaryScheduleReq) InitDefault() {
+}
+
+func (p *SetSummaryScheduleReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SetSummaryScheduleReq) GetDailyEnabled() (v bool) {
+	return p.DailyEnabled
+}
+
+func (p *SetSummaryScheduleReq) GetWeeklyEnabled() (v bool) {
+	return p.WeeklyEnabled
+}
+func (p *SetSummaryScheduleReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SetSummaryScheduleReq) SetDailyEnabled(val bool) {
+	p.DailyEnabled = val
+}
+func (p *SetSummaryScheduleReq) SetWeeklyEnabled(val bool) {
+	p.WeeklyEnabled = val
+}
+
+func (p *SetSummaryScheduleReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SetSummaryScheduleReq(%+v)", *p)
+}
+
+var fieldIDToName_SetSummaryScheduleReq = map[int16]string{
+	1: "user_id",
+	2: "daily_enabled",
+	3: "weekly_enabled",
+}
+
+type SetSummaryScheduleRes struct {
+	Success bool `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+}
+
+func NewSetSummaryScheduleRes() *SetSummaryScheduleRes {
+	return &SetSummaryScheduleRes{}
+}
+
+func (p *SetSummaryScheduleRes) InitDefault() {
+}
+
+func (p *SetSummaryScheduleRes) GetSuccess() (v bool) {
+	return p.Success
+}
+func (p *SetSummaryScheduleRes) SetSuccess(val bool) {
+	p.Success = val
+}
+
+func (p *SetSummaryScheduleRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SetSummaryScheduleRes(%+v)", *p)
+}
+
+var fieldIDToName_SetSummaryScheduleRes = map[int16]string{
+	1: "success",
+}
+
 type WorkService interface {
 	SummarizeConversation(ctx context.Context, req *SummarizeConversationReq) (r *SummarizeConversationRes, err error)
 
 	SuggestReplies(ctx context.Context, req *SuggestRepliesReq) (r *SuggestRepliesRes, err error)
 
 	TranslateMessage(ctx context.Context, req *TranslateMessageReq) (r *TranslateMessageRes, err error)
+
+	GenerateSummary(ctx context.Context, req *GenerateSummaryReq) (r *GenerateSummaryRes, err error)
+
+	GetSummaryReport(ctx context.Context, req *GetSummaryReportReq) (r *GetSummaryReportRes, err error)
+
+	ListSummaryReports(ctx context.Context, req *ListSummaryReportsReq) (r *ListSummaryReportsRes, err error)
+
+	GetSummarySchedule(ctx context.Context, req *GetSummaryScheduleReq) (r *GetSummaryScheduleRes, err error)
+
+	SetSummarySchedule(ctx context.Context, req *SetSummaryScheduleReq) (r *SetSummaryScheduleRes, err error)
 }
 
 type WorkServiceSummarizeConversationArgs struct {
@@ -468,5 +1096,385 @@ func (p *WorkServiceTranslateMessageResult) String() string {
 }
 
 var fieldIDToName_WorkServiceTranslateMessageResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceGenerateSummaryArgs struct {
+	Req *GenerateSummaryReq `thrift:"req,1" frugal:"1,default,GenerateSummaryReq" json:"req"`
+}
+
+func NewWorkServiceGenerateSummaryArgs() *WorkServiceGenerateSummaryArgs {
+	return &WorkServiceGenerateSummaryArgs{}
+}
+
+func (p *WorkServiceGenerateSummaryArgs) InitDefault() {
+}
+
+var WorkServiceGenerateSummaryArgs_Req_DEFAULT *GenerateSummaryReq
+
+func (p *WorkServiceGenerateSummaryArgs) GetReq() (v *GenerateSummaryReq) {
+	if !p.IsSetReq() {
+		return WorkServiceGenerateSummaryArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceGenerateSummaryArgs) SetReq(val *GenerateSummaryReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceGenerateSummaryArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceGenerateSummaryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGenerateSummaryArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGenerateSummaryArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceGenerateSummaryResult struct {
+	Success *GenerateSummaryRes `thrift:"success,0,optional" frugal:"0,optional,GenerateSummaryRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceGenerateSummaryResult() *WorkServiceGenerateSummaryResult {
+	return &WorkServiceGenerateSummaryResult{}
+}
+
+func (p *WorkServiceGenerateSummaryResult) InitDefault() {
+}
+
+var WorkServiceGenerateSummaryResult_Success_DEFAULT *GenerateSummaryRes
+
+func (p *WorkServiceGenerateSummaryResult) GetSuccess() (v *GenerateSummaryRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceGenerateSummaryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceGenerateSummaryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GenerateSummaryRes)
+}
+
+func (p *WorkServiceGenerateSummaryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceGenerateSummaryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGenerateSummaryResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGenerateSummaryResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceGetSummaryReportArgs struct {
+	Req *GetSummaryReportReq `thrift:"req,1" frugal:"1,default,GetSummaryReportReq" json:"req"`
+}
+
+func NewWorkServiceGetSummaryReportArgs() *WorkServiceGetSummaryReportArgs {
+	return &WorkServiceGetSummaryReportArgs{}
+}
+
+func (p *WorkServiceGetSummaryReportArgs) InitDefault() {
+}
+
+var WorkServiceGetSummaryReportArgs_Req_DEFAULT *GetSummaryReportReq
+
+func (p *WorkServiceGetSummaryReportArgs) GetReq() (v *GetSummaryReportReq) {
+	if !p.IsSetReq() {
+		return WorkServiceGetSummaryReportArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceGetSummaryReportArgs) SetReq(val *GetSummaryReportReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceGetSummaryReportArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceGetSummaryReportArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGetSummaryReportArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGetSummaryReportArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceGetSummaryReportResult struct {
+	Success *GetSummaryReportRes `thrift:"success,0,optional" frugal:"0,optional,GetSummaryReportRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceGetSummaryReportResult() *WorkServiceGetSummaryReportResult {
+	return &WorkServiceGetSummaryReportResult{}
+}
+
+func (p *WorkServiceGetSummaryReportResult) InitDefault() {
+}
+
+var WorkServiceGetSummaryReportResult_Success_DEFAULT *GetSummaryReportRes
+
+func (p *WorkServiceGetSummaryReportResult) GetSuccess() (v *GetSummaryReportRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceGetSummaryReportResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceGetSummaryReportResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetSummaryReportRes)
+}
+
+func (p *WorkServiceGetSummaryReportResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceGetSummaryReportResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGetSummaryReportResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGetSummaryReportResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceListSummaryReportsArgs struct {
+	Req *ListSummaryReportsReq `thrift:"req,1" frugal:"1,default,ListSummaryReportsReq" json:"req"`
+}
+
+func NewWorkServiceListSummaryReportsArgs() *WorkServiceListSummaryReportsArgs {
+	return &WorkServiceListSummaryReportsArgs{}
+}
+
+func (p *WorkServiceListSummaryReportsArgs) InitDefault() {
+}
+
+var WorkServiceListSummaryReportsArgs_Req_DEFAULT *ListSummaryReportsReq
+
+func (p *WorkServiceListSummaryReportsArgs) GetReq() (v *ListSummaryReportsReq) {
+	if !p.IsSetReq() {
+		return WorkServiceListSummaryReportsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceListSummaryReportsArgs) SetReq(val *ListSummaryReportsReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceListSummaryReportsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceListSummaryReportsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceListSummaryReportsArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceListSummaryReportsArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceListSummaryReportsResult struct {
+	Success *ListSummaryReportsRes `thrift:"success,0,optional" frugal:"0,optional,ListSummaryReportsRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceListSummaryReportsResult() *WorkServiceListSummaryReportsResult {
+	return &WorkServiceListSummaryReportsResult{}
+}
+
+func (p *WorkServiceListSummaryReportsResult) InitDefault() {
+}
+
+var WorkServiceListSummaryReportsResult_Success_DEFAULT *ListSummaryReportsRes
+
+func (p *WorkServiceListSummaryReportsResult) GetSuccess() (v *ListSummaryReportsRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceListSummaryReportsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceListSummaryReportsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListSummaryReportsRes)
+}
+
+func (p *WorkServiceListSummaryReportsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceListSummaryReportsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceListSummaryReportsResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceListSummaryReportsResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceGetSummaryScheduleArgs struct {
+	Req *GetSummaryScheduleReq `thrift:"req,1" frugal:"1,default,GetSummaryScheduleReq" json:"req"`
+}
+
+func NewWorkServiceGetSummaryScheduleArgs() *WorkServiceGetSummaryScheduleArgs {
+	return &WorkServiceGetSummaryScheduleArgs{}
+}
+
+func (p *WorkServiceGetSummaryScheduleArgs) InitDefault() {
+}
+
+var WorkServiceGetSummaryScheduleArgs_Req_DEFAULT *GetSummaryScheduleReq
+
+func (p *WorkServiceGetSummaryScheduleArgs) GetReq() (v *GetSummaryScheduleReq) {
+	if !p.IsSetReq() {
+		return WorkServiceGetSummaryScheduleArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceGetSummaryScheduleArgs) SetReq(val *GetSummaryScheduleReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceGetSummaryScheduleArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceGetSummaryScheduleArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGetSummaryScheduleArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGetSummaryScheduleArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceGetSummaryScheduleResult struct {
+	Success *GetSummaryScheduleRes `thrift:"success,0,optional" frugal:"0,optional,GetSummaryScheduleRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceGetSummaryScheduleResult() *WorkServiceGetSummaryScheduleResult {
+	return &WorkServiceGetSummaryScheduleResult{}
+}
+
+func (p *WorkServiceGetSummaryScheduleResult) InitDefault() {
+}
+
+var WorkServiceGetSummaryScheduleResult_Success_DEFAULT *GetSummaryScheduleRes
+
+func (p *WorkServiceGetSummaryScheduleResult) GetSuccess() (v *GetSummaryScheduleRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceGetSummaryScheduleResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceGetSummaryScheduleResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetSummaryScheduleRes)
+}
+
+func (p *WorkServiceGetSummaryScheduleResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceGetSummaryScheduleResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceGetSummaryScheduleResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceGetSummaryScheduleResult = map[int16]string{
+	0: "success",
+}
+
+type WorkServiceSetSummaryScheduleArgs struct {
+	Req *SetSummaryScheduleReq `thrift:"req,1" frugal:"1,default,SetSummaryScheduleReq" json:"req"`
+}
+
+func NewWorkServiceSetSummaryScheduleArgs() *WorkServiceSetSummaryScheduleArgs {
+	return &WorkServiceSetSummaryScheduleArgs{}
+}
+
+func (p *WorkServiceSetSummaryScheduleArgs) InitDefault() {
+}
+
+var WorkServiceSetSummaryScheduleArgs_Req_DEFAULT *SetSummaryScheduleReq
+
+func (p *WorkServiceSetSummaryScheduleArgs) GetReq() (v *SetSummaryScheduleReq) {
+	if !p.IsSetReq() {
+		return WorkServiceSetSummaryScheduleArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *WorkServiceSetSummaryScheduleArgs) SetReq(val *SetSummaryScheduleReq) {
+	p.Req = val
+}
+
+func (p *WorkServiceSetSummaryScheduleArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *WorkServiceSetSummaryScheduleArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSetSummaryScheduleArgs(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSetSummaryScheduleArgs = map[int16]string{
+	1: "req",
+}
+
+type WorkServiceSetSummaryScheduleResult struct {
+	Success *SetSummaryScheduleRes `thrift:"success,0,optional" frugal:"0,optional,SetSummaryScheduleRes" json:"success,omitempty"`
+}
+
+func NewWorkServiceSetSummaryScheduleResult() *WorkServiceSetSummaryScheduleResult {
+	return &WorkServiceSetSummaryScheduleResult{}
+}
+
+func (p *WorkServiceSetSummaryScheduleResult) InitDefault() {
+}
+
+var WorkServiceSetSummaryScheduleResult_Success_DEFAULT *SetSummaryScheduleRes
+
+func (p *WorkServiceSetSummaryScheduleResult) GetSuccess() (v *SetSummaryScheduleRes) {
+	if !p.IsSetSuccess() {
+		return WorkServiceSetSummaryScheduleResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *WorkServiceSetSummaryScheduleResult) SetSuccess(x interface{}) {
+	p.Success = x.(*SetSummaryScheduleRes)
+}
+
+func (p *WorkServiceSetSummaryScheduleResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *WorkServiceSetSummaryScheduleResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WorkServiceSetSummaryScheduleResult(%+v)", *p)
+}
+
+var fieldIDToName_WorkServiceSetSummaryScheduleResult = map[int16]string{
 	0: "success",
 }

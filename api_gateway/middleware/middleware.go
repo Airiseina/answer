@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/Airiseina/answer/api_gateway/config"
@@ -24,8 +25,19 @@ type loginParam struct {
 }
 
 type Resp struct {
-	Id      int64
-	Account string
+	Id       int64
+	Account  string
+	TenantId int64
+}
+
+// CurrentUser 读取当前登录态；未登录返回 false。
+func CurrentUser(c *app.RequestContext) (*Resp, bool) {
+	v, ok := c.Get(IdentityKey)
+	if !ok {
+		return nil, false
+	}
+	resp, ok := v.(*Resp)
+	return resp, ok
 }
 
 func JwtMiddleware() {
@@ -52,15 +64,25 @@ func JwtMiddleware() {
 			if res.Id == 0 {
 				return nil, errors.New("账号密码错误")
 			}
+			// 默认进入个人租户；老数据缺少个人租户时退回第一个可用租户。
+			tenantID := res.PersonalTenantId
+			if tenantID == 0 && len(res.Tenants) > 0 {
+				tenantID = res.Tenants[0].Id
+			}
 			c.Set("account", res.Account)
 			c.Set("avatar_url", res.AvatarUrl)
-			return &Resp{res.Id, res.Account}, nil
+			c.Set("tenants", res.Tenants)
+			identity := &Resp{Id: res.Id, Account: res.Account, TenantId: tenantID}
+			// 登录响应回调读不到 jwt 中间件的登录态，这里先落到上下文供其复用。
+			c.Set(IdentityKey, identity)
+			return identity, nil
 		},
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if v, ok := data.(*Resp); ok {
 				return jwt.MapClaims{
-					"account": v.Account,
-					"id":      v.Id,
+					"account":   v.Account,
+					"id":        v.Id,
+					"tenant_id": v.TenantId,
 				}
 			}
 			return jwt.MapClaims{}
@@ -85,17 +107,32 @@ func JwtMiddleware() {
 					userId = int64(idFloat)
 				}
 			}
-			account := claims["account"].(string)
-			return &Resp{userId, account}
+			var tenantId int64
+			if tVal, ok := claims["tenant_id"]; ok {
+				if tFloat, ok := tVal.(float64); ok {
+					tenantId = int64(tFloat)
+				}
+			}
+			account, _ := claims["account"].(string)
+			return &Resp{Id: userId, Account: account, TenantId: tenantId}
 		},
 		LoginResponse: func(ctx context.Context, c *app.RequestContext, code int, message string, time time.Time) {
 			account, _ := c.Get("account")
 			avatarUrl, _ := c.Get("avatar_url")
-			response.Success(c, map[string]interface{}{
+			identity, _ := CurrentUser(c)
+			data := map[string]interface{}{
 				"token":      message,
 				"account":    account,
 				"avatar_url": avatarUrl,
-			})
+			}
+			if identity != nil {
+				data["user_id"] = strconv.FormatInt(identity.Id, 10)
+				data["tenant_id"] = strconv.FormatInt(identity.TenantId, 10)
+			}
+			if tenants, ok := c.Get("tenants"); ok {
+				data["tenants"] = tenants
+			}
+			response.Success(c, data)
 		},
 	})
 	if err != nil {

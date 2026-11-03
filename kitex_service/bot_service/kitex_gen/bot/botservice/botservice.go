@@ -104,6 +104,153 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"PublishMarketBot": kitex.NewMethodInfo(
+		publishMarketBotHandler,
+		newBotServicePublishMarketBotArgs,
+		newBotServicePublishMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateMarketBot": kitex.NewMethodInfo(
+		updateMarketBotHandler,
+		newBotServiceUpdateMarketBotArgs,
+		newBotServiceUpdateMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetMarketBot": kitex.NewMethodInfo(
+		getMarketBotHandler,
+		newBotServiceGetMarketBotArgs,
+		newBotServiceGetMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListMarketBots": kitex.NewMethodInfo(
+		listMarketBotsHandler,
+		newBotServiceListMarketBotsArgs,
+		newBotServiceListMarketBotsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListMyMarketBots": kitex.NewMethodInfo(
+		listMyMarketBotsHandler,
+		newBotServiceListMyMarketBotsArgs,
+		newBotServiceListMyMarketBotsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"InstallMarketBot": kitex.NewMethodInfo(
+		installMarketBotHandler,
+		newBotServiceInstallMarketBotArgs,
+		newBotServiceInstallMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RateMarketBot": kitex.NewMethodInfo(
+		rateMarketBotHandler,
+		newBotServiceRateMarketBotArgs,
+		newBotServiceRateMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"OfflineMarketBot": kitex.NewMethodInfo(
+		offlineMarketBotHandler,
+		newBotServiceOfflineMarketBotArgs,
+		newBotServiceOfflineMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListMarketReviews": kitex.NewMethodInfo(
+		listMarketReviewsHandler,
+		newBotServiceListMarketReviewsArgs,
+		newBotServiceListMarketReviewsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ReviewMarketBot": kitex.NewMethodInfo(
+		reviewMarketBotHandler,
+		newBotServiceReviewMarketBotArgs,
+		newBotServiceReviewMarketBotResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UploadUserSkill": kitex.NewMethodInfo(
+		uploadUserSkillHandler,
+		newBotServiceUploadUserSkillArgs,
+		newBotServiceUploadUserSkillResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListUserSkills": kitex.NewMethodInfo(
+		listUserSkillsHandler,
+		newBotServiceListUserSkillsArgs,
+		newBotServiceListUserSkillsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetUserSkill": kitex.NewMethodInfo(
+		getUserSkillHandler,
+		newBotServiceGetUserSkillArgs,
+		newBotServiceGetUserSkillResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteUserSkill": kitex.NewMethodInfo(
+		deleteUserSkillHandler,
+		newBotServiceDeleteUserSkillArgs,
+		newBotServiceDeleteUserSkillResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BindUserSkill": kitex.NewMethodInfo(
+		bindUserSkillHandler,
+		newBotServiceBindUserSkillArgs,
+		newBotServiceBindUserSkillResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListBotSkills": kitex.NewMethodInfo(
+		listBotSkillsHandler,
+		newBotServiceListBotSkillsArgs,
+		newBotServiceListBotSkillsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SaveAgentGraph": kitex.NewMethodInfo(
+		saveAgentGraphHandler,
+		newBotServiceSaveAgentGraphArgs,
+		newBotServiceSaveAgentGraphResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetAgentGraph": kitex.NewMethodInfo(
+		getAgentGraphHandler,
+		newBotServiceGetAgentGraphArgs,
+		newBotServiceGetAgentGraphResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ValidateAgentGraph": kitex.NewMethodInfo(
+		validateAgentGraphHandler,
+		newBotServiceValidateAgentGraphArgs,
+		newBotServiceValidateAgentGraphResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"PublishAgentGraph": kitex.NewMethodInfo(
+		publishAgentGraphHandler,
+		newBotServicePublishAgentGraphArgs,
+		newBotServicePublishAgentGraphResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListAgentGraphHistory": kitex.NewMethodInfo(
+		listAgentGraphHistoryHandler,
+		newBotServiceListAgentGraphHistoryArgs,
+		newBotServiceListAgentGraphHistoryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -404,6 +551,384 @@ func newBotServiceDeleteMcpServerResult() interface{} {
 	return bot.NewBotServiceDeleteMcpServerResult()
 }
 
+func publishMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServicePublishMarketBotArgs)
+	realResult := result.(*bot.BotServicePublishMarketBotResult)
+	success, err := handler.(bot.BotService).PublishMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServicePublishMarketBotArgs() interface{} {
+	return bot.NewBotServicePublishMarketBotArgs()
+}
+
+func newBotServicePublishMarketBotResult() interface{} {
+	return bot.NewBotServicePublishMarketBotResult()
+}
+
+func updateMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceUpdateMarketBotArgs)
+	realResult := result.(*bot.BotServiceUpdateMarketBotResult)
+	success, err := handler.(bot.BotService).UpdateMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceUpdateMarketBotArgs() interface{} {
+	return bot.NewBotServiceUpdateMarketBotArgs()
+}
+
+func newBotServiceUpdateMarketBotResult() interface{} {
+	return bot.NewBotServiceUpdateMarketBotResult()
+}
+
+func getMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceGetMarketBotArgs)
+	realResult := result.(*bot.BotServiceGetMarketBotResult)
+	success, err := handler.(bot.BotService).GetMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceGetMarketBotArgs() interface{} {
+	return bot.NewBotServiceGetMarketBotArgs()
+}
+
+func newBotServiceGetMarketBotResult() interface{} {
+	return bot.NewBotServiceGetMarketBotResult()
+}
+
+func listMarketBotsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListMarketBotsArgs)
+	realResult := result.(*bot.BotServiceListMarketBotsResult)
+	success, err := handler.(bot.BotService).ListMarketBots(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListMarketBotsArgs() interface{} {
+	return bot.NewBotServiceListMarketBotsArgs()
+}
+
+func newBotServiceListMarketBotsResult() interface{} {
+	return bot.NewBotServiceListMarketBotsResult()
+}
+
+func listMyMarketBotsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListMyMarketBotsArgs)
+	realResult := result.(*bot.BotServiceListMyMarketBotsResult)
+	success, err := handler.(bot.BotService).ListMyMarketBots(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListMyMarketBotsArgs() interface{} {
+	return bot.NewBotServiceListMyMarketBotsArgs()
+}
+
+func newBotServiceListMyMarketBotsResult() interface{} {
+	return bot.NewBotServiceListMyMarketBotsResult()
+}
+
+func installMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceInstallMarketBotArgs)
+	realResult := result.(*bot.BotServiceInstallMarketBotResult)
+	success, err := handler.(bot.BotService).InstallMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceInstallMarketBotArgs() interface{} {
+	return bot.NewBotServiceInstallMarketBotArgs()
+}
+
+func newBotServiceInstallMarketBotResult() interface{} {
+	return bot.NewBotServiceInstallMarketBotResult()
+}
+
+func rateMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceRateMarketBotArgs)
+	realResult := result.(*bot.BotServiceRateMarketBotResult)
+	success, err := handler.(bot.BotService).RateMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceRateMarketBotArgs() interface{} {
+	return bot.NewBotServiceRateMarketBotArgs()
+}
+
+func newBotServiceRateMarketBotResult() interface{} {
+	return bot.NewBotServiceRateMarketBotResult()
+}
+
+func offlineMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceOfflineMarketBotArgs)
+	realResult := result.(*bot.BotServiceOfflineMarketBotResult)
+	success, err := handler.(bot.BotService).OfflineMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceOfflineMarketBotArgs() interface{} {
+	return bot.NewBotServiceOfflineMarketBotArgs()
+}
+
+func newBotServiceOfflineMarketBotResult() interface{} {
+	return bot.NewBotServiceOfflineMarketBotResult()
+}
+
+func listMarketReviewsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListMarketReviewsArgs)
+	realResult := result.(*bot.BotServiceListMarketReviewsResult)
+	success, err := handler.(bot.BotService).ListMarketReviews(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListMarketReviewsArgs() interface{} {
+	return bot.NewBotServiceListMarketReviewsArgs()
+}
+
+func newBotServiceListMarketReviewsResult() interface{} {
+	return bot.NewBotServiceListMarketReviewsResult()
+}
+
+func reviewMarketBotHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceReviewMarketBotArgs)
+	realResult := result.(*bot.BotServiceReviewMarketBotResult)
+	success, err := handler.(bot.BotService).ReviewMarketBot(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceReviewMarketBotArgs() interface{} {
+	return bot.NewBotServiceReviewMarketBotArgs()
+}
+
+func newBotServiceReviewMarketBotResult() interface{} {
+	return bot.NewBotServiceReviewMarketBotResult()
+}
+
+func uploadUserSkillHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceUploadUserSkillArgs)
+	realResult := result.(*bot.BotServiceUploadUserSkillResult)
+	success, err := handler.(bot.BotService).UploadUserSkill(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceUploadUserSkillArgs() interface{} {
+	return bot.NewBotServiceUploadUserSkillArgs()
+}
+
+func newBotServiceUploadUserSkillResult() interface{} {
+	return bot.NewBotServiceUploadUserSkillResult()
+}
+
+func listUserSkillsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListUserSkillsArgs)
+	realResult := result.(*bot.BotServiceListUserSkillsResult)
+	success, err := handler.(bot.BotService).ListUserSkills(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListUserSkillsArgs() interface{} {
+	return bot.NewBotServiceListUserSkillsArgs()
+}
+
+func newBotServiceListUserSkillsResult() interface{} {
+	return bot.NewBotServiceListUserSkillsResult()
+}
+
+func getUserSkillHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceGetUserSkillArgs)
+	realResult := result.(*bot.BotServiceGetUserSkillResult)
+	success, err := handler.(bot.BotService).GetUserSkill(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceGetUserSkillArgs() interface{} {
+	return bot.NewBotServiceGetUserSkillArgs()
+}
+
+func newBotServiceGetUserSkillResult() interface{} {
+	return bot.NewBotServiceGetUserSkillResult()
+}
+
+func deleteUserSkillHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceDeleteUserSkillArgs)
+	realResult := result.(*bot.BotServiceDeleteUserSkillResult)
+	success, err := handler.(bot.BotService).DeleteUserSkill(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceDeleteUserSkillArgs() interface{} {
+	return bot.NewBotServiceDeleteUserSkillArgs()
+}
+
+func newBotServiceDeleteUserSkillResult() interface{} {
+	return bot.NewBotServiceDeleteUserSkillResult()
+}
+
+func bindUserSkillHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceBindUserSkillArgs)
+	realResult := result.(*bot.BotServiceBindUserSkillResult)
+	success, err := handler.(bot.BotService).BindUserSkill(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceBindUserSkillArgs() interface{} {
+	return bot.NewBotServiceBindUserSkillArgs()
+}
+
+func newBotServiceBindUserSkillResult() interface{} {
+	return bot.NewBotServiceBindUserSkillResult()
+}
+
+func listBotSkillsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListBotSkillsArgs)
+	realResult := result.(*bot.BotServiceListBotSkillsResult)
+	success, err := handler.(bot.BotService).ListBotSkills(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListBotSkillsArgs() interface{} {
+	return bot.NewBotServiceListBotSkillsArgs()
+}
+
+func newBotServiceListBotSkillsResult() interface{} {
+	return bot.NewBotServiceListBotSkillsResult()
+}
+
+func saveAgentGraphHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceSaveAgentGraphArgs)
+	realResult := result.(*bot.BotServiceSaveAgentGraphResult)
+	success, err := handler.(bot.BotService).SaveAgentGraph(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceSaveAgentGraphArgs() interface{} {
+	return bot.NewBotServiceSaveAgentGraphArgs()
+}
+
+func newBotServiceSaveAgentGraphResult() interface{} {
+	return bot.NewBotServiceSaveAgentGraphResult()
+}
+
+func getAgentGraphHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceGetAgentGraphArgs)
+	realResult := result.(*bot.BotServiceGetAgentGraphResult)
+	success, err := handler.(bot.BotService).GetAgentGraph(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceGetAgentGraphArgs() interface{} {
+	return bot.NewBotServiceGetAgentGraphArgs()
+}
+
+func newBotServiceGetAgentGraphResult() interface{} {
+	return bot.NewBotServiceGetAgentGraphResult()
+}
+
+func validateAgentGraphHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceValidateAgentGraphArgs)
+	realResult := result.(*bot.BotServiceValidateAgentGraphResult)
+	success, err := handler.(bot.BotService).ValidateAgentGraph(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceValidateAgentGraphArgs() interface{} {
+	return bot.NewBotServiceValidateAgentGraphArgs()
+}
+
+func newBotServiceValidateAgentGraphResult() interface{} {
+	return bot.NewBotServiceValidateAgentGraphResult()
+}
+
+func publishAgentGraphHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServicePublishAgentGraphArgs)
+	realResult := result.(*bot.BotServicePublishAgentGraphResult)
+	success, err := handler.(bot.BotService).PublishAgentGraph(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServicePublishAgentGraphArgs() interface{} {
+	return bot.NewBotServicePublishAgentGraphArgs()
+}
+
+func newBotServicePublishAgentGraphResult() interface{} {
+	return bot.NewBotServicePublishAgentGraphResult()
+}
+
+func listAgentGraphHistoryHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*bot.BotServiceListAgentGraphHistoryArgs)
+	realResult := result.(*bot.BotServiceListAgentGraphHistoryResult)
+	success, err := handler.(bot.BotService).ListAgentGraphHistory(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newBotServiceListAgentGraphHistoryArgs() interface{} {
+	return bot.NewBotServiceListAgentGraphHistoryArgs()
+}
+
+func newBotServiceListAgentGraphHistoryResult() interface{} {
+	return bot.NewBotServiceListAgentGraphHistoryResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -538,6 +1063,216 @@ func (p *kClient) DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerR
 	_args.Req = req
 	var _result bot.BotServiceDeleteMcpServerResult
 	if err = p.c.Call(ctx, "DeleteMcpServer", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) PublishMarketBot(ctx context.Context, req *bot.PublishMarketBotReq) (r *bot.PublishMarketBotRes, err error) {
+	var _args bot.BotServicePublishMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServicePublishMarketBotResult
+	if err = p.c.Call(ctx, "PublishMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateMarketBot(ctx context.Context, req *bot.UpdateMarketBotReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceUpdateMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceUpdateMarketBotResult
+	if err = p.c.Call(ctx, "UpdateMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetMarketBot(ctx context.Context, req *bot.GetMarketBotReq) (r *bot.GetMarketBotRes, err error) {
+	var _args bot.BotServiceGetMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceGetMarketBotResult
+	if err = p.c.Call(ctx, "GetMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListMarketBots(ctx context.Context, req *bot.ListMarketBotsReq) (r *bot.ListMarketBotsRes, err error) {
+	var _args bot.BotServiceListMarketBotsArgs
+	_args.Req = req
+	var _result bot.BotServiceListMarketBotsResult
+	if err = p.c.Call(ctx, "ListMarketBots", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListMyMarketBots(ctx context.Context, req *bot.ListMyMarketBotsReq) (r *bot.ListMyMarketBotsRes, err error) {
+	var _args bot.BotServiceListMyMarketBotsArgs
+	_args.Req = req
+	var _result bot.BotServiceListMyMarketBotsResult
+	if err = p.c.Call(ctx, "ListMyMarketBots", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) InstallMarketBot(ctx context.Context, req *bot.InstallMarketBotReq) (r *bot.InstallMarketBotRes, err error) {
+	var _args bot.BotServiceInstallMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceInstallMarketBotResult
+	if err = p.c.Call(ctx, "InstallMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RateMarketBot(ctx context.Context, req *bot.RateMarketBotReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceRateMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceRateMarketBotResult
+	if err = p.c.Call(ctx, "RateMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) OfflineMarketBot(ctx context.Context, req *bot.OfflineMarketBotReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceOfflineMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceOfflineMarketBotResult
+	if err = p.c.Call(ctx, "OfflineMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListMarketReviews(ctx context.Context, req *bot.ListMarketReviewsReq) (r *bot.ListMarketReviewsRes, err error) {
+	var _args bot.BotServiceListMarketReviewsArgs
+	_args.Req = req
+	var _result bot.BotServiceListMarketReviewsResult
+	if err = p.c.Call(ctx, "ListMarketReviews", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ReviewMarketBot(ctx context.Context, req *bot.ReviewMarketBotReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceReviewMarketBotArgs
+	_args.Req = req
+	var _result bot.BotServiceReviewMarketBotResult
+	if err = p.c.Call(ctx, "ReviewMarketBot", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UploadUserSkill(ctx context.Context, req *bot.UploadUserSkillReq) (r *bot.UploadUserSkillRes, err error) {
+	var _args bot.BotServiceUploadUserSkillArgs
+	_args.Req = req
+	var _result bot.BotServiceUploadUserSkillResult
+	if err = p.c.Call(ctx, "UploadUserSkill", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListUserSkills(ctx context.Context, req *bot.ListUserSkillsReq) (r *bot.ListUserSkillsRes, err error) {
+	var _args bot.BotServiceListUserSkillsArgs
+	_args.Req = req
+	var _result bot.BotServiceListUserSkillsResult
+	if err = p.c.Call(ctx, "ListUserSkills", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetUserSkill(ctx context.Context, req *bot.GetUserSkillReq) (r *bot.GetUserSkillRes, err error) {
+	var _args bot.BotServiceGetUserSkillArgs
+	_args.Req = req
+	var _result bot.BotServiceGetUserSkillResult
+	if err = p.c.Call(ctx, "GetUserSkill", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteUserSkill(ctx context.Context, req *bot.DeleteUserSkillReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceDeleteUserSkillArgs
+	_args.Req = req
+	var _result bot.BotServiceDeleteUserSkillResult
+	if err = p.c.Call(ctx, "DeleteUserSkill", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BindUserSkill(ctx context.Context, req *bot.BindUserSkillReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServiceBindUserSkillArgs
+	_args.Req = req
+	var _result bot.BotServiceBindUserSkillResult
+	if err = p.c.Call(ctx, "BindUserSkill", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListBotSkills(ctx context.Context, req *bot.ListBotSkillsReq) (r *bot.ListBotSkillsRes, err error) {
+	var _args bot.BotServiceListBotSkillsArgs
+	_args.Req = req
+	var _result bot.BotServiceListBotSkillsResult
+	if err = p.c.Call(ctx, "ListBotSkills", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SaveAgentGraph(ctx context.Context, req *bot.SaveAgentGraphReq) (r *bot.SaveAgentGraphRes, err error) {
+	var _args bot.BotServiceSaveAgentGraphArgs
+	_args.Req = req
+	var _result bot.BotServiceSaveAgentGraphResult
+	if err = p.c.Call(ctx, "SaveAgentGraph", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAgentGraph(ctx context.Context, req *bot.GetAgentGraphReq) (r *bot.GetAgentGraphRes, err error) {
+	var _args bot.BotServiceGetAgentGraphArgs
+	_args.Req = req
+	var _result bot.BotServiceGetAgentGraphResult
+	if err = p.c.Call(ctx, "GetAgentGraph", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ValidateAgentGraph(ctx context.Context, req *bot.ValidateAgentGraphReq) (r *bot.ValidateAgentGraphRes, err error) {
+	var _args bot.BotServiceValidateAgentGraphArgs
+	_args.Req = req
+	var _result bot.BotServiceValidateAgentGraphResult
+	if err = p.c.Call(ctx, "ValidateAgentGraph", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) PublishAgentGraph(ctx context.Context, req *bot.PublishAgentGraphReq) (r *bot.CommonRes, err error) {
+	var _args bot.BotServicePublishAgentGraphArgs
+	_args.Req = req
+	var _result bot.BotServicePublishAgentGraphResult
+	if err = p.c.Call(ctx, "PublishAgentGraph", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListAgentGraphHistory(ctx context.Context, req *bot.ListAgentGraphHistoryReq) (r *bot.ListAgentGraphHistoryRes, err error) {
+	var _args bot.BotServiceListAgentGraphHistoryArgs
+	_args.Req = req
+	var _result bot.BotServiceListAgentGraphHistoryResult
+	if err = p.c.Call(ctx, "ListAgentGraphHistory", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

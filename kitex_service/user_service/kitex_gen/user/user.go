@@ -36,6 +36,62 @@ var fieldIDToName_CommonRes = map[int16]string{
 	1: "success",
 }
 
+type TenantBrief struct {
+	Id         int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Name       string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	IsPersonal bool   `thrift:"is_personal,3" frugal:"3,default,bool" json:"is_personal"`
+	Role       int16  `thrift:"role,4" frugal:"4,default,i16" json:"role"`
+}
+
+func NewTenantBrief() *TenantBrief {
+	return &TenantBrief{}
+}
+
+func (p *TenantBrief) InitDefault() {
+}
+
+func (p *TenantBrief) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *TenantBrief) GetName() (v string) {
+	return p.Name
+}
+
+func (p *TenantBrief) GetIsPersonal() (v bool) {
+	return p.IsPersonal
+}
+
+func (p *TenantBrief) GetRole() (v int16) {
+	return p.Role
+}
+func (p *TenantBrief) SetId(val int64) {
+	p.Id = val
+}
+func (p *TenantBrief) SetName(val string) {
+	p.Name = val
+}
+func (p *TenantBrief) SetIsPersonal(val bool) {
+	p.IsPersonal = val
+}
+func (p *TenantBrief) SetRole(val int16) {
+	p.Role = val
+}
+
+func (p *TenantBrief) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TenantBrief(%+v)", *p)
+}
+
+var fieldIDToName_TenantBrief = map[int16]string{
+	1: "id",
+	2: "name",
+	3: "is_personal",
+	4: "role",
+}
+
 type RegisterReq struct {
 	Account  string `thrift:"account,1" frugal:"1,default,string" json:"account"`
 	Name     string `thrift:"name,2" frugal:"2,default,string" json:"name"`
@@ -151,9 +207,11 @@ var fieldIDToName_LoginReq = map[int16]string{
 }
 
 type LoginRes struct {
-	Id        int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
-	Account   string `thrift:"account,2" frugal:"2,default,string" json:"account"`
-	AvatarUrl string `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
+	Id               int64          `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Account          string         `thrift:"account,2" frugal:"2,default,string" json:"account"`
+	AvatarUrl        string         `thrift:"avatar_url,3" frugal:"3,default,string" json:"avatar_url"`
+	Tenants          []*TenantBrief `thrift:"tenants,4" frugal:"4,default,list<TenantBrief>" json:"tenants"`
+	PersonalTenantId int64          `thrift:"personal_tenant_id,5" frugal:"5,default,i64" json:"personal_tenant_id"`
 }
 
 func NewLoginRes() *LoginRes {
@@ -174,6 +232,14 @@ func (p *LoginRes) GetAccount() (v string) {
 func (p *LoginRes) GetAvatarUrl() (v string) {
 	return p.AvatarUrl
 }
+
+func (p *LoginRes) GetTenants() (v []*TenantBrief) {
+	return p.Tenants
+}
+
+func (p *LoginRes) GetPersonalTenantId() (v int64) {
+	return p.PersonalTenantId
+}
 func (p *LoginRes) SetId(val int64) {
 	p.Id = val
 }
@@ -182,6 +248,12 @@ func (p *LoginRes) SetAccount(val string) {
 }
 func (p *LoginRes) SetAvatarUrl(val string) {
 	p.AvatarUrl = val
+}
+func (p *LoginRes) SetTenants(val []*TenantBrief) {
+	p.Tenants = val
+}
+func (p *LoginRes) SetPersonalTenantId(val int64) {
+	p.PersonalTenantId = val
 }
 
 func (p *LoginRes) String() string {
@@ -195,6 +267,8 @@ var fieldIDToName_LoginRes = map[int16]string{
 	1: "id",
 	2: "account",
 	3: "avatar_url",
+	4: "tenants",
+	5: "personal_tenant_id",
 }
 
 type CheckUsersExistReq struct {
@@ -1547,6 +1621,1255 @@ var fieldIDToName_UpdateBotUserNameReq = map[int16]string{
 	2: "name",
 }
 
+type TenantInfo struct {
+	Id          int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	Name        string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	Code        string `thrift:"code,3" frugal:"3,default,string" json:"code"`
+	LogoUrl     string `thrift:"logo_url,4" frugal:"4,default,string" json:"logo_url"`
+	OwnerId     int64  `thrift:"owner_id,5" frugal:"5,default,i64" json:"owner_id"`
+	IsPersonal  bool   `thrift:"is_personal,6" frugal:"6,default,bool" json:"is_personal"`
+	Role        int16  `thrift:"role,7" frugal:"7,default,i16" json:"role"`
+	MemberCount int64  `thrift:"member_count,8" frugal:"8,default,i64" json:"member_count"`
+	Status      int16  `thrift:"status,9" frugal:"9,default,i16" json:"status"`
+}
+
+func NewTenantInfo() *TenantInfo {
+	return &TenantInfo{}
+}
+
+func (p *TenantInfo) InitDefault() {
+}
+
+func (p *TenantInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *TenantInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *TenantInfo) GetCode() (v string) {
+	return p.Code
+}
+
+func (p *TenantInfo) GetLogoUrl() (v string) {
+	return p.LogoUrl
+}
+
+func (p *TenantInfo) GetOwnerId() (v int64) {
+	return p.OwnerId
+}
+
+func (p *TenantInfo) GetIsPersonal() (v bool) {
+	return p.IsPersonal
+}
+
+func (p *TenantInfo) GetRole() (v int16) {
+	return p.Role
+}
+
+func (p *TenantInfo) GetMemberCount() (v int64) {
+	return p.MemberCount
+}
+
+func (p *TenantInfo) GetStatus() (v int16) {
+	return p.Status
+}
+func (p *TenantInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *TenantInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *TenantInfo) SetCode(val string) {
+	p.Code = val
+}
+func (p *TenantInfo) SetLogoUrl(val string) {
+	p.LogoUrl = val
+}
+func (p *TenantInfo) SetOwnerId(val int64) {
+	p.OwnerId = val
+}
+func (p *TenantInfo) SetIsPersonal(val bool) {
+	p.IsPersonal = val
+}
+func (p *TenantInfo) SetRole(val int16) {
+	p.Role = val
+}
+func (p *TenantInfo) SetMemberCount(val int64) {
+	p.MemberCount = val
+}
+func (p *TenantInfo) SetStatus(val int16) {
+	p.Status = val
+}
+
+func (p *TenantInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TenantInfo(%+v)", *p)
+}
+
+var fieldIDToName_TenantInfo = map[int16]string{
+	1: "id",
+	2: "name",
+	3: "code",
+	4: "logo_url",
+	5: "owner_id",
+	6: "is_personal",
+	7: "role",
+	8: "member_count",
+	9: "status",
+}
+
+type CreateTenantReq struct {
+	UserId  int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Name    string `thrift:"name,2" frugal:"2,default,string" json:"name"`
+	LogoUrl string `thrift:"logo_url,3" frugal:"3,default,string" json:"logo_url"`
+}
+
+func NewCreateTenantReq() *CreateTenantReq {
+	return &CreateTenantReq{}
+}
+
+func (p *CreateTenantReq) InitDefault() {
+}
+
+func (p *CreateTenantReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *CreateTenantReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *CreateTenantReq) GetLogoUrl() (v string) {
+	return p.LogoUrl
+}
+func (p *CreateTenantReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *CreateTenantReq) SetName(val string) {
+	p.Name = val
+}
+func (p *CreateTenantReq) SetLogoUrl(val string) {
+	p.LogoUrl = val
+}
+
+func (p *CreateTenantReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateTenantReq(%+v)", *p)
+}
+
+var fieldIDToName_CreateTenantReq = map[int16]string{
+	1: "user_id",
+	2: "name",
+	3: "logo_url",
+}
+
+type CreateTenantRes struct {
+	Success bool        `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	Tenant  *TenantInfo `thrift:"tenant,2" frugal:"2,default,TenantInfo" json:"tenant"`
+}
+
+func NewCreateTenantRes() *CreateTenantRes {
+	return &CreateTenantRes{}
+}
+
+func (p *CreateTenantRes) InitDefault() {
+}
+
+func (p *CreateTenantRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+var CreateTenantRes_Tenant_DEFAULT *TenantInfo
+
+func (p *CreateTenantRes) GetTenant() (v *TenantInfo) {
+	if !p.IsSetTenant() {
+		return CreateTenantRes_Tenant_DEFAULT
+	}
+	return p.Tenant
+}
+func (p *CreateTenantRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *CreateTenantRes) SetTenant(val *TenantInfo) {
+	p.Tenant = val
+}
+
+func (p *CreateTenantRes) IsSetTenant() bool {
+	return p.Tenant != nil
+}
+
+func (p *CreateTenantRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateTenantRes(%+v)", *p)
+}
+
+var fieldIDToName_CreateTenantRes = map[int16]string{
+	1: "success",
+	2: "tenant",
+}
+
+type ListTenantsReq struct {
+	UserId int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+}
+
+func NewListTenantsReq() *ListTenantsReq {
+	return &ListTenantsReq{}
+}
+
+func (p *ListTenantsReq) InitDefault() {
+}
+
+func (p *ListTenantsReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *ListTenantsReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *ListTenantsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTenantsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListTenantsReq = map[int16]string{
+	1: "user_id",
+}
+
+type ListTenantsRes struct {
+	Tenants []*TenantInfo `thrift:"tenants,1" frugal:"1,default,list<TenantInfo>" json:"tenants"`
+}
+
+func NewListTenantsRes() *ListTenantsRes {
+	return &ListTenantsRes{}
+}
+
+func (p *ListTenantsRes) InitDefault() {
+}
+
+func (p *ListTenantsRes) GetTenants() (v []*TenantInfo) {
+	return p.Tenants
+}
+func (p *ListTenantsRes) SetTenants(val []*TenantInfo) {
+	p.Tenants = val
+}
+
+func (p *ListTenantsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTenantsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListTenantsRes = map[int16]string{
+	1: "tenants",
+}
+
+type GetTenantReq struct {
+	UserId   int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	TenantId int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+}
+
+func NewGetTenantReq() *GetTenantReq {
+	return &GetTenantReq{}
+}
+
+func (p *GetTenantReq) InitDefault() {
+}
+
+func (p *GetTenantReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *GetTenantReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+func (p *GetTenantReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *GetTenantReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+
+func (p *GetTenantReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetTenantReq(%+v)", *p)
+}
+
+var fieldIDToName_GetTenantReq = map[int16]string{
+	1: "user_id",
+	2: "tenant_id",
+}
+
+type GetTenantRes struct {
+	Tenant *TenantInfo `thrift:"tenant,1" frugal:"1,default,TenantInfo" json:"tenant"`
+}
+
+func NewGetTenantRes() *GetTenantRes {
+	return &GetTenantRes{}
+}
+
+func (p *GetTenantRes) InitDefault() {
+}
+
+var GetTenantRes_Tenant_DEFAULT *TenantInfo
+
+func (p *GetTenantRes) GetTenant() (v *TenantInfo) {
+	if !p.IsSetTenant() {
+		return GetTenantRes_Tenant_DEFAULT
+	}
+	return p.Tenant
+}
+func (p *GetTenantRes) SetTenant(val *TenantInfo) {
+	p.Tenant = val
+}
+
+func (p *GetTenantRes) IsSetTenant() bool {
+	return p.Tenant != nil
+}
+
+func (p *GetTenantRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetTenantRes(%+v)", *p)
+}
+
+var fieldIDToName_GetTenantRes = map[int16]string{
+	1: "tenant",
+}
+
+type UpdateTenantReq struct {
+	UserId   int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	TenantId int64  `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	Name     string `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	LogoUrl  string `thrift:"logo_url,4" frugal:"4,default,string" json:"logo_url"`
+}
+
+func NewUpdateTenantReq() *UpdateTenantReq {
+	return &UpdateTenantReq{}
+}
+
+func (p *UpdateTenantReq) InitDefault() {
+}
+
+func (p *UpdateTenantReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *UpdateTenantReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *UpdateTenantReq) GetName() (v string) {
+	return p.Name
+}
+
+func (p *UpdateTenantReq) GetLogoUrl() (v string) {
+	return p.LogoUrl
+}
+func (p *UpdateTenantReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *UpdateTenantReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *UpdateTenantReq) SetName(val string) {
+	p.Name = val
+}
+func (p *UpdateTenantReq) SetLogoUrl(val string) {
+	p.LogoUrl = val
+}
+
+func (p *UpdateTenantReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateTenantReq(%+v)", *p)
+}
+
+var fieldIDToName_UpdateTenantReq = map[int16]string{
+	1: "user_id",
+	2: "tenant_id",
+	3: "name",
+	4: "logo_url",
+}
+
+type TenantMemberInfo struct {
+	UserId    int64  `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	Account   string `thrift:"account,2" frugal:"2,default,string" json:"account"`
+	Name      string `thrift:"name,3" frugal:"3,default,string" json:"name"`
+	AvatarUrl string `thrift:"avatar_url,4" frugal:"4,default,string" json:"avatar_url"`
+	Role      int16  `thrift:"role,5" frugal:"5,default,i16" json:"role"`
+	DeptId    int64  `thrift:"dept_id,6" frugal:"6,default,i64" json:"dept_id"`
+	Status    int16  `thrift:"status,7" frugal:"7,default,i16" json:"status"`
+}
+
+func NewTenantMemberInfo() *TenantMemberInfo {
+	return &TenantMemberInfo{}
+}
+
+func (p *TenantMemberInfo) InitDefault() {
+}
+
+func (p *TenantMemberInfo) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *TenantMemberInfo) GetAccount() (v string) {
+	return p.Account
+}
+
+func (p *TenantMemberInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *TenantMemberInfo) GetAvatarUrl() (v string) {
+	return p.AvatarUrl
+}
+
+func (p *TenantMemberInfo) GetRole() (v int16) {
+	return p.Role
+}
+
+func (p *TenantMemberInfo) GetDeptId() (v int64) {
+	return p.DeptId
+}
+
+func (p *TenantMemberInfo) GetStatus() (v int16) {
+	return p.Status
+}
+func (p *TenantMemberInfo) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *TenantMemberInfo) SetAccount(val string) {
+	p.Account = val
+}
+func (p *TenantMemberInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *TenantMemberInfo) SetAvatarUrl(val string) {
+	p.AvatarUrl = val
+}
+func (p *TenantMemberInfo) SetRole(val int16) {
+	p.Role = val
+}
+func (p *TenantMemberInfo) SetDeptId(val int64) {
+	p.DeptId = val
+}
+func (p *TenantMemberInfo) SetStatus(val int16) {
+	p.Status = val
+}
+
+func (p *TenantMemberInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TenantMemberInfo(%+v)", *p)
+}
+
+var fieldIDToName_TenantMemberInfo = map[int16]string{
+	1: "user_id",
+	2: "account",
+	3: "name",
+	4: "avatar_url",
+	5: "role",
+	6: "dept_id",
+	7: "status",
+}
+
+type ListTenantMembersReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+}
+
+func NewListTenantMembersReq() *ListTenantMembersReq {
+	return &ListTenantMembersReq{}
+}
+
+func (p *ListTenantMembersReq) InitDefault() {
+}
+
+func (p *ListTenantMembersReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *ListTenantMembersReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+func (p *ListTenantMembersReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *ListTenantMembersReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+
+func (p *ListTenantMembersReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTenantMembersReq(%+v)", *p)
+}
+
+var fieldIDToName_ListTenantMembersReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+}
+
+type ListTenantMembersRes struct {
+	Members []*TenantMemberInfo `thrift:"members,1" frugal:"1,default,list<TenantMemberInfo>" json:"members"`
+}
+
+func NewListTenantMembersRes() *ListTenantMembersRes {
+	return &ListTenantMembersRes{}
+}
+
+func (p *ListTenantMembersRes) InitDefault() {
+}
+
+func (p *ListTenantMembersRes) GetMembers() (v []*TenantMemberInfo) {
+	return p.Members
+}
+func (p *ListTenantMembersRes) SetMembers(val []*TenantMemberInfo) {
+	p.Members = val
+}
+
+func (p *ListTenantMembersRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTenantMembersRes(%+v)", *p)
+}
+
+var fieldIDToName_ListTenantMembersRes = map[int16]string{
+	1: "members",
+}
+
+type AddTenantMemberReq struct {
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64  `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	Account    string `thrift:"account,3" frugal:"3,default,string" json:"account"`
+	Role       int16  `thrift:"role,4" frugal:"4,default,i16" json:"role"`
+	DeptId     int64  `thrift:"dept_id,5" frugal:"5,default,i64" json:"dept_id"`
+}
+
+func NewAddTenantMemberReq() *AddTenantMemberReq {
+	return &AddTenantMemberReq{}
+}
+
+func (p *AddTenantMemberReq) InitDefault() {
+}
+
+func (p *AddTenantMemberReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *AddTenantMemberReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *AddTenantMemberReq) GetAccount() (v string) {
+	return p.Account
+}
+
+func (p *AddTenantMemberReq) GetRole() (v int16) {
+	return p.Role
+}
+
+func (p *AddTenantMemberReq) GetDeptId() (v int64) {
+	return p.DeptId
+}
+func (p *AddTenantMemberReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *AddTenantMemberReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *AddTenantMemberReq) SetAccount(val string) {
+	p.Account = val
+}
+func (p *AddTenantMemberReq) SetRole(val int16) {
+	p.Role = val
+}
+func (p *AddTenantMemberReq) SetDeptId(val int64) {
+	p.DeptId = val
+}
+
+func (p *AddTenantMemberReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AddTenantMemberReq(%+v)", *p)
+}
+
+var fieldIDToName_AddTenantMemberReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "account",
+	4: "role",
+	5: "dept_id",
+}
+
+type SetTenantMemberRoleReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	UserId     int64 `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+	Role       int16 `thrift:"role,4" frugal:"4,default,i16" json:"role"`
+}
+
+func NewSetTenantMemberRoleReq() *SetTenantMemberRoleReq {
+	return &SetTenantMemberRoleReq{}
+}
+
+func (p *SetTenantMemberRoleReq) InitDefault() {
+}
+
+func (p *SetTenantMemberRoleReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *SetTenantMemberRoleReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *SetTenantMemberRoleReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SetTenantMemberRoleReq) GetRole() (v int16) {
+	return p.Role
+}
+func (p *SetTenantMemberRoleReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *SetTenantMemberRoleReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *SetTenantMemberRoleReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SetTenantMemberRoleReq) SetRole(val int16) {
+	p.Role = val
+}
+
+func (p *SetTenantMemberRoleReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SetTenantMemberRoleReq(%+v)", *p)
+}
+
+var fieldIDToName_SetTenantMemberRoleReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "user_id",
+	4: "role",
+}
+
+type RemoveTenantMemberReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	UserId     int64 `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+}
+
+func NewRemoveTenantMemberReq() *RemoveTenantMemberReq {
+	return &RemoveTenantMemberReq{}
+}
+
+func (p *RemoveTenantMemberReq) InitDefault() {
+}
+
+func (p *RemoveTenantMemberReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *RemoveTenantMemberReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *RemoveTenantMemberReq) GetUserId() (v int64) {
+	return p.UserId
+}
+func (p *RemoveTenantMemberReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *RemoveTenantMemberReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *RemoveTenantMemberReq) SetUserId(val int64) {
+	p.UserId = val
+}
+
+func (p *RemoveTenantMemberReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RemoveTenantMemberReq(%+v)", *p)
+}
+
+var fieldIDToName_RemoveTenantMemberReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "user_id",
+}
+
+type TenantDepartmentInfo struct {
+	Id       int64  `thrift:"id,1" frugal:"1,default,i64" json:"id"`
+	TenantId int64  `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	ParentId int64  `thrift:"parent_id,3" frugal:"3,default,i64" json:"parent_id"`
+	Name     string `thrift:"name,4" frugal:"4,default,string" json:"name"`
+	Order    int32  `thrift:"order,5" frugal:"5,default,i32" json:"order"`
+}
+
+func NewTenantDepartmentInfo() *TenantDepartmentInfo {
+	return &TenantDepartmentInfo{}
+}
+
+func (p *TenantDepartmentInfo) InitDefault() {
+}
+
+func (p *TenantDepartmentInfo) GetId() (v int64) {
+	return p.Id
+}
+
+func (p *TenantDepartmentInfo) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *TenantDepartmentInfo) GetParentId() (v int64) {
+	return p.ParentId
+}
+
+func (p *TenantDepartmentInfo) GetName() (v string) {
+	return p.Name
+}
+
+func (p *TenantDepartmentInfo) GetOrder() (v int32) {
+	return p.Order
+}
+func (p *TenantDepartmentInfo) SetId(val int64) {
+	p.Id = val
+}
+func (p *TenantDepartmentInfo) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *TenantDepartmentInfo) SetParentId(val int64) {
+	p.ParentId = val
+}
+func (p *TenantDepartmentInfo) SetName(val string) {
+	p.Name = val
+}
+func (p *TenantDepartmentInfo) SetOrder(val int32) {
+	p.Order = val
+}
+
+func (p *TenantDepartmentInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TenantDepartmentInfo(%+v)", *p)
+}
+
+var fieldIDToName_TenantDepartmentInfo = map[int16]string{
+	1: "id",
+	2: "tenant_id",
+	3: "parent_id",
+	4: "name",
+	5: "order",
+}
+
+type ListDepartmentsReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+}
+
+func NewListDepartmentsReq() *ListDepartmentsReq {
+	return &ListDepartmentsReq{}
+}
+
+func (p *ListDepartmentsReq) InitDefault() {
+}
+
+func (p *ListDepartmentsReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *ListDepartmentsReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+func (p *ListDepartmentsReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *ListDepartmentsReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+
+func (p *ListDepartmentsReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListDepartmentsReq(%+v)", *p)
+}
+
+var fieldIDToName_ListDepartmentsReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+}
+
+type ListDepartmentsRes struct {
+	Departments []*TenantDepartmentInfo `thrift:"departments,1" frugal:"1,default,list<TenantDepartmentInfo>" json:"departments"`
+}
+
+func NewListDepartmentsRes() *ListDepartmentsRes {
+	return &ListDepartmentsRes{}
+}
+
+func (p *ListDepartmentsRes) InitDefault() {
+}
+
+func (p *ListDepartmentsRes) GetDepartments() (v []*TenantDepartmentInfo) {
+	return p.Departments
+}
+func (p *ListDepartmentsRes) SetDepartments(val []*TenantDepartmentInfo) {
+	p.Departments = val
+}
+
+func (p *ListDepartmentsRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListDepartmentsRes(%+v)", *p)
+}
+
+var fieldIDToName_ListDepartmentsRes = map[int16]string{
+	1: "departments",
+}
+
+type CreateDepartmentReq struct {
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64  `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	ParentId   int64  `thrift:"parent_id,3" frugal:"3,default,i64" json:"parent_id"`
+	Name       string `thrift:"name,4" frugal:"4,default,string" json:"name"`
+}
+
+func NewCreateDepartmentReq() *CreateDepartmentReq {
+	return &CreateDepartmentReq{}
+}
+
+func (p *CreateDepartmentReq) InitDefault() {
+}
+
+func (p *CreateDepartmentReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *CreateDepartmentReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *CreateDepartmentReq) GetParentId() (v int64) {
+	return p.ParentId
+}
+
+func (p *CreateDepartmentReq) GetName() (v string) {
+	return p.Name
+}
+func (p *CreateDepartmentReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *CreateDepartmentReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *CreateDepartmentReq) SetParentId(val int64) {
+	p.ParentId = val
+}
+func (p *CreateDepartmentReq) SetName(val string) {
+	p.Name = val
+}
+
+func (p *CreateDepartmentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateDepartmentReq(%+v)", *p)
+}
+
+var fieldIDToName_CreateDepartmentReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "parent_id",
+	4: "name",
+}
+
+type CreateDepartmentRes struct {
+	Success bool  `thrift:"success,1" frugal:"1,default,bool" json:"success"`
+	DeptId  int64 `thrift:"dept_id,2" frugal:"2,default,i64" json:"dept_id"`
+}
+
+func NewCreateDepartmentRes() *CreateDepartmentRes {
+	return &CreateDepartmentRes{}
+}
+
+func (p *CreateDepartmentRes) InitDefault() {
+}
+
+func (p *CreateDepartmentRes) GetSuccess() (v bool) {
+	return p.Success
+}
+
+func (p *CreateDepartmentRes) GetDeptId() (v int64) {
+	return p.DeptId
+}
+func (p *CreateDepartmentRes) SetSuccess(val bool) {
+	p.Success = val
+}
+func (p *CreateDepartmentRes) SetDeptId(val int64) {
+	p.DeptId = val
+}
+
+func (p *CreateDepartmentRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CreateDepartmentRes(%+v)", *p)
+}
+
+var fieldIDToName_CreateDepartmentRes = map[int16]string{
+	1: "success",
+	2: "dept_id",
+}
+
+type RenameDepartmentReq struct {
+	OperatorId int64  `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64  `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	DeptId     int64  `thrift:"dept_id,3" frugal:"3,default,i64" json:"dept_id"`
+	Name       string `thrift:"name,4" frugal:"4,default,string" json:"name"`
+}
+
+func NewRenameDepartmentReq() *RenameDepartmentReq {
+	return &RenameDepartmentReq{}
+}
+
+func (p *RenameDepartmentReq) InitDefault() {
+}
+
+func (p *RenameDepartmentReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *RenameDepartmentReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *RenameDepartmentReq) GetDeptId() (v int64) {
+	return p.DeptId
+}
+
+func (p *RenameDepartmentReq) GetName() (v string) {
+	return p.Name
+}
+func (p *RenameDepartmentReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *RenameDepartmentReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *RenameDepartmentReq) SetDeptId(val int64) {
+	p.DeptId = val
+}
+func (p *RenameDepartmentReq) SetName(val string) {
+	p.Name = val
+}
+
+func (p *RenameDepartmentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RenameDepartmentReq(%+v)", *p)
+}
+
+var fieldIDToName_RenameDepartmentReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "dept_id",
+	4: "name",
+}
+
+type MoveDepartmentReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	DeptId     int64 `thrift:"dept_id,3" frugal:"3,default,i64" json:"dept_id"`
+	ParentId   int64 `thrift:"parent_id,4" frugal:"4,default,i64" json:"parent_id"`
+}
+
+func NewMoveDepartmentReq() *MoveDepartmentReq {
+	return &MoveDepartmentReq{}
+}
+
+func (p *MoveDepartmentReq) InitDefault() {
+}
+
+func (p *MoveDepartmentReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *MoveDepartmentReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *MoveDepartmentReq) GetDeptId() (v int64) {
+	return p.DeptId
+}
+
+func (p *MoveDepartmentReq) GetParentId() (v int64) {
+	return p.ParentId
+}
+func (p *MoveDepartmentReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *MoveDepartmentReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *MoveDepartmentReq) SetDeptId(val int64) {
+	p.DeptId = val
+}
+func (p *MoveDepartmentReq) SetParentId(val int64) {
+	p.ParentId = val
+}
+
+func (p *MoveDepartmentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MoveDepartmentReq(%+v)", *p)
+}
+
+var fieldIDToName_MoveDepartmentReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "dept_id",
+	4: "parent_id",
+}
+
+type RemoveDepartmentReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	DeptId     int64 `thrift:"dept_id,3" frugal:"3,default,i64" json:"dept_id"`
+}
+
+func NewRemoveDepartmentReq() *RemoveDepartmentReq {
+	return &RemoveDepartmentReq{}
+}
+
+func (p *RemoveDepartmentReq) InitDefault() {
+}
+
+func (p *RemoveDepartmentReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *RemoveDepartmentReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *RemoveDepartmentReq) GetDeptId() (v int64) {
+	return p.DeptId
+}
+func (p *RemoveDepartmentReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *RemoveDepartmentReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *RemoveDepartmentReq) SetDeptId(val int64) {
+	p.DeptId = val
+}
+
+func (p *RemoveDepartmentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RemoveDepartmentReq(%+v)", *p)
+}
+
+var fieldIDToName_RemoveDepartmentReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "dept_id",
+}
+
+type SetMemberDepartmentReq struct {
+	OperatorId int64 `thrift:"operator_id,1" frugal:"1,default,i64" json:"operator_id"`
+	TenantId   int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+	UserId     int64 `thrift:"user_id,3" frugal:"3,default,i64" json:"user_id"`
+	DeptId     int64 `thrift:"dept_id,4" frugal:"4,default,i64" json:"dept_id"`
+}
+
+func NewSetMemberDepartmentReq() *SetMemberDepartmentReq {
+	return &SetMemberDepartmentReq{}
+}
+
+func (p *SetMemberDepartmentReq) InitDefault() {
+}
+
+func (p *SetMemberDepartmentReq) GetOperatorId() (v int64) {
+	return p.OperatorId
+}
+
+func (p *SetMemberDepartmentReq) GetTenantId() (v int64) {
+	return p.TenantId
+}
+
+func (p *SetMemberDepartmentReq) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *SetMemberDepartmentReq) GetDeptId() (v int64) {
+	return p.DeptId
+}
+func (p *SetMemberDepartmentReq) SetOperatorId(val int64) {
+	p.OperatorId = val
+}
+func (p *SetMemberDepartmentReq) SetTenantId(val int64) {
+	p.TenantId = val
+}
+func (p *SetMemberDepartmentReq) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *SetMemberDepartmentReq) SetDeptId(val int64) {
+	p.DeptId = val
+}
+
+func (p *SetMemberDepartmentReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SetMemberDepartmentReq(%+v)", *p)
+}
+
+var fieldIDToName_SetMemberDepartmentReq = map[int16]string{
+	1: "operator_id",
+	2: "tenant_id",
+	3: "user_id",
+	4: "dept_id",
+}
+
+type ListActiveUsersReq struct {
+	AfterUserId int64 `thrift:"after_user_id,1" frugal:"1,default,i64" json:"after_user_id"`
+	Limit       int32 `thrift:"limit,2" frugal:"2,default,i32" json:"limit"`
+}
+
+func NewListActiveUsersReq() *ListActiveUsersReq {
+	return &ListActiveUsersReq{}
+}
+
+func (p *ListActiveUsersReq) InitDefault() {
+}
+
+func (p *ListActiveUsersReq) GetAfterUserId() (v int64) {
+	return p.AfterUserId
+}
+
+func (p *ListActiveUsersReq) GetLimit() (v int32) {
+	return p.Limit
+}
+func (p *ListActiveUsersReq) SetAfterUserId(val int64) {
+	p.AfterUserId = val
+}
+func (p *ListActiveUsersReq) SetLimit(val int32) {
+	p.Limit = val
+}
+
+func (p *ListActiveUsersReq) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListActiveUsersReq(%+v)", *p)
+}
+
+var fieldIDToName_ListActiveUsersReq = map[int16]string{
+	1: "after_user_id",
+	2: "limit",
+}
+
+type ActiveUserInfo struct {
+	UserId   int64 `thrift:"user_id,1" frugal:"1,default,i64" json:"user_id"`
+	TenantId int64 `thrift:"tenant_id,2" frugal:"2,default,i64" json:"tenant_id"`
+}
+
+func NewActiveUserInfo() *ActiveUserInfo {
+	return &ActiveUserInfo{}
+}
+
+func (p *ActiveUserInfo) InitDefault() {
+}
+
+func (p *ActiveUserInfo) GetUserId() (v int64) {
+	return p.UserId
+}
+
+func (p *ActiveUserInfo) GetTenantId() (v int64) {
+	return p.TenantId
+}
+func (p *ActiveUserInfo) SetUserId(val int64) {
+	p.UserId = val
+}
+func (p *ActiveUserInfo) SetTenantId(val int64) {
+	p.TenantId = val
+}
+
+func (p *ActiveUserInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ActiveUserInfo(%+v)", *p)
+}
+
+var fieldIDToName_ActiveUserInfo = map[int16]string{
+	1: "user_id",
+	2: "tenant_id",
+}
+
+type ListActiveUsersRes struct {
+	Users []*ActiveUserInfo `thrift:"users,1" frugal:"1,default,list<ActiveUserInfo>" json:"users"`
+}
+
+func NewListActiveUsersRes() *ListActiveUsersRes {
+	return &ListActiveUsersRes{}
+}
+
+func (p *ListActiveUsersRes) InitDefault() {
+}
+
+func (p *ListActiveUsersRes) GetUsers() (v []*ActiveUserInfo) {
+	return p.Users
+}
+func (p *ListActiveUsersRes) SetUsers(val []*ActiveUserInfo) {
+	p.Users = val
+}
+
+func (p *ListActiveUsersRes) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListActiveUsersRes(%+v)", *p)
+}
+
+var fieldIDToName_ListActiveUsersRes = map[int16]string{
+	1: "users",
+}
+
 type LoginService interface {
 	Register(ctx context.Context, req *RegisterReq) (r *RegisterRes, err error)
 
@@ -1589,6 +2912,36 @@ type LoginService interface {
 	CreateBotUser(ctx context.Context, req *CreateBotUserReq) (r *CreateBotUserRes, err error)
 
 	UpdateBotUserName(ctx context.Context, req *UpdateBotUserNameReq) (r *CommonRes, err error)
+
+	CreateTenant(ctx context.Context, req *CreateTenantReq) (r *CreateTenantRes, err error)
+
+	ListTenants(ctx context.Context, req *ListTenantsReq) (r *ListTenantsRes, err error)
+
+	GetTenant(ctx context.Context, req *GetTenantReq) (r *GetTenantRes, err error)
+
+	UpdateTenant(ctx context.Context, req *UpdateTenantReq) (r *CommonRes, err error)
+
+	ListTenantMembers(ctx context.Context, req *ListTenantMembersReq) (r *ListTenantMembersRes, err error)
+
+	AddTenantMember(ctx context.Context, req *AddTenantMemberReq) (r *CommonRes, err error)
+
+	SetTenantMemberRole(ctx context.Context, req *SetTenantMemberRoleReq) (r *CommonRes, err error)
+
+	RemoveTenantMember(ctx context.Context, req *RemoveTenantMemberReq) (r *CommonRes, err error)
+
+	ListDepartments(ctx context.Context, req *ListDepartmentsReq) (r *ListDepartmentsRes, err error)
+
+	CreateDepartment(ctx context.Context, req *CreateDepartmentReq) (r *CreateDepartmentRes, err error)
+
+	RenameDepartment(ctx context.Context, req *RenameDepartmentReq) (r *CommonRes, err error)
+
+	MoveDepartment(ctx context.Context, req *MoveDepartmentReq) (r *CommonRes, err error)
+
+	RemoveDepartment(ctx context.Context, req *RemoveDepartmentReq) (r *CommonRes, err error)
+
+	SetMemberDepartment(ctx context.Context, req *SetMemberDepartmentReq) (r *CommonRes, err error)
+
+	ListActiveUsers(ctx context.Context, req *ListActiveUsersReq) (r *ListActiveUsersRes, err error)
 }
 
 type LoginServiceRegisterArgs struct {
@@ -3184,5 +4537,1145 @@ func (p *LoginServiceUpdateBotUserNameResult) String() string {
 }
 
 var fieldIDToName_LoginServiceUpdateBotUserNameResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceCreateTenantArgs struct {
+	Req *CreateTenantReq `thrift:"req,1" frugal:"1,default,CreateTenantReq" json:"req"`
+}
+
+func NewLoginServiceCreateTenantArgs() *LoginServiceCreateTenantArgs {
+	return &LoginServiceCreateTenantArgs{}
+}
+
+func (p *LoginServiceCreateTenantArgs) InitDefault() {
+}
+
+var LoginServiceCreateTenantArgs_Req_DEFAULT *CreateTenantReq
+
+func (p *LoginServiceCreateTenantArgs) GetReq() (v *CreateTenantReq) {
+	if !p.IsSetReq() {
+		return LoginServiceCreateTenantArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceCreateTenantArgs) SetReq(val *CreateTenantReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceCreateTenantArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceCreateTenantArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceCreateTenantArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceCreateTenantArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceCreateTenantResult struct {
+	Success *CreateTenantRes `thrift:"success,0,optional" frugal:"0,optional,CreateTenantRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceCreateTenantResult() *LoginServiceCreateTenantResult {
+	return &LoginServiceCreateTenantResult{}
+}
+
+func (p *LoginServiceCreateTenantResult) InitDefault() {
+}
+
+var LoginServiceCreateTenantResult_Success_DEFAULT *CreateTenantRes
+
+func (p *LoginServiceCreateTenantResult) GetSuccess() (v *CreateTenantRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceCreateTenantResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceCreateTenantResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateTenantRes)
+}
+
+func (p *LoginServiceCreateTenantResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceCreateTenantResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceCreateTenantResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceCreateTenantResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceListTenantsArgs struct {
+	Req *ListTenantsReq `thrift:"req,1" frugal:"1,default,ListTenantsReq" json:"req"`
+}
+
+func NewLoginServiceListTenantsArgs() *LoginServiceListTenantsArgs {
+	return &LoginServiceListTenantsArgs{}
+}
+
+func (p *LoginServiceListTenantsArgs) InitDefault() {
+}
+
+var LoginServiceListTenantsArgs_Req_DEFAULT *ListTenantsReq
+
+func (p *LoginServiceListTenantsArgs) GetReq() (v *ListTenantsReq) {
+	if !p.IsSetReq() {
+		return LoginServiceListTenantsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceListTenantsArgs) SetReq(val *ListTenantsReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceListTenantsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceListTenantsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListTenantsArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListTenantsArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceListTenantsResult struct {
+	Success *ListTenantsRes `thrift:"success,0,optional" frugal:"0,optional,ListTenantsRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceListTenantsResult() *LoginServiceListTenantsResult {
+	return &LoginServiceListTenantsResult{}
+}
+
+func (p *LoginServiceListTenantsResult) InitDefault() {
+}
+
+var LoginServiceListTenantsResult_Success_DEFAULT *ListTenantsRes
+
+func (p *LoginServiceListTenantsResult) GetSuccess() (v *ListTenantsRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceListTenantsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceListTenantsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListTenantsRes)
+}
+
+func (p *LoginServiceListTenantsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceListTenantsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListTenantsResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListTenantsResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceGetTenantArgs struct {
+	Req *GetTenantReq `thrift:"req,1" frugal:"1,default,GetTenantReq" json:"req"`
+}
+
+func NewLoginServiceGetTenantArgs() *LoginServiceGetTenantArgs {
+	return &LoginServiceGetTenantArgs{}
+}
+
+func (p *LoginServiceGetTenantArgs) InitDefault() {
+}
+
+var LoginServiceGetTenantArgs_Req_DEFAULT *GetTenantReq
+
+func (p *LoginServiceGetTenantArgs) GetReq() (v *GetTenantReq) {
+	if !p.IsSetReq() {
+		return LoginServiceGetTenantArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceGetTenantArgs) SetReq(val *GetTenantReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceGetTenantArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceGetTenantArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetTenantArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetTenantArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceGetTenantResult struct {
+	Success *GetTenantRes `thrift:"success,0,optional" frugal:"0,optional,GetTenantRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceGetTenantResult() *LoginServiceGetTenantResult {
+	return &LoginServiceGetTenantResult{}
+}
+
+func (p *LoginServiceGetTenantResult) InitDefault() {
+}
+
+var LoginServiceGetTenantResult_Success_DEFAULT *GetTenantRes
+
+func (p *LoginServiceGetTenantResult) GetSuccess() (v *GetTenantRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceGetTenantResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceGetTenantResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetTenantRes)
+}
+
+func (p *LoginServiceGetTenantResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceGetTenantResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceGetTenantResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceGetTenantResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceUpdateTenantArgs struct {
+	Req *UpdateTenantReq `thrift:"req,1" frugal:"1,default,UpdateTenantReq" json:"req"`
+}
+
+func NewLoginServiceUpdateTenantArgs() *LoginServiceUpdateTenantArgs {
+	return &LoginServiceUpdateTenantArgs{}
+}
+
+func (p *LoginServiceUpdateTenantArgs) InitDefault() {
+}
+
+var LoginServiceUpdateTenantArgs_Req_DEFAULT *UpdateTenantReq
+
+func (p *LoginServiceUpdateTenantArgs) GetReq() (v *UpdateTenantReq) {
+	if !p.IsSetReq() {
+		return LoginServiceUpdateTenantArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceUpdateTenantArgs) SetReq(val *UpdateTenantReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceUpdateTenantArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceUpdateTenantArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateTenantArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateTenantArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceUpdateTenantResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceUpdateTenantResult() *LoginServiceUpdateTenantResult {
+	return &LoginServiceUpdateTenantResult{}
+}
+
+func (p *LoginServiceUpdateTenantResult) InitDefault() {
+}
+
+var LoginServiceUpdateTenantResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceUpdateTenantResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceUpdateTenantResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceUpdateTenantResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceUpdateTenantResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceUpdateTenantResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceUpdateTenantResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceUpdateTenantResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceListTenantMembersArgs struct {
+	Req *ListTenantMembersReq `thrift:"req,1" frugal:"1,default,ListTenantMembersReq" json:"req"`
+}
+
+func NewLoginServiceListTenantMembersArgs() *LoginServiceListTenantMembersArgs {
+	return &LoginServiceListTenantMembersArgs{}
+}
+
+func (p *LoginServiceListTenantMembersArgs) InitDefault() {
+}
+
+var LoginServiceListTenantMembersArgs_Req_DEFAULT *ListTenantMembersReq
+
+func (p *LoginServiceListTenantMembersArgs) GetReq() (v *ListTenantMembersReq) {
+	if !p.IsSetReq() {
+		return LoginServiceListTenantMembersArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceListTenantMembersArgs) SetReq(val *ListTenantMembersReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceListTenantMembersArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceListTenantMembersArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListTenantMembersArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListTenantMembersArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceListTenantMembersResult struct {
+	Success *ListTenantMembersRes `thrift:"success,0,optional" frugal:"0,optional,ListTenantMembersRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceListTenantMembersResult() *LoginServiceListTenantMembersResult {
+	return &LoginServiceListTenantMembersResult{}
+}
+
+func (p *LoginServiceListTenantMembersResult) InitDefault() {
+}
+
+var LoginServiceListTenantMembersResult_Success_DEFAULT *ListTenantMembersRes
+
+func (p *LoginServiceListTenantMembersResult) GetSuccess() (v *ListTenantMembersRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceListTenantMembersResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceListTenantMembersResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListTenantMembersRes)
+}
+
+func (p *LoginServiceListTenantMembersResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceListTenantMembersResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListTenantMembersResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListTenantMembersResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceAddTenantMemberArgs struct {
+	Req *AddTenantMemberReq `thrift:"req,1" frugal:"1,default,AddTenantMemberReq" json:"req"`
+}
+
+func NewLoginServiceAddTenantMemberArgs() *LoginServiceAddTenantMemberArgs {
+	return &LoginServiceAddTenantMemberArgs{}
+}
+
+func (p *LoginServiceAddTenantMemberArgs) InitDefault() {
+}
+
+var LoginServiceAddTenantMemberArgs_Req_DEFAULT *AddTenantMemberReq
+
+func (p *LoginServiceAddTenantMemberArgs) GetReq() (v *AddTenantMemberReq) {
+	if !p.IsSetReq() {
+		return LoginServiceAddTenantMemberArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceAddTenantMemberArgs) SetReq(val *AddTenantMemberReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceAddTenantMemberArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceAddTenantMemberArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceAddTenantMemberArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceAddTenantMemberArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceAddTenantMemberResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceAddTenantMemberResult() *LoginServiceAddTenantMemberResult {
+	return &LoginServiceAddTenantMemberResult{}
+}
+
+func (p *LoginServiceAddTenantMemberResult) InitDefault() {
+}
+
+var LoginServiceAddTenantMemberResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceAddTenantMemberResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceAddTenantMemberResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceAddTenantMemberResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceAddTenantMemberResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceAddTenantMemberResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceAddTenantMemberResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceAddTenantMemberResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceSetTenantMemberRoleArgs struct {
+	Req *SetTenantMemberRoleReq `thrift:"req,1" frugal:"1,default,SetTenantMemberRoleReq" json:"req"`
+}
+
+func NewLoginServiceSetTenantMemberRoleArgs() *LoginServiceSetTenantMemberRoleArgs {
+	return &LoginServiceSetTenantMemberRoleArgs{}
+}
+
+func (p *LoginServiceSetTenantMemberRoleArgs) InitDefault() {
+}
+
+var LoginServiceSetTenantMemberRoleArgs_Req_DEFAULT *SetTenantMemberRoleReq
+
+func (p *LoginServiceSetTenantMemberRoleArgs) GetReq() (v *SetTenantMemberRoleReq) {
+	if !p.IsSetReq() {
+		return LoginServiceSetTenantMemberRoleArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceSetTenantMemberRoleArgs) SetReq(val *SetTenantMemberRoleReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceSetTenantMemberRoleArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceSetTenantMemberRoleArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceSetTenantMemberRoleArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceSetTenantMemberRoleArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceSetTenantMemberRoleResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceSetTenantMemberRoleResult() *LoginServiceSetTenantMemberRoleResult {
+	return &LoginServiceSetTenantMemberRoleResult{}
+}
+
+func (p *LoginServiceSetTenantMemberRoleResult) InitDefault() {
+}
+
+var LoginServiceSetTenantMemberRoleResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceSetTenantMemberRoleResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceSetTenantMemberRoleResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceSetTenantMemberRoleResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceSetTenantMemberRoleResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceSetTenantMemberRoleResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceSetTenantMemberRoleResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceSetTenantMemberRoleResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceRemoveTenantMemberArgs struct {
+	Req *RemoveTenantMemberReq `thrift:"req,1" frugal:"1,default,RemoveTenantMemberReq" json:"req"`
+}
+
+func NewLoginServiceRemoveTenantMemberArgs() *LoginServiceRemoveTenantMemberArgs {
+	return &LoginServiceRemoveTenantMemberArgs{}
+}
+
+func (p *LoginServiceRemoveTenantMemberArgs) InitDefault() {
+}
+
+var LoginServiceRemoveTenantMemberArgs_Req_DEFAULT *RemoveTenantMemberReq
+
+func (p *LoginServiceRemoveTenantMemberArgs) GetReq() (v *RemoveTenantMemberReq) {
+	if !p.IsSetReq() {
+		return LoginServiceRemoveTenantMemberArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceRemoveTenantMemberArgs) SetReq(val *RemoveTenantMemberReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceRemoveTenantMemberArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceRemoveTenantMemberArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRemoveTenantMemberArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRemoveTenantMemberArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceRemoveTenantMemberResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceRemoveTenantMemberResult() *LoginServiceRemoveTenantMemberResult {
+	return &LoginServiceRemoveTenantMemberResult{}
+}
+
+func (p *LoginServiceRemoveTenantMemberResult) InitDefault() {
+}
+
+var LoginServiceRemoveTenantMemberResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceRemoveTenantMemberResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceRemoveTenantMemberResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceRemoveTenantMemberResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceRemoveTenantMemberResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceRemoveTenantMemberResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRemoveTenantMemberResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRemoveTenantMemberResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceListDepartmentsArgs struct {
+	Req *ListDepartmentsReq `thrift:"req,1" frugal:"1,default,ListDepartmentsReq" json:"req"`
+}
+
+func NewLoginServiceListDepartmentsArgs() *LoginServiceListDepartmentsArgs {
+	return &LoginServiceListDepartmentsArgs{}
+}
+
+func (p *LoginServiceListDepartmentsArgs) InitDefault() {
+}
+
+var LoginServiceListDepartmentsArgs_Req_DEFAULT *ListDepartmentsReq
+
+func (p *LoginServiceListDepartmentsArgs) GetReq() (v *ListDepartmentsReq) {
+	if !p.IsSetReq() {
+		return LoginServiceListDepartmentsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceListDepartmentsArgs) SetReq(val *ListDepartmentsReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceListDepartmentsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceListDepartmentsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListDepartmentsArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListDepartmentsArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceListDepartmentsResult struct {
+	Success *ListDepartmentsRes `thrift:"success,0,optional" frugal:"0,optional,ListDepartmentsRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceListDepartmentsResult() *LoginServiceListDepartmentsResult {
+	return &LoginServiceListDepartmentsResult{}
+}
+
+func (p *LoginServiceListDepartmentsResult) InitDefault() {
+}
+
+var LoginServiceListDepartmentsResult_Success_DEFAULT *ListDepartmentsRes
+
+func (p *LoginServiceListDepartmentsResult) GetSuccess() (v *ListDepartmentsRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceListDepartmentsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceListDepartmentsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListDepartmentsRes)
+}
+
+func (p *LoginServiceListDepartmentsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceListDepartmentsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListDepartmentsResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListDepartmentsResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceCreateDepartmentArgs struct {
+	Req *CreateDepartmentReq `thrift:"req,1" frugal:"1,default,CreateDepartmentReq" json:"req"`
+}
+
+func NewLoginServiceCreateDepartmentArgs() *LoginServiceCreateDepartmentArgs {
+	return &LoginServiceCreateDepartmentArgs{}
+}
+
+func (p *LoginServiceCreateDepartmentArgs) InitDefault() {
+}
+
+var LoginServiceCreateDepartmentArgs_Req_DEFAULT *CreateDepartmentReq
+
+func (p *LoginServiceCreateDepartmentArgs) GetReq() (v *CreateDepartmentReq) {
+	if !p.IsSetReq() {
+		return LoginServiceCreateDepartmentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceCreateDepartmentArgs) SetReq(val *CreateDepartmentReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceCreateDepartmentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceCreateDepartmentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceCreateDepartmentArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceCreateDepartmentArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceCreateDepartmentResult struct {
+	Success *CreateDepartmentRes `thrift:"success,0,optional" frugal:"0,optional,CreateDepartmentRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceCreateDepartmentResult() *LoginServiceCreateDepartmentResult {
+	return &LoginServiceCreateDepartmentResult{}
+}
+
+func (p *LoginServiceCreateDepartmentResult) InitDefault() {
+}
+
+var LoginServiceCreateDepartmentResult_Success_DEFAULT *CreateDepartmentRes
+
+func (p *LoginServiceCreateDepartmentResult) GetSuccess() (v *CreateDepartmentRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceCreateDepartmentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceCreateDepartmentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CreateDepartmentRes)
+}
+
+func (p *LoginServiceCreateDepartmentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceCreateDepartmentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceCreateDepartmentResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceCreateDepartmentResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceRenameDepartmentArgs struct {
+	Req *RenameDepartmentReq `thrift:"req,1" frugal:"1,default,RenameDepartmentReq" json:"req"`
+}
+
+func NewLoginServiceRenameDepartmentArgs() *LoginServiceRenameDepartmentArgs {
+	return &LoginServiceRenameDepartmentArgs{}
+}
+
+func (p *LoginServiceRenameDepartmentArgs) InitDefault() {
+}
+
+var LoginServiceRenameDepartmentArgs_Req_DEFAULT *RenameDepartmentReq
+
+func (p *LoginServiceRenameDepartmentArgs) GetReq() (v *RenameDepartmentReq) {
+	if !p.IsSetReq() {
+		return LoginServiceRenameDepartmentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceRenameDepartmentArgs) SetReq(val *RenameDepartmentReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceRenameDepartmentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceRenameDepartmentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRenameDepartmentArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRenameDepartmentArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceRenameDepartmentResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceRenameDepartmentResult() *LoginServiceRenameDepartmentResult {
+	return &LoginServiceRenameDepartmentResult{}
+}
+
+func (p *LoginServiceRenameDepartmentResult) InitDefault() {
+}
+
+var LoginServiceRenameDepartmentResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceRenameDepartmentResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceRenameDepartmentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceRenameDepartmentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceRenameDepartmentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceRenameDepartmentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRenameDepartmentResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRenameDepartmentResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceMoveDepartmentArgs struct {
+	Req *MoveDepartmentReq `thrift:"req,1" frugal:"1,default,MoveDepartmentReq" json:"req"`
+}
+
+func NewLoginServiceMoveDepartmentArgs() *LoginServiceMoveDepartmentArgs {
+	return &LoginServiceMoveDepartmentArgs{}
+}
+
+func (p *LoginServiceMoveDepartmentArgs) InitDefault() {
+}
+
+var LoginServiceMoveDepartmentArgs_Req_DEFAULT *MoveDepartmentReq
+
+func (p *LoginServiceMoveDepartmentArgs) GetReq() (v *MoveDepartmentReq) {
+	if !p.IsSetReq() {
+		return LoginServiceMoveDepartmentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceMoveDepartmentArgs) SetReq(val *MoveDepartmentReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceMoveDepartmentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceMoveDepartmentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceMoveDepartmentArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceMoveDepartmentArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceMoveDepartmentResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceMoveDepartmentResult() *LoginServiceMoveDepartmentResult {
+	return &LoginServiceMoveDepartmentResult{}
+}
+
+func (p *LoginServiceMoveDepartmentResult) InitDefault() {
+}
+
+var LoginServiceMoveDepartmentResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceMoveDepartmentResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceMoveDepartmentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceMoveDepartmentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceMoveDepartmentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceMoveDepartmentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceMoveDepartmentResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceMoveDepartmentResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceRemoveDepartmentArgs struct {
+	Req *RemoveDepartmentReq `thrift:"req,1" frugal:"1,default,RemoveDepartmentReq" json:"req"`
+}
+
+func NewLoginServiceRemoveDepartmentArgs() *LoginServiceRemoveDepartmentArgs {
+	return &LoginServiceRemoveDepartmentArgs{}
+}
+
+func (p *LoginServiceRemoveDepartmentArgs) InitDefault() {
+}
+
+var LoginServiceRemoveDepartmentArgs_Req_DEFAULT *RemoveDepartmentReq
+
+func (p *LoginServiceRemoveDepartmentArgs) GetReq() (v *RemoveDepartmentReq) {
+	if !p.IsSetReq() {
+		return LoginServiceRemoveDepartmentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceRemoveDepartmentArgs) SetReq(val *RemoveDepartmentReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceRemoveDepartmentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceRemoveDepartmentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRemoveDepartmentArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRemoveDepartmentArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceRemoveDepartmentResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceRemoveDepartmentResult() *LoginServiceRemoveDepartmentResult {
+	return &LoginServiceRemoveDepartmentResult{}
+}
+
+func (p *LoginServiceRemoveDepartmentResult) InitDefault() {
+}
+
+var LoginServiceRemoveDepartmentResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceRemoveDepartmentResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceRemoveDepartmentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceRemoveDepartmentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceRemoveDepartmentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceRemoveDepartmentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceRemoveDepartmentResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceRemoveDepartmentResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceSetMemberDepartmentArgs struct {
+	Req *SetMemberDepartmentReq `thrift:"req,1" frugal:"1,default,SetMemberDepartmentReq" json:"req"`
+}
+
+func NewLoginServiceSetMemberDepartmentArgs() *LoginServiceSetMemberDepartmentArgs {
+	return &LoginServiceSetMemberDepartmentArgs{}
+}
+
+func (p *LoginServiceSetMemberDepartmentArgs) InitDefault() {
+}
+
+var LoginServiceSetMemberDepartmentArgs_Req_DEFAULT *SetMemberDepartmentReq
+
+func (p *LoginServiceSetMemberDepartmentArgs) GetReq() (v *SetMemberDepartmentReq) {
+	if !p.IsSetReq() {
+		return LoginServiceSetMemberDepartmentArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceSetMemberDepartmentArgs) SetReq(val *SetMemberDepartmentReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceSetMemberDepartmentArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceSetMemberDepartmentArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceSetMemberDepartmentArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceSetMemberDepartmentArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceSetMemberDepartmentResult struct {
+	Success *CommonRes `thrift:"success,0,optional" frugal:"0,optional,CommonRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceSetMemberDepartmentResult() *LoginServiceSetMemberDepartmentResult {
+	return &LoginServiceSetMemberDepartmentResult{}
+}
+
+func (p *LoginServiceSetMemberDepartmentResult) InitDefault() {
+}
+
+var LoginServiceSetMemberDepartmentResult_Success_DEFAULT *CommonRes
+
+func (p *LoginServiceSetMemberDepartmentResult) GetSuccess() (v *CommonRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceSetMemberDepartmentResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceSetMemberDepartmentResult) SetSuccess(x interface{}) {
+	p.Success = x.(*CommonRes)
+}
+
+func (p *LoginServiceSetMemberDepartmentResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceSetMemberDepartmentResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceSetMemberDepartmentResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceSetMemberDepartmentResult = map[int16]string{
+	0: "success",
+}
+
+type LoginServiceListActiveUsersArgs struct {
+	Req *ListActiveUsersReq `thrift:"req,1" frugal:"1,default,ListActiveUsersReq" json:"req"`
+}
+
+func NewLoginServiceListActiveUsersArgs() *LoginServiceListActiveUsersArgs {
+	return &LoginServiceListActiveUsersArgs{}
+}
+
+func (p *LoginServiceListActiveUsersArgs) InitDefault() {
+}
+
+var LoginServiceListActiveUsersArgs_Req_DEFAULT *ListActiveUsersReq
+
+func (p *LoginServiceListActiveUsersArgs) GetReq() (v *ListActiveUsersReq) {
+	if !p.IsSetReq() {
+		return LoginServiceListActiveUsersArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *LoginServiceListActiveUsersArgs) SetReq(val *ListActiveUsersReq) {
+	p.Req = val
+}
+
+func (p *LoginServiceListActiveUsersArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *LoginServiceListActiveUsersArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListActiveUsersArgs(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListActiveUsersArgs = map[int16]string{
+	1: "req",
+}
+
+type LoginServiceListActiveUsersResult struct {
+	Success *ListActiveUsersRes `thrift:"success,0,optional" frugal:"0,optional,ListActiveUsersRes" json:"success,omitempty"`
+}
+
+func NewLoginServiceListActiveUsersResult() *LoginServiceListActiveUsersResult {
+	return &LoginServiceListActiveUsersResult{}
+}
+
+func (p *LoginServiceListActiveUsersResult) InitDefault() {
+}
+
+var LoginServiceListActiveUsersResult_Success_DEFAULT *ListActiveUsersRes
+
+func (p *LoginServiceListActiveUsersResult) GetSuccess() (v *ListActiveUsersRes) {
+	if !p.IsSetSuccess() {
+		return LoginServiceListActiveUsersResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LoginServiceListActiveUsersResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListActiveUsersRes)
+}
+
+func (p *LoginServiceListActiveUsersResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LoginServiceListActiveUsersResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LoginServiceListActiveUsersResult(%+v)", *p)
+}
+
+var fieldIDToName_LoginServiceListActiveUsersResult = map[int16]string{
 	0: "success",
 }

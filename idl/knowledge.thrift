@@ -8,6 +8,7 @@ struct CreateKnowledgeBaseReq {
     1: i64 owner_id
     2: string name
     3: optional string description
+    4: optional i64 tenant_id
 }
 
 struct CreateKnowledgeBaseRes {
@@ -27,6 +28,7 @@ struct KnowledgeBaseInfo {
 
 struct GetKnowledgeBaseReq {
     1: i64 kb_id
+    2: optional i64 tenant_id
 }
 
 struct GetKnowledgeBaseRes {
@@ -36,6 +38,7 @@ struct GetKnowledgeBaseRes {
 
 struct GetUserKnowledgeBasesReq {
     1: i64 owner_id
+    2: optional i64 tenant_id
 }
 
 struct GetUserKnowledgeBasesRes {
@@ -48,11 +51,13 @@ struct UpdateKnowledgeBaseReq {
     2: i64 operator_id
     3: optional string name
     4: optional string description
+    5: optional i64 tenant_id
 }
 
 struct DeleteKnowledgeBaseReq {
     1: i64 kb_id
     2: i64 operator_id
+    3: optional i64 tenant_id
 }
 
 struct AddDocumentReq {
@@ -62,6 +67,7 @@ struct AddDocumentReq {
     4: string file_url
     5: string file_type
     6: i64 file_size
+    7: optional i64 tenant_id
 }
 
 struct AddDocumentRes {
@@ -84,6 +90,7 @@ struct DocumentInfo {
 
 struct GetDocumentsReq {
     1: i64 kb_id
+    2: optional i64 tenant_id
 }
 
 struct GetDocumentsRes {
@@ -94,27 +101,32 @@ struct GetDocumentsRes {
 struct DeleteDocumentReq {
     1: i64 doc_id
     2: i64 operator_id
+    3: optional i64 tenant_id
 }
 
 struct RetryDocumentReq {
     1: i64 doc_id
     2: i64 operator_id
+    3: optional i64 tenant_id
 }
 
 struct BindKnowledgeBaseReq {
     1: i64 bot_id
     2: i64 operator_id
     3: i64 kb_id
+    4: optional i64 tenant_id
 }
 
 struct UnbindKnowledgeBaseReq {
     1: i64 bot_id
     2: i64 operator_id
     3: i64 kb_id
+    4: optional i64 tenant_id
 }
 
 struct GetBotKnowledgeBasesReq {
     1: i64 bot_id
+    2: optional i64 tenant_id
 }
 
 struct GetBotKnowledgeBasesRes {
@@ -126,6 +138,7 @@ struct SearchKnowledgeReq {
     1: list<i64> kb_ids
     2: string query
     3: i32 top_k
+    4: optional i64 tenant_id
 }
 
 struct KnowledgeChunk {

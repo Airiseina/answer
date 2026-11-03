@@ -49,12 +49,14 @@ func main() {
 	h.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		// 开放平台签名请求头需显式放行，否则浏览器跨域调用 /open/v1 会被预检拦截。
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-App-Id", "X-Timestamp", "X-Nonce", "X-Signature"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	}))
 	middleware.JwtMiddleware()
+	middleware.AdminJwtMiddleware()
 	ratelimit.Default.StartCleanup(5 * time.Minute)
 	routes.Routes(h)
 	h.Spin()

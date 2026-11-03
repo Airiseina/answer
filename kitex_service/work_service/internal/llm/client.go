@@ -21,6 +21,14 @@ type ImageData struct {
 	MIMEType   string
 }
 
+// ChatResult 是一次 LLM 调用的结果，含回答正文与 token 用量。
+type ChatResult struct {
+	Content          string
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+}
+
 // 默认 LLM 调用超时，与 service.go 中的 llmTimeout 保持一致
 const defaultChatTimeout = 120 * time.Second
 
@@ -43,6 +51,15 @@ func NewClient() *Client {
 //   - userContent: 当前用户输入文本
 //   - imageData: 图片数据，非 nil 时构造多模态消息
 func (c *Client) Chat(ctx context.Context, apiKey, baseURL, modelName, systemPrompt string, history []ChatMessage, userContent string, imageData *ImageData) (string, error) {
+	result, err := c.ChatWithUsage(ctx, apiKey, baseURL, modelName, systemPrompt, history, userContent, imageData)
+	if err != nil {
+		return "", err
+	}
+	return result.Content, nil
+}
+
+// ChatWithUsage 与 Chat 相同，但额外返回 token 用量，供用量记账使用。
+func (c *Client) ChatWithUsage(ctx context.Context, apiKey, baseURL, modelName, systemPrompt string, history []ChatMessage, userContent string, imageData *ImageData) (*ChatResult, error) {
 	// 基于 eino-ext OpenAI 适配器创建 ChatModel
 	// 与 agent/react.go 使用同一实现，统一可观测性与回调链路
 	temp := float32(defaultTemperature)
@@ -54,7 +71,7 @@ func (c *Client) Chat(ctx context.Context, apiKey, baseURL, modelName, systemPro
 		Timeout:     defaultChatTimeout,
 	})
 	if err != nil {
-		return "", fmt.Errorf("创建ChatModel失败: %w", err)
+		return nil, fmt.Errorf("创建ChatModel失败: %w", err)
 	}
 
 	// 构造消息列表：System + History + User
@@ -112,10 +129,17 @@ func (c *Client) Chat(ctx context.Context, apiKey, baseURL, modelName, systemPro
 	// 调用 ChatModel 生成回复
 	resp, err := chatModel.Generate(ctx, messages)
 	if err != nil {
-		return "", fmt.Errorf("调用ChatModel失败: %w", err)
+		return nil, fmt.Errorf("调用ChatModel失败: %w", err)
 	}
 	if resp == nil || resp.Content == "" {
-		return "", fmt.Errorf("ChatModel返回空响应")
+		return nil, fmt.Errorf("ChatModel返回空响应")
 	}
-	return resp.Content, nil
+	result := &ChatResult{Content: resp.Content}
+	if resp.ResponseMeta != nil {
+		usage := resp.ResponseMeta.Usage
+		result.PromptTokens = usage.PromptTokens
+		result.CompletionTokens = usage.CompletionTokens
+		result.TotalTokens = usage.TotalTokens
+	}
+	return result, nil
 }

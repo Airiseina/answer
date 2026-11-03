@@ -67,11 +67,13 @@ func ConnectChatService(r discovery.Resolver) {
 //   - groupID: 群组ID，写入会话记录用于前端关联
 //
 // 返回值: 会话ID（后续邀请/踢人时需要使用），错误信息
-func CreateConversation(ctx context.Context, name string, memberIDs []int64, groupID int64) (int64, error) {
+func CreateConversation(ctx context.Context, tenantID int64, name string, memberIDs []int64, groupID int64) (int64, error) {
+	tenantIDValue := tenantID
 	resp, err := chatCli.CreateConversation(ctx, &chat.CreateConversationReq{
 		Name:      name,
 		MemberIds: memberIDs,
 		GroupId:   &groupID,
+		TenantId:  &tenantIDValue,
 	})
 	if err != nil {
 		return 0, err
@@ -89,10 +91,12 @@ func CreateConversation(ctx context.Context, name string, memberIDs []int64, gro
 //   - 新成员加入群组后，应该能收到该群的消息推送
 //   - 如果不同步 conversation_member，新成员不在会话成员列表中
 //   - SendMessage 查询 GetConversationMembers 时会遗漏新成员
-func AddConversationMembers(ctx context.Context, conversationID int64, memberIDs []int64) error {
+func AddConversationMembers(ctx context.Context, tenantID int64, conversationID int64, memberIDs []int64) error {
+	tenantIDValue := tenantID
 	resp, err := chatCli.AddConversationMembers(ctx, &chat.AddConversationMembersReq{
 		ConversationId: conversationID,
 		MemberIds:      memberIDs,
+		TenantId:       &tenantIDValue,
 	})
 	if err != nil {
 		return err
@@ -110,10 +114,12 @@ func AddConversationMembers(ctx context.Context, conversationID int64, memberIDs
 //   - 被踢出的成员不应再收到该群的消息推送
 //   - 如果不同步移除 conversation_member，被踢用户仍在会话成员列表中
 //   - SendMessage 会继续向已退群的用户推送消息
-func RemoveConversationMembers(ctx context.Context, conversationID int64, memberIDs []int64) error {
+func RemoveConversationMembers(ctx context.Context, tenantID int64, conversationID int64, memberIDs []int64) error {
+	tenantIDValue := tenantID
 	resp, err := chatCli.RemoveConversationMembers(ctx, &chat.RemoveConversationMembersReq{
 		ConversationId: conversationID,
 		MemberIds:      memberIDs,
+		TenantId:       &tenantIDValue,
 	})
 	if err != nil {
 		return err

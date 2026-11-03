@@ -1,0 +1,316 @@
+.ag-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+}
+
+.ag-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ag-select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.ag-status {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ag-status-1 {
+  background: #E7F7EC;
+  color: #1E8E4A;
+}
+
+.ag-status-2 {
+  background: #F2F2F2;
+  color: var(--text-secondary);
+}
+
+.ag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ag-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ag-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ag-btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.ag-btn.primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  color: #fff;
+}
+
+.ag-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ag-link {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ag-link.danger {
+  color: #D9534F;
+}
+
+.ag-errors {
+  border: 1px solid #F3C7C7;
+  background: #FDECEC;
+  color: #C0392B;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.ag-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.ag-canvas {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-white);
+}
+
+.ag-canvas-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ag-config {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-white);
+  padding: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ag-config-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ag-config-empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 8px 0;
+}
+
+.ag-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.ag-field > span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ag-field input,
+.ag-field textarea,
+.ag-field select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  background: var(--bg-white);
+  color: var(--text-primary);
+}
+
+.ag-field textarea {
+  resize: vertical;
+}
+
+.ag-field input[readonly] {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.ag-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.ag-history {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-white);
+  padding: 8px 10px;
+}
+
+.ag-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ag-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.ag-history-version {
+  flex-shrink: 0;
+  width: 42px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ag-history-time {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 画布节点：三类节点用不同色条区分，其余视觉保持克制。 */
+.ag-node {
+  min-width: 140px;
+  max-width: 200px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--text-light);
+  background: var(--bg-white);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.ag-node-start {
+  border-left-color: #2FA36B;
+}
+
+.ag-node-agent {
+  border-left-color: var(--primary);
+}
+
+.ag-node-end {
+  border-left-color: #C98A1B;
+}
+
+.ag-node.ag-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(18, 183, 245, 0.25);
+}
+
+.ag-node-head {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-node-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-node-tag {
+  margin-top: 6px;
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 画布需要更宽的工作区：仅在编排面板挂载时加宽中间列（浏览器不支持 :has 时优雅降级为原宽度）。 */
+.main-middle:has(.ag-panel) {
+  width: 460px;
+}
+
+@media (max-width: 600px) {
+  .main-middle:has(.ag-panel) {
+    width: 100%;
+  }
+}

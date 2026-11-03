@@ -32,6 +32,21 @@ type Client interface {
 	UpdateAvatar(ctx context.Context, req *user.UpdateAvatarReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
 	CreateBotUser(ctx context.Context, req *user.CreateBotUserReq, callOptions ...callopt.Option) (r *user.CreateBotUserRes, err error)
 	UpdateBotUserName(ctx context.Context, req *user.UpdateBotUserNameReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	CreateTenant(ctx context.Context, req *user.CreateTenantReq, callOptions ...callopt.Option) (r *user.CreateTenantRes, err error)
+	ListTenants(ctx context.Context, req *user.ListTenantsReq, callOptions ...callopt.Option) (r *user.ListTenantsRes, err error)
+	GetTenant(ctx context.Context, req *user.GetTenantReq, callOptions ...callopt.Option) (r *user.GetTenantRes, err error)
+	UpdateTenant(ctx context.Context, req *user.UpdateTenantReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	ListTenantMembers(ctx context.Context, req *user.ListTenantMembersReq, callOptions ...callopt.Option) (r *user.ListTenantMembersRes, err error)
+	AddTenantMember(ctx context.Context, req *user.AddTenantMemberReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	SetTenantMemberRole(ctx context.Context, req *user.SetTenantMemberRoleReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	RemoveTenantMember(ctx context.Context, req *user.RemoveTenantMemberReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	ListDepartments(ctx context.Context, req *user.ListDepartmentsReq, callOptions ...callopt.Option) (r *user.ListDepartmentsRes, err error)
+	CreateDepartment(ctx context.Context, req *user.CreateDepartmentReq, callOptions ...callopt.Option) (r *user.CreateDepartmentRes, err error)
+	RenameDepartment(ctx context.Context, req *user.RenameDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	MoveDepartment(ctx context.Context, req *user.MoveDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	RemoveDepartment(ctx context.Context, req *user.RemoveDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	SetMemberDepartment(ctx context.Context, req *user.SetMemberDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error)
+	ListActiveUsers(ctx context.Context, req *user.ListActiveUsersReq, callOptions ...callopt.Option) (r *user.ListActiveUsersRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -166,4 +181,79 @@ func (p *kLoginServiceClient) CreateBotUser(ctx context.Context, req *user.Creat
 func (p *kLoginServiceClient) UpdateBotUserName(ctx context.Context, req *user.UpdateBotUserNameReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdateBotUserName(ctx, req)
+}
+
+func (p *kLoginServiceClient) CreateTenant(ctx context.Context, req *user.CreateTenantReq, callOptions ...callopt.Option) (r *user.CreateTenantRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateTenant(ctx, req)
+}
+
+func (p *kLoginServiceClient) ListTenants(ctx context.Context, req *user.ListTenantsReq, callOptions ...callopt.Option) (r *user.ListTenantsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTenants(ctx, req)
+}
+
+func (p *kLoginServiceClient) GetTenant(ctx context.Context, req *user.GetTenantReq, callOptions ...callopt.Option) (r *user.GetTenantRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetTenant(ctx, req)
+}
+
+func (p *kLoginServiceClient) UpdateTenant(ctx context.Context, req *user.UpdateTenantReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateTenant(ctx, req)
+}
+
+func (p *kLoginServiceClient) ListTenantMembers(ctx context.Context, req *user.ListTenantMembersReq, callOptions ...callopt.Option) (r *user.ListTenantMembersRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTenantMembers(ctx, req)
+}
+
+func (p *kLoginServiceClient) AddTenantMember(ctx context.Context, req *user.AddTenantMemberReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AddTenantMember(ctx, req)
+}
+
+func (p *kLoginServiceClient) SetTenantMemberRole(ctx context.Context, req *user.SetTenantMemberRoleReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SetTenantMemberRole(ctx, req)
+}
+
+func (p *kLoginServiceClient) RemoveTenantMember(ctx context.Context, req *user.RemoveTenantMemberReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RemoveTenantMember(ctx, req)
+}
+
+func (p *kLoginServiceClient) ListDepartments(ctx context.Context, req *user.ListDepartmentsReq, callOptions ...callopt.Option) (r *user.ListDepartmentsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListDepartments(ctx, req)
+}
+
+func (p *kLoginServiceClient) CreateDepartment(ctx context.Context, req *user.CreateDepartmentReq, callOptions ...callopt.Option) (r *user.CreateDepartmentRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateDepartment(ctx, req)
+}
+
+func (p *kLoginServiceClient) RenameDepartment(ctx context.Context, req *user.RenameDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RenameDepartment(ctx, req)
+}
+
+func (p *kLoginServiceClient) MoveDepartment(ctx context.Context, req *user.MoveDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.MoveDepartment(ctx, req)
+}
+
+func (p *kLoginServiceClient) RemoveDepartment(ctx context.Context, req *user.RemoveDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RemoveDepartment(ctx, req)
+}
+
+func (p *kLoginServiceClient) SetMemberDepartment(ctx context.Context, req *user.SetMemberDepartmentReq, callOptions ...callopt.Option) (r *user.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SetMemberDepartment(ctx, req)
+}
+
+func (p *kLoginServiceClient) ListActiveUsers(ctx context.Context, req *user.ListActiveUsersReq, callOptions ...callopt.Option) (r *user.ListActiveUsersRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListActiveUsers(ctx, req)
 }

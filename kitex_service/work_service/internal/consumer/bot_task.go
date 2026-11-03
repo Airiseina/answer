@@ -8,18 +8,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
+	"github.com/Airiseina/answer/pkg/tenant"
 
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/segmentio/kafka-go"
 )
 
 const (
-	maxConcurrentBots = 10
-	perBotQueueSize   = 50
-	botIdleTimeout    = 10 * time.Minute
-	handleTimeout     = 300 * time.Second
+	// 默认值，运行时以 ai.bot_task.* 配置覆盖，便于按机器规格弹性扩容。
+	defaultMaxConcurrentBots = 10
+	defaultPerBotQueueSize   = 50
+	botIdleTimeout           = 10 * time.Minute
+	handleTimeout            = 300 * time.Second
 )
 
 type FlexInt int64
@@ -38,6 +41,7 @@ func (f *FlexInt) UnmarshalJSON(data []byte) error {
 }
 
 type BotTask struct {
+	TenantID       FlexInt `json:"tenant_id"`
 	BotID          FlexInt `json:"bot_id"`
 	ConversationID FlexInt `json:"conversation_id"`
 	SenderID       FlexInt `json:"sender_id"`
@@ -50,14 +54,25 @@ type BotTaskConsumer struct {
 	workService *service.WorkService
 	botChans    sync.Map
 	sem         chan struct{}
+	queueSize   int
 	mu          sync.Mutex
 }
 
 func NewBotTaskConsumer(reader *kafka.Reader, workService *service.WorkService) *BotTaskConsumer {
+	maxConcurrent := config.V.GetInt("ai.bot_task.max_concurrent")
+	if maxConcurrent <= 0 {
+		maxConcurrent = defaultMaxConcurrentBots
+	}
+	perBotQueue := config.V.GetInt("ai.bot_task.per_bot_queue")
+	if perBotQueue <= 0 {
+		perBotQueue = defaultPerBotQueueSize
+	}
+	klog.Infof("Bot任务并发上限=%d, 单Bot队列长度=%d", maxConcurrent, perBotQueue)
 	return &BotTaskConsumer{
 		reader:      reader,
 		workService: workService,
-		sem:         make(chan struct{}, maxConcurrentBots),
+		sem:         make(chan struct{}, maxConcurrent),
+		queueSize:   perBotQueue,
 	}
 }
 
@@ -88,7 +103,7 @@ func (c *BotTaskConsumer) getOrCreateBotChan(botID int64) chan kafka.Message {
 	if ch, ok := c.botChans.Load(botID); ok {
 		return ch.(chan kafka.Message)
 	}
-	ch := make(chan kafka.Message, perBotQueueSize)
+	ch := make(chan kafka.Message, c.queueSize)
 	c.botChans.Store(botID, ch)
 	go c.botWorker(botID, ch)
 	return ch
@@ -170,7 +185,7 @@ func (c *BotTaskConsumer) processMessage(msg kafka.Message) {
 	handleCtx, handleCancel := context.WithTimeout(context.Background(), handleTimeout)
 	defer handleCancel()
 
-	_, err := c.workService.HandleMessage(handleCtx, int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, int64(task.QuoteMsgID))
+	_, err := c.workService.HandleMessage(handleCtx, int64(task.TenantID), int64(task.BotID), int64(task.ConversationID), int64(task.SenderID), task.Content, int64(task.QuoteMsgID))
 	if err != nil {
 		if errors.Is(handleCtx.Err(), context.DeadlineExceeded) {
 			klog.Errorf("Bot[%d]处理消息超时(>%v): convId=%d, senderId=%d", task.BotID, handleTimeout, task.ConversationID, task.SenderID)
@@ -190,6 +205,11 @@ func (c *BotTaskConsumer) commitMessage(msg kafka.Message) {
 }
 
 func (c *BotTaskConsumer) validateTask(ctx context.Context, task *BotTask) (valid bool, ackOnFailure bool) {
+	if !tenant.IsValid(int64(task.TenantID)) {
+		klog.Errorf("鉴权失败: Bot任务缺少 tenant_id, botId=%d, convId=%d", task.BotID, task.ConversationID)
+		return false, true
+	}
+	ctx = tenant.WithTenant(ctx, int64(task.TenantID))
 	members, err := rpc.GetConversationMembers(ctx, int64(task.ConversationID))
 	if err != nil {
 		klog.Errorf("查询会话[%d]成员失败: %v", task.ConversationID, err)

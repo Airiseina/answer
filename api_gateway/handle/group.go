@@ -43,6 +43,7 @@ func CreateGroup(ctx context.Context, c *app.RequestContext) {
 		CreatorId:      id,
 		Name:           param.Name,
 		InitialMembers: initialMembers,
+		TenantId:       &userInfo.TenantId,
 	}
 	resp, err := rpc.CreateGroup(ctx, req)
 	if err != nil {
@@ -80,7 +81,7 @@ func InviteMembers(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "邀请成员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -107,6 +108,7 @@ func InviteMembers(ctx context.Context, c *app.RequestContext) {
 		InviterId: inviterId,
 		GroupId:   groupID,
 		UserIds:   userIDs,
+		TenantId:  &userInfo.TenantId,
 	}
 	resp, err := rpc.InviteMembers(ctx, req)
 	if err != nil {
@@ -141,7 +143,7 @@ func KickMembers(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "踢出成员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -168,6 +170,7 @@ func KickMembers(ctx context.Context, c *app.RequestContext) {
 		OperatorId: operatorId,
 		GroupId:    groupID,
 		UserIds:    userIDs,
+		TenantId:   &userInfo.TenantId,
 	}
 	resp, err := rpc.KickMembers(ctx, req)
 	if err != nil {
@@ -201,7 +204,7 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "获取群组信息-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -214,7 +217,8 @@ func GetGroupInfo(ctx context.Context, c *app.RequestContext) {
 	groupID := searchResp.GroupInfo.GroupId
 
 	req := &group.GetGroupInfoReq{
-		GroupId: groupID,
+		GroupId:  groupID,
+		TenantId: tenantIDPtr(c),
 	}
 	resp, err := rpc.GetGroupInfo(ctx, req)
 	if err != nil {
@@ -307,7 +311,7 @@ func ChangeOwner(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "转让群主-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -333,6 +337,7 @@ func ChangeOwner(ctx context.Context, c *app.RequestContext) {
 		OldId:   oldId,
 		GroupId: groupID,
 		NewId_:  newId,
+		TenantId: &userInfo.TenantId,
 	}
 	resp, err := rpc.ChangeOwner(ctx, req)
 	if err != nil {
@@ -367,7 +372,7 @@ func ChangeNotice(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "修改群公告-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -386,6 +391,7 @@ func ChangeNotice(ctx context.Context, c *app.RequestContext) {
 		OperatorId: operatorId,
 		GroupId:    groupID,
 		Notice:     param.Notice,
+		TenantId:   &userInfo.TenantId,
 	}
 	resp, err := rpc.ChangeNotice(ctx, req)
 	if err != nil {
@@ -421,7 +427,7 @@ func Muted(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "禁言操作-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -448,6 +454,7 @@ func Muted(ctx context.Context, c *app.RequestContext) {
 		GroupId:    groupID,
 		MutedId:    mutedId,
 		IsMuted:    param.IsMuted,
+		TenantId:   &userInfo.TenantId,
 	}
 	resp, err := rpc.Muted(ctx, req)
 	if err != nil {
@@ -487,7 +494,7 @@ func SetAdmin(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "设置管理员-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -514,6 +521,7 @@ func SetAdmin(ctx context.Context, c *app.RequestContext) {
 		GroupId:    groupID,
 		TargetId:   targetId,
 		Role:       param.Role,
+		TenantId:   &userInfo.TenantId,
 	}
 	resp, err := rpc.SetAdmin(ctx, req)
 	if err != nil {
@@ -535,7 +543,8 @@ func GetUserGroups(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	userId := userInfo.Id
 	req := &group.GetUserGroupsReq{
-		UserId: userId,
+		UserId:   userId,
+		TenantId: &userInfo.TenantId,
 	}
 	resp, err := rpc.GetUserGroups(ctx, req)
 	if err != nil {
@@ -573,6 +582,7 @@ func SearchGroupByNumber(ctx context.Context, c *app.RequestContext) {
 	}
 	req := &group.SearchGroupByNumberReq{
 		GroupNumber: groupNumber,
+		TenantId:    tenantIDPtr(c),
 	}
 	resp, err := rpc.SearchGroupByNumber(ctx, req)
 	if err != nil {
@@ -615,7 +625,7 @@ func JoinGroup(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, searchErr := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, searchErr := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if searchErr != nil {
 		hlog.CtxErrorf(ctx, "申请入群-群号查找失败, group_number=%d, err=%v", groupNumber, searchErr)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -633,6 +643,7 @@ func JoinGroup(ctx context.Context, c *app.RequestContext) {
 		UserId:      userId,
 		GroupNumber: groupNumber,
 		Message:     param.Message,
+		TenantId:    &userInfo.TenantId,
 	}
 	resp, err := rpc.JoinGroup(ctx, req)
 	if err != nil {
@@ -681,7 +692,7 @@ func HandleJoinReq(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "处理入群申请-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -708,6 +719,7 @@ func HandleJoinReq(ctx context.Context, c *app.RequestContext) {
 		GroupId:    groupID,
 		UserId:     userID,
 		Accept:     param.Accept,
+		TenantId:   &userInfo.TenantId,
 	}
 	resp, err := rpc.HandleJoinReq(ctx, req)
 	if err != nil {
@@ -741,7 +753,7 @@ func GetJoinRequests(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber})
+	searchResp, err := rpc.SearchGroupByNumber(ctx, &group.SearchGroupByNumberReq{GroupNumber: groupNumber, TenantId: tenantIDPtr(c)})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "获取入群申请-群号查找失败, group_number=%d, err=%v", groupNumber, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -757,7 +769,10 @@ func GetJoinRequests(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	operatorId := userInfo.Id
 
-	groupInfoResp, err := rpc.GetGroupInfo(ctx, &group.GetGroupInfoReq{GroupId: groupID})
+	groupInfoResp, err := rpc.GetGroupInfo(ctx, &group.GetGroupInfoReq{
+		GroupId:  groupID,
+		TenantId: tenantIDPtr(c),
+	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "获取入群申请-查询群信息失败, group_id=%d, err=%v", groupID, err)
 		response.Error(c, "系统繁忙", "请稍后重试")
@@ -779,7 +794,8 @@ func GetJoinRequests(ctx context.Context, c *app.RequestContext) {
 	}
 
 	req := &group.GetJoinRequestsReq{
-		GroupId: groupID,
+		GroupId:  groupID,
+		TenantId: tenantIDPtr(c),
 	}
 	resp, err := rpc.GetJoinRequests(ctx, req)
 	if err != nil {
@@ -815,4 +831,18 @@ func GetJoinRequests(ctx context.Context, c *app.RequestContext) {
 
 	hlog.CtxInfof(ctx, "获取入群申请成功, group_id=%d, count=%d", groupID, len(resp.Requests))
 	response.Success(c, items)
+}
+
+// tenantIDPtr 读取当前登录态的租户 ID，供群组 RPC 请求透传租户使用。
+func tenantIDPtr(c *app.RequestContext) *int64 {
+	Identity, ok := c.Get(middleware.IdentityKey)
+	if !ok {
+		return nil
+	}
+	userInfo, ok := Identity.(*middleware.Resp)
+	if !ok || userInfo.TenantId == 0 {
+		return nil
+	}
+	tenantId := userInfo.TenantId
+	return &tenantId
 }

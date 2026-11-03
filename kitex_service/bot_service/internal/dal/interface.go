@@ -16,11 +16,11 @@ func NewBotDao(db *gorm.DB) BotDao {
 
 type BotDao interface {
 	CreateBot(bot model.Bot) error
-	GetBot(botId int64) (model.Bot, error)
+	GetBot(tenantId, botId int64) (model.Bot, error)
 	GetSystemBot() (model.Bot, error)
-	GetUserBots(creatorId int64) ([]model.Bot, error)
-	UpdateBot(botId int64, updates map[string]interface{}) error
-	DeleteBot(botId int64) error
+	GetUserBots(tenantId, creatorId int64) ([]model.Bot, error)
+	UpdateBot(tenantId, botId int64, updates map[string]interface{}) error
+	DeleteBot(tenantId, botId int64) error
 	IsBot(userId int64) (bool, error) //未用上，是废代码
 	GetBotByUserId(userId int64) (model.Bot, error)
 }

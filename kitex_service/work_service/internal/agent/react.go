@@ -48,12 +48,22 @@ type AgentRunConfig struct {
 	ImageData    *llm.ImageData // 图片数据，非nil时构造多模态消息
 	KBIDs        []int64        // Bot关联的知识库ID列表，用于内置知识库检索工具
 	BotID        int64          // Bot ID，用于获取知识库列表
+	MaxSteps     int            // ReAct 最大步数；<=0 时使用默认值（供编排节点按节点单独限制）
 }
 
 // AgentResult Agent执行结果
 type AgentResult struct {
-	Content  string   // Agent生成的回答
-	Contexts []string // search_knowledge工具返回的检索上下文
+	Content  string     // Agent生成的回答
+	Contexts []string   // search_knowledge工具返回的检索上下文
+	Usage    TokenUsage // 本次执行的 token 消耗（含 ReAct 多轮模型调用）
+}
+
+// TokenUsage 汇总一次 Agent 执行的 token 消耗。
+// ReAct 每轮都会重发完整上下文，因此这里是各轮 usage 的累加，与上游计费口径一致。
+type TokenUsage struct {
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
 }
 
 func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, error) {
@@ -100,6 +110,13 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, erro
 				toolCallCount := 0
 				if output != nil && output.Message != nil {
 					toolCallCount = len(output.Message.ToolCalls)
+					// 累加每轮模型调用的 token 用量，作为用量记账依据。
+					if output.Message.ResponseMeta != nil {
+						usage := output.Message.ResponseMeta.Usage
+						stepCounter.usage.PromptTokens += usage.PromptTokens
+						stepCounter.usage.CompletionTokens += usage.CompletionTokens
+						stepCounter.usage.TotalTokens += usage.TotalTokens
+					}
 				}
 				klog.Infof("Agent步骤[%d]: ChatModel完成, tool_calls=%d", stepCounter.modelCalls, toolCallCount)
 				return ctx
@@ -139,7 +156,7 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, erro
 	reactAgent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
 		ToolsConfig:      toolsConfig,
-		MaxStep:          maxReActSteps,
+		MaxStep:          resolveMaxSteps(cfg.MaxSteps),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("创建ReAct Agent失败: %w", err)
@@ -193,6 +210,7 @@ func (a *Agent) Run(ctx context.Context, cfg AgentRunConfig) (*AgentResult, erro
 	return &AgentResult{
 		Content:  result.Content,
 		Contexts: stepCounter.knowledgeContexts,
+		Usage:    stepCounter.usage,
 	}, nil
 }
 
@@ -202,6 +220,7 @@ type agentStepCounter struct {
 	toolCalls         int
 	toolErrors        int
 	knowledgeContexts []string // search_knowledge工具返回的上下文
+	usage             TokenUsage
 }
 
 func truncateStr(s string, maxLen int) string {
@@ -209,4 +228,13 @@ func truncateStr(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// resolveMaxSteps 归一化 ReAct 步数：编排节点可传入更小的上限，未指定时用默认值。
+// 上限不超过 maxReActSteps，避免画布把单节点步数放大成资源放大器。
+func resolveMaxSteps(steps int) int {
+	if steps <= 0 || steps > maxReActSteps {
+		return maxReActSteps
+	}
+	return steps
 }

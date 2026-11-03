@@ -135,6 +135,7 @@ require (
 )
 
 require (
+	github.com/Airiseina/answer/kitex_service/billing_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/bot_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/chat_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0
@@ -148,6 +149,7 @@ require (
 )
 
 replace (
+	github.com/Airiseina/answer/kitex_service/billing_service => ../billing_service
 	github.com/Airiseina/answer/kitex_service/bot_service => ../bot_service
 	github.com/Airiseina/answer/kitex_service/chat_service => ../chat_service
 	github.com/Airiseina/answer/kitex_service/knowledge_service => ../knowledge_service

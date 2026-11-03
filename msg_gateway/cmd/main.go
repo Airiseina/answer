@@ -14,7 +14,6 @@ import (
 	"github.com/Airiseina/answer/pkg/observability/tracer"
 
 	"github.com/cloudwego/kitex/pkg/klog"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/websocket"
 	kitexzap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -46,36 +45,16 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	tokenStr := r.URL.Query().Get("token")
-	if tokenStr == "" {
-		http.Error(w, "未授权", http.StatusUnauthorized)
-		return
-	}
-
-	claims := jwt.MapClaims{}
-	_, err := jwt.ParseWithClaims(tokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
+	identity, err := authenticateToken(tokenFromRequest(r), jwtKey)
 	if err != nil {
-		klog.Warnf("JWT 验证失败: %v", err)
+		klog.Warnf("WebSocket 鉴权失败: %v", err)
 		http.Error(w, "无效的令牌", http.StatusUnauthorized)
 		return
 	}
-
-	userIdFloat, ok := claims["id"].(float64)
-	if !ok {
-		klog.Warnf("JWT claims 中缺少 id 字段")
-		http.Error(w, "无效的令牌", http.StatusUnauthorized)
-		return
-	}
-	userId := int64(userIdFloat)
-	klog.Infof("JWT 验证成功, userId: %d", userId)
-	userName := ""
-	userAccount := ""
+	klog.Infof("JWT 验证成功, userId: %d, tenantId: %d", identity.UserID, identity.TenantID)
 	nameCtx, nameCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer nameCancel()
-	userName = rpc.GetUserName(nameCtx, userId)
-	userAccount = rpc.GetUserAccount(nameCtx, userId)
+	userName := rpc.GetUserName(nameCtx, identity.UserID)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		klog.Errorf("WebSocket 升级失败: %v", err)
@@ -83,9 +62,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	client := &core.Client{
 		Manager:     &core.GlobalManager,
-		UserId:      userId,
+		UserId:      identity.UserID,
+		TenantID:    identity.TenantID,
 		UserName:    userName,
-		UserAccount: userAccount,
+		UserAccount: identity.Account,
 		Socket:      conn,
 	}
 	core.GlobalManager.Register <- client
@@ -117,6 +97,9 @@ func main() {
 		return nil
 	})
 	jwtKey = []byte(v.GetString("jwt.Key"))
+	if len(jwtKey) < minJWTKeyLen {
+		klog.Warnf("jwt.Key 长度不足 %d 字节，生产环境请更换为强随机密钥", minJWTKeyLen)
+	}
 	core.InitPushSecret(v.GetString("jwt.Key"))
 	gatewayAddr := v.GetString("gateway.addr")
 	core.InitManager(gatewayAddr)

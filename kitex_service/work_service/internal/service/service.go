@@ -17,10 +17,13 @@ import (
 	chat "github.com/Airiseina/answer/kitex_service/chat_service/kitex_gen/chat"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/agent"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/config"
+	"github.com/Airiseina/answer/kitex_service/work_service/internal/dal"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/llm"
 	"github.com/Airiseina/answer/kitex_service/work_service/internal/mcp"
 	"github.com/Airiseina/answer/kitex_service/work_service/rpc"
 	"github.com/Airiseina/answer/pkg/observability/meter"
+	"github.com/Airiseina/answer/pkg/snowflake"
+	"github.com/Airiseina/answer/pkg/tenant"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
@@ -36,7 +39,12 @@ const (
 	agentTimeout         = 180 * time.Second // Agent需要多轮ChatModel+工具调用, 给更充裕的时间
 	memorySaveTimeout    = 60 * time.Second
 	imageDownloadTimeout = 30 * time.Second
+	usageRecordTimeout   = 3 * time.Second
+	agentGraphTimeout    = 240 * time.Second // 编排图多节点串行，给更充裕的总时长
 )
+
+// agentGraphStatusPublished 与 bot_service 编排图状态机一致：1=已发布（才会被按图执行）。
+const agentGraphStatusPublished int16 = 1
 
 // messageContent 消息内容的基础结构
 
@@ -210,20 +218,29 @@ type WorkService struct {
 	kafkaWriter *kafka.Writer
 	mcpPool     *mcp.Pool
 	agent       *agent.Agent
+	summaryDao  dal.SummaryDao
+	snowNode    *snowflake.Node
 }
 
-func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer, mcpPool *mcp.Pool) *WorkService {
+func NewWorkService(llmClient *llm.Client, kafkaWriter *kafka.Writer, mcpPool *mcp.Pool, summaryDao dal.SummaryDao) *WorkService {
 	return &WorkService{
 		llmClient:   llmClient,
 		kafkaWriter: kafkaWriter,
 		mcpPool:     mcpPool,
 		agent:       agent.NewAgent(mcpPool),
+		summaryDao:  summaryDao,
+		snowNode:    snowflake.NewNode(snowflake.ShardWork),
 	}
 }
 
-func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId, senderId int64, content string, quoteMsgID int64) (bool, error) {
+func (svc *WorkService) HandleMessage(ctx context.Context, tenantId, botId, conversationId, senderId int64, content string, quoteMsgID int64) (bool, error) {
 	start := time.Now()
-	botCfg, err := rpc.GetBotConfig(ctx, botId)
+	if !tenant.IsValid(tenantId) {
+		return false, fmt.Errorf("bot[%d]缺少租户上下文，拒绝处理", botId)
+	}
+	// 把租户写入上下文，下游 chat/mcp 等 RPC 统一从 ctx 取出透传，避免逐个改签名。
+	ctx = tenant.WithTenant(ctx, tenantId)
+	botCfg, err := rpc.GetBotConfig(ctx, tenantId, botId)
 	if err != nil {
 		return false, fmt.Errorf("获取Bot[%d]配置失败: %w", botId, err)
 	}
@@ -255,9 +272,9 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	if botCfg.UserID > 0 && botCfg.Name == "" {
 		botCfg.Name = rpc.GetUserName(ctx, botCfg.UserID)
 	}
-	mcpServers := mcp.GetMcpServersForBot(ctx, botId, rpc.GetBotMcpServers)
+	mcpServers := mcp.GetMcpServersForBot(ctx, tenantId, botId, rpc.GetBotMcpServers)
 	agentMcpServers := mcp.FilterAgentServers(append(mcp.GetBuiltinServerConfigs(), mcpServers...))
-	result := svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, isGroupChat, quoteMsgID)
+	result, usage := svc.handleWithAgent(ctx, botCfg, agentMcpServers, conversationId, senderId, botId, content, isGroupChat, quoteMsgID)
 	if ctx.Err() != nil {
 		return false, fmt.Errorf("bot[%d]处理消息超时，跳过发送", botId)
 	}
@@ -268,11 +285,14 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 		ConversationId: conversationId,
 		PeerId:         0,
 		Content:        result,
+		TenantId:       &tenantId,
 	})
 	if sendErr != nil {
 		return false, fmt.Errorf("bot[%d]消息入库失败: %w", botId, sendErr)
 	}
 	meter.M.BotResponseLatency.Record(ctx, float64(time.Since(start).Milliseconds()), metric.WithAttributes(attribute.Int64("bot_id", botId)))
+	// 回复入库后按 msg_id 幂等上报本轮 token 用量；OpenAPI 接入的 Bot 不计入。
+	svc.recordUsage(ctx, tenantId, botId, conversationId, senderId, sendResp.GetMsgId(), botCfg, usage)
 	if svc.kafkaWriter != nil {
 		reply := map[string]interface{}{
 			"msg_id":            sendResp.GetMsgId(),
@@ -296,7 +316,34 @@ func (svc *WorkService) HandleMessage(ctx context.Context, botId, conversationId
 	return true, nil
 }
 
-func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId, botId int64, content string, isGroupChat bool, quoteMsgID int64) string {
+// recordUsage 上报本轮 Bot 回复的 token 用量。
+// OpenAPI 接入的 Bot（origin=2）跑在用户自己的服务里，平台不参与调用，直接跳过；
+// 其余场景（用户自建 / 市场安装）计入发送者（即安装者）。上报失败只告警，不影响回复。
+func (svc *WorkService) recordUsage(ctx context.Context, tenantId, botId, conversationId, senderId, msgId int64, botCfg *rpc.BotConfig, usage agent.TokenUsage) {
+	if botCfg.Origin == rpc.BotOriginOpenAPI {
+		return
+	}
+	if usage.PromptTokens+usage.CompletionTokens <= 0 || msgId <= 0 {
+		return
+	}
+	billingCtx, cancel := context.WithTimeout(context.Background(), usageRecordTimeout)
+	defer cancel()
+	if err := rpc.RecordUsage(billingCtx, rpc.RecordUsageInput{
+		UserID:           senderId,
+		TenantID:         tenantId,
+		BotID:            botId,
+		Origin:           botCfg.Origin,
+		ConversationID:   conversationId,
+		MsgID:            msgId,
+		Model:            botCfg.Model,
+		PromptTokens:     int64(usage.PromptTokens),
+		CompletionTokens: int64(usage.CompletionTokens),
+	}); err != nil {
+		klog.CtxWarnf(ctx, "Bot[%d]用量上报失败: %v", botId, err)
+	}
+}
+
+func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig, conversationId, senderId, botId int64, content string, isGroupChat bool, quoteMsgID int64) (string, agent.TokenUsage) {
 	userID := fmt.Sprintf("%d", senderId)
 	botID := fmt.Sprintf("%d", botId)
 	runID := fmt.Sprintf("%d", conversationId)
@@ -435,6 +482,23 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 	}
 	agentCtx, agentCancel := context.WithTimeout(ctx, agentTimeout)
 	defer agentCancel()
+
+	// 若该 Bot 已发布多 Agent 协作编排图，优先按图执行；图执行失败或未产出内容时回退单 Agent。
+	if graphContent, graphUsage, ok := svc.runAgentGraph(ctx, botCfg, mcpServers, botId,
+		userID, botID, runID, enhancedPrompt, userContent, imageData, kbIDsInt64, isGroupChat); ok {
+		go func() {
+			saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
+			defer cancel()
+			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, graphContent)
+			saveRunID := ""
+			if isGroupChat {
+				saveRunID = runID
+			}
+			mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
+		}()
+		return graphContent, graphUsage
+	}
+
 	agentResult, err := svc.agent.Run(agentCtx, agent.AgentRunConfig{
 		APIKey:       botCfg.ApiKey,
 		BaseURL:      botCfg.BaseUrl,
@@ -488,22 +552,26 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 				chatHistory = append(chatHistory, llm.ChatMessage{Role: role, Content: msgContent})
 			}
 		}
-		llmResult, llmErr := svc.llmClient.Chat(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent, imageData)
+		llmResult, llmErr := svc.llmClient.ChatWithUsage(llmCtx, botCfg.ApiKey, botCfg.BaseUrl, botCfg.Model, enhancedPrompt, chatHistory, userContent, imageData)
 		if llmErr != nil {
 			klog.CtxErrorf(ctx, "处理消息出错：%v", llmErr)
-			return "抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?"
+			return "抱歉，在月球这边接收地球的信息偶尔会有延迟呢~😭。能再重复一遍吗(*/ω＼*)?", agent.TokenUsage{}
 		}
 		go func() {
 			saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
 			defer cancel()
-			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, llmResult)
+			memoryContent := fmt.Sprintf("用户: %s | 助手: %s", userContent, llmResult.Content)
 			saveRunID := ""
 			if isGroupChat {
 				saveRunID = runID
 			}
 			mcp.SaveMemory(saveCtx, svc.mcpPool, memoryContent, userID, botID, saveRunID)
 		}()
-		return "抱歉，我这边信号有点不好~我只能凭记忆给你回答了😥\n\n" + llmResult
+		return "抱歉，我这边信号有点不好~我只能凭记忆给你回答了😥\n\n" + llmResult.Content, agent.TokenUsage{
+			PromptTokens:     llmResult.PromptTokens,
+			CompletionTokens: llmResult.CompletionTokens,
+			TotalTokens:      llmResult.TotalTokens,
+		}
 	}
 	go func() {
 		saveCtx, cancel := context.WithTimeout(context.Background(), memorySaveTimeout)
@@ -527,7 +595,76 @@ func (svc *WorkService) handleWithAgent(ctx context.Context, botCfg *rpc.BotConf
 		}()
 	}
 
-	return agentResult.Content
+	return agentResult.Content, agentResult.Usage
+}
+
+// runAgentGraph 尝试按 Bot 已发布的多 Agent 协作编排图执行。
+//
+// 返回 ok=false 表示「未启用编排 / 未发布图 / 执行失败」，调用方据此回退到单 Agent 路径，
+// 保证编排能力只是增强项，不会因为一张画布配错而让 Bot 整体不可用。
+func (svc *WorkService) runAgentGraph(ctx context.Context, botCfg *rpc.BotConfig, mcpServers []mcp.ServerConfig,
+	botId int64, userID, botID, runID, commonPrompt, userContent string, imageData *llm.ImageData,
+	kbIDs []int64, isGroupChat bool) (string, agent.TokenUsage, bool) {
+	if !config.V.GetBool("ai.agent_graph.enabled") {
+		return "", agent.TokenUsage{}, false
+	}
+	tenantId, ok := tenant.FromContext(ctx)
+	if !ok || !tenant.IsValid(tenantId) {
+		return "", agent.TokenUsage{}, false
+	}
+	graphCfg, err := rpc.GetAgentGraph(ctx, tenantId, botId)
+	if err != nil {
+		klog.CtxWarnf(ctx, "查询Bot[%d]编排图失败，回退单Agent: %v", botId, err)
+		return "", agent.TokenUsage{}, false
+	}
+	if graphCfg == nil || !graphCfg.Found || graphCfg.Status != agentGraphStatusPublished ||
+		strings.TrimSpace(graphCfg.GraphJSON) == "" {
+		return "", agent.TokenUsage{}, false
+	}
+
+	timeout := time.Duration(config.V.GetInt("ai.agent_graph.timeout_seconds")) * time.Second
+	if timeout <= 0 {
+		timeout = agentGraphTimeout
+	}
+	graphCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	result, err := svc.agent.RunGraph(graphCtx, agent.GraphRunConfig{
+		APIKey:         botCfg.ApiKey,
+		BaseURL:        botCfg.BaseUrl,
+		Model:          botCfg.Model,
+		CommonPrompt:   commonPrompt,
+		UserContent:    userContent,
+		ImageData:      imageData,
+		KBIDs:          kbIDs,
+		BotID:          botId,
+		MemoryServers:  memoryServerConfigs(),
+		DefaultServers: mcpServers,
+		GraphJSON:      graphCfg.GraphJSON,
+		MaxAgentNodes:  config.V.GetInt("ai.agent_graph.max_agent_nodes"),
+	})
+	if err != nil {
+		klog.CtxWarnf(ctx, "Bot[%d]编排图执行失败，回退单Agent: %v", botId, err)
+		meter.M.AgentGraphRunTotal.Add(ctx, 1,
+			metric.WithAttributes(attribute.Int64("bot_id", botId), attribute.String("result", "fallback")))
+		return "", agent.TokenUsage{}, false
+	}
+	meter.M.AgentGraphRunTotal.Add(ctx, 1,
+		metric.WithAttributes(attribute.Int64("bot_id", botId), attribute.String("result", "success")))
+	klog.CtxInfof(ctx, "Bot[%d]编排图执行完成: 节点数=%d, 版本=%d, 用量=%d",
+		botId, result.Nodes, graphCfg.Version, result.Usage.TotalTokens)
+	return result.Content, result.Usage, true
+}
+
+// memoryServerConfigs 返回记忆检索（mem0）服务配置，供编排节点按需以工具形式读取历史记忆。
+func memoryServerConfigs() []mcp.ServerConfig {
+	var out []mcp.ServerConfig
+	for _, b := range mcp.GetBuiltinServers() {
+		if b.Name == "mem0" && b.URL != "" {
+			out = append(out, mcp.ServerConfig{Name: b.Name, URL: b.URL, Transport: b.Transport})
+		}
+	}
+	return out
 }
 
 func (svc *WorkService) getSystemBotLLMConfig(ctx context.Context) (apiKey, baseURL, model string, err error) {
@@ -535,7 +672,7 @@ func (svc *WorkService) getSystemBotLLMConfig(ctx context.Context) (apiKey, base
 	if err != nil {
 		return "", "", "", fmt.Errorf("获取系统Bot失败: %w", err)
 	}
-	botCfg, err := rpc.GetBotConfig(ctx, botId)
+	botCfg, err := rpc.GetBotConfig(ctx, tenant.PlatformTenantID, botId)
 	if err != nil {
 		return "", "", "", fmt.Errorf("获取系统Bot[%d]配置失败: %w", botId, err)
 	}

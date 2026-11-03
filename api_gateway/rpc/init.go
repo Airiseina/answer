@@ -18,4 +18,7 @@ func Connect(v *viper.Viper) {
 	ConnectBotService(r)
 	ConnectWorkService(r)
 	ConnectKnowledgeService(r)
+	ConnectAdminService(r)
+	ConnectOpenService(r)
+	ConnectBillingService(r)
 }

@@ -5,7 +5,6 @@ package workservice
 import (
 	"context"
 	"errors"
-
 	work "github.com/Airiseina/answer/kitex_service/work_service/kitex_gen/work"
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
@@ -32,6 +31,41 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		translateMessageHandler,
 		newWorkServiceTranslateMessageArgs,
 		newWorkServiceTranslateMessageResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GenerateSummary": kitex.NewMethodInfo(
+		generateSummaryHandler,
+		newWorkServiceGenerateSummaryArgs,
+		newWorkServiceGenerateSummaryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetSummaryReport": kitex.NewMethodInfo(
+		getSummaryReportHandler,
+		newWorkServiceGetSummaryReportArgs,
+		newWorkServiceGetSummaryReportResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListSummaryReports": kitex.NewMethodInfo(
+		listSummaryReportsHandler,
+		newWorkServiceListSummaryReportsArgs,
+		newWorkServiceListSummaryReportsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetSummarySchedule": kitex.NewMethodInfo(
+		getSummaryScheduleHandler,
+		newWorkServiceGetSummaryScheduleArgs,
+		newWorkServiceGetSummaryScheduleResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SetSummarySchedule": kitex.NewMethodInfo(
+		setSummaryScheduleHandler,
+		newWorkServiceSetSummaryScheduleArgs,
+		newWorkServiceSetSummaryScheduleResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -155,6 +189,96 @@ func newWorkServiceTranslateMessageResult() interface{} {
 	return work.NewWorkServiceTranslateMessageResult()
 }
 
+func generateSummaryHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceGenerateSummaryArgs)
+	realResult := result.(*work.WorkServiceGenerateSummaryResult)
+	success, err := handler.(work.WorkService).GenerateSummary(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceGenerateSummaryArgs() interface{} {
+	return work.NewWorkServiceGenerateSummaryArgs()
+}
+
+func newWorkServiceGenerateSummaryResult() interface{} {
+	return work.NewWorkServiceGenerateSummaryResult()
+}
+
+func getSummaryReportHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceGetSummaryReportArgs)
+	realResult := result.(*work.WorkServiceGetSummaryReportResult)
+	success, err := handler.(work.WorkService).GetSummaryReport(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceGetSummaryReportArgs() interface{} {
+	return work.NewWorkServiceGetSummaryReportArgs()
+}
+
+func newWorkServiceGetSummaryReportResult() interface{} {
+	return work.NewWorkServiceGetSummaryReportResult()
+}
+
+func listSummaryReportsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceListSummaryReportsArgs)
+	realResult := result.(*work.WorkServiceListSummaryReportsResult)
+	success, err := handler.(work.WorkService).ListSummaryReports(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceListSummaryReportsArgs() interface{} {
+	return work.NewWorkServiceListSummaryReportsArgs()
+}
+
+func newWorkServiceListSummaryReportsResult() interface{} {
+	return work.NewWorkServiceListSummaryReportsResult()
+}
+
+func getSummaryScheduleHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceGetSummaryScheduleArgs)
+	realResult := result.(*work.WorkServiceGetSummaryScheduleResult)
+	success, err := handler.(work.WorkService).GetSummarySchedule(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceGetSummaryScheduleArgs() interface{} {
+	return work.NewWorkServiceGetSummaryScheduleArgs()
+}
+
+func newWorkServiceGetSummaryScheduleResult() interface{} {
+	return work.NewWorkServiceGetSummaryScheduleResult()
+}
+
+func setSummaryScheduleHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*work.WorkServiceSetSummaryScheduleArgs)
+	realResult := result.(*work.WorkServiceSetSummaryScheduleResult)
+	success, err := handler.(work.WorkService).SetSummarySchedule(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newWorkServiceSetSummaryScheduleArgs() interface{} {
+	return work.NewWorkServiceSetSummaryScheduleArgs()
+}
+
+func newWorkServiceSetSummaryScheduleResult() interface{} {
+	return work.NewWorkServiceSetSummaryScheduleResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -190,6 +314,56 @@ func (p *kClient) TranslateMessage(ctx context.Context, req *work.TranslateMessa
 	_args.Req = req
 	var _result work.WorkServiceTranslateMessageResult
 	if err = p.c.Call(ctx, "TranslateMessage", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GenerateSummary(ctx context.Context, req *work.GenerateSummaryReq) (r *work.GenerateSummaryRes, err error) {
+	var _args work.WorkServiceGenerateSummaryArgs
+	_args.Req = req
+	var _result work.WorkServiceGenerateSummaryResult
+	if err = p.c.Call(ctx, "GenerateSummary", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetSummaryReport(ctx context.Context, req *work.GetSummaryReportReq) (r *work.GetSummaryReportRes, err error) {
+	var _args work.WorkServiceGetSummaryReportArgs
+	_args.Req = req
+	var _result work.WorkServiceGetSummaryReportResult
+	if err = p.c.Call(ctx, "GetSummaryReport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListSummaryReports(ctx context.Context, req *work.ListSummaryReportsReq) (r *work.ListSummaryReportsRes, err error) {
+	var _args work.WorkServiceListSummaryReportsArgs
+	_args.Req = req
+	var _result work.WorkServiceListSummaryReportsResult
+	if err = p.c.Call(ctx, "ListSummaryReports", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetSummarySchedule(ctx context.Context, req *work.GetSummaryScheduleReq) (r *work.GetSummaryScheduleRes, err error) {
+	var _args work.WorkServiceGetSummaryScheduleArgs
+	_args.Req = req
+	var _result work.WorkServiceGetSummaryScheduleResult
+	if err = p.c.Call(ctx, "GetSummarySchedule", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SetSummarySchedule(ctx context.Context, req *work.SetSummaryScheduleReq) (r *work.SetSummaryScheduleRes, err error) {
+	var _args work.WorkServiceSetSummaryScheduleArgs
+	_args.Req = req
+	var _result work.WorkServiceSetSummaryScheduleResult
+	if err = p.c.Call(ctx, "SetSummarySchedule", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

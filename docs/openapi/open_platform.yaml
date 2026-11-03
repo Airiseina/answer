@@ -1,0 +1,778 @@
+openapi: 3.1.0
+info:
+  title: Answer 开放平台 API
+  version: 1.0.0
+  description: |
+    Answer 开放平台允许第三方以「应用（AppID + AppSecret）」身份自助部署并托管机器人，
+    通过签名鉴权调用机器人管理、消息收发、会话查询与事件订阅接口。
+
+    ## 鉴权
+    所有 `/open/v1/*` 接口都必须在请求头携带以下字段，服务端以 HMAC-SHA256 校验签名：
+
+    | 请求头 | 说明 |
+    | --- | --- |
+    | `X-App-Id` | 应用 AppID |
+    | `X-Timestamp` | 当前 Unix 秒级时间戳，允许与服务端偏差 ±300 秒 |
+    | `X-Nonce` | 随机串，同一应用内 300 秒内不可重复（防重放） |
+    | `X-Signature` | 十六进制 HMAC-SHA256 签名，见下方「签名算法」 |
+
+    签名串（`stringToSign`）由 6 段以 `\n` 连接组成，顺序固定：
+
+    ```
+    appID \n timestamp \n nonce \n METHOD \n path \n sha256Hex(body)
+    ```
+
+    - `METHOD` 为大写 HTTP 方法（`GET` / `POST` / `PATCH` / `DELETE`）。
+    - `path` 为不含查询串、不含域名的接口路径，例如 `/open/v1/bots`。
+    - `sha256Hex(body)` 为请求体（无请求体时为空串 `""`）的 SHA-256 十六进制摘要。
+    - 签名 = `hmacSha256Hex(appSecret, stringToSign)`，请求头传小写十六进制即可。
+
+    示例（伪代码）：
+
+    ```
+    body := `{"name":"demo"}`
+    bodySHA := sha256Hex(body)
+    toSign := strings.Join([]string{appID, ts, nonce, "POST", "/open/v1/bots", bodySHA}, "\n")
+    signature := hmacSha256Hex(appSecret, toSign)
+    ```
+
+    ## 响应封装
+    所有接口统一返回 HTTP 200，业务结果放在 body 中：
+
+    ```json
+    { "code": 0, "msg": "操作成功", "data": {} }
+    ```
+
+    `code = 0` 表示成功，`code = 1` 表示失败；失败时 `msg` 为错误分类，`data` 为具体原因。
+    常见失败分类：`鉴权失败` / `签名已过期` / `重复请求` / `应用不可用` / `签名校验失败` /
+    `权限不足` / `请求过于频繁` / `参数缺失` / `参数错误` / `系统繁忙`。
+
+    ## 限流
+    限流按 AppID 维度生效，默认 20 QPS（可在创建应用时通过 `qps_limit` 覆盖）。
+    超限返回 `code=1, msg=请求过于频繁`。
+
+    ## 事件：轮询与回调
+    机器人相关事件（收到消息、生成回复）先落库，再通过两种方式投递给应用，二者可以同时开启：
+
+    1. **轮询**：`GET /open/v1/events`，用 `since_id` 游标增量拉取，处理后调用
+       `POST /open/v1/events/ack` 确认。
+    2. **回调**：`POST /open/v1/webhooks` 注册地址，服务端在事件产生时以签名 POST 推送，
+       失败按指数退避重试，超过次数进入死信。
+
+    事件类型：
+    - `message.received`：有人（用户或群成员）给机器人发来消息。
+    - `message.reply`：机器人生成了一条回复。
+
+    ## 不在本版本范围
+    MCP Server 绑定与知识库绑定暂未通过开放平台对外开放，将在后续迭代提供。
+servers:
+  - url: /
+    description: 网关根地址，路径前缀为 /open/v1
+tags:
+  - name: Bots
+    description: 机器人管理
+  - name: Messages
+    description: 消息收发
+  - name: Conversations
+    description: 会话查询
+  - name: Events
+    description: 事件轮询与确认
+  - name: Webhooks
+    description: 回调注册与校验
+
+security:
+  - OpenSignature: []
+
+components:
+  securitySchemes:
+    OpenSignature:
+      type: apiKey
+      in: header
+      name: X-App-Id
+      description: 需同时携带 X-Timestamp / X-Nonce / X-Signature 请求头完成 HMAC-SHA256 签名校验。
+  parameters:
+    Timestamp:
+      name: X-Timestamp
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Unix 秒级时间戳，允许与服务端偏差 ±300 秒。
+    Nonce:
+      name: X-Nonce
+      in: header
+      required: true
+      schema:
+        type: string
+      description: 随机串，同一应用 300 秒内不可重复。
+    Signature:
+      name: X-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+      description: 十六进制 HMAC-SHA256 签名。
+    BotID:
+      name: bot_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 机器人 ID（字符串形式的 int64）。
+    WebhookID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 回调 ID（字符串形式的 int64）。
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: 0 成功，1 失败
+          example: 0
+        msg:
+          type: string
+          example: 操作成功
+        data: {}
+    Bot:
+      type: object
+      properties:
+        bot_id:
+          type: string
+          example: "1700000000000000001"
+        app_id:
+          type: string
+          example: app_5f1c2d3e4b
+        name:
+          type: string
+        system_prompt:
+          type: string
+        model:
+          type: string
+        base_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Message:
+      type: object
+      properties:
+        msg_id:
+          type: string
+        sender_id:
+          type: string
+        conversation_id:
+          type: string
+        content:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        sender_name:
+          type: string
+    Conversation:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+        type:
+          type: integer
+          description: 1 私聊，2 群聊
+        name:
+          type: string
+        member_ids:
+          type: array
+          items:
+            type: string
+    Event:
+      type: object
+      properties:
+        event_id:
+          type: string
+        bot_id:
+          type: string
+        event_type:
+          type: string
+          enum: [message.received, message.reply]
+        payload:
+          type: string
+          description: JSON 字符串，内容随事件类型而定
+        status:
+          type: integer
+          description: 0 待投递，1 已投递，2 已确认，3 死信
+        created_at:
+          type: string
+          format: date-time
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+        bot_id:
+          type: string
+        url:
+          type: string
+        events:
+          type: string
+          description: 逗号分隔的事件类型；为空表示订阅全部
+        enabled:
+          type: boolean
+        status:
+          type: string
+          description: pending 待校验，verified 已校验
+        created_at:
+          type: string
+          format: date-time
+
+paths:
+  /open/v1/bots:
+    post:
+      tags: [Bots]
+      summary: 创建机器人
+      description: 以应用名义创建一个机器人，归属应用所在租户。通过开放平台接入的机器人不计入 token 用量统计。
+      operationId: createBot
+      parameters:
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, api_key, model]
+              properties:
+                name:
+                  type: string
+                  description: 机器人名称
+                system_prompt:
+                  type: string
+                  description: 系统提示词
+                api_key:
+                  type: string
+                  description: 模型 API Key（由应用自带）
+                model:
+                  type: string
+                  description: 模型名
+                base_url:
+                  type: string
+                  description: 模型服务地址（可选，留空使用平台默认）
+      responses:
+        '200':
+          description: 创建结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          bot_id:
+                            type: string
+    get:
+      tags: [Bots]
+      summary: 查询机器人列表
+      operationId: listBots
+      parameters:
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 机器人列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Bot'
+
+  /open/v1/bots/{bot_id}:
+    get:
+      tags: [Bots]
+      summary: 查询机器人详情
+      operationId: getBot
+      parameters:
+        - $ref: '#/components/parameters/BotID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 机器人详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Bot'
+    patch:
+      tags: [Bots]
+      summary: 更新机器人
+      description: 仅传入需要修改的字段，未传字段保持不变。
+      operationId: updateBot
+      parameters:
+        - $ref: '#/components/parameters/BotID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                system_prompt:
+                  type: string
+                api_key:
+                  type: string
+                model:
+                  type: string
+                base_url:
+                  type: string
+      responses:
+        '200':
+          description: 更新结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+    delete:
+      tags: [Bots]
+      summary: 删除机器人
+      operationId: deleteBot
+      parameters:
+        - $ref: '#/components/parameters/BotID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /open/v1/bots/{bot_id}/conversations:
+    post:
+      tags: [Bots]
+      summary: 将机器人拉入会话
+      operationId: addBotToConversation
+      parameters:
+        - $ref: '#/components/parameters/BotID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id, conversation_type]
+              properties:
+                conversation_id:
+                  type: integer
+                  format: int64
+                conversation_type:
+                  type: integer
+                  description: 1 私聊，2 群聊
+      responses:
+        '200':
+          description: 结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          conversation_id:
+                            type: string
+
+  /open/v1/messages/send:
+    post:
+      tags: [Messages]
+      summary: 以机器人身份发送消息
+      operationId: sendMessage
+      parameters:
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bot_id, content]
+              properties:
+                bot_id:
+                  type: integer
+                  format: int64
+                conversation_id:
+                  type: integer
+                  format: int64
+                  description: 会话 ID；与 peer_id 至少提供一个
+                peer_id:
+                  type: integer
+                  format: int64
+                  description: 私聊对端用户 ID；无 conversation_id 时按此定位会话
+                content:
+                  type: string
+      responses:
+        '200':
+          description: 发送结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          msg_id:
+                            type: string
+                          conversation_id:
+                            type: string
+
+  /open/v1/messages:
+    get:
+      tags: [Messages]
+      summary: 拉取会话历史消息
+      operationId: listMessages
+      parameters:
+        - name: bot_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: conversation_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: before_msg_id
+          in: query
+          schema:
+            type: string
+          description: 游标，返回该消息 ID 之前的消息
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 消息列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Message'
+
+  /open/v1/conversations:
+    get:
+      tags: [Conversations]
+      summary: 查询机器人参与的会话
+      operationId: listConversations
+      parameters:
+        - name: bot_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 会话列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Conversation'
+
+  /open/v1/events:
+    get:
+      tags: [Events]
+      summary: 增量拉取事件
+      operationId: listEvents
+      parameters:
+        - name: since_id
+          in: query
+          schema:
+            type: string
+          description: 游标，返回 event_id 大于该值的事件；首次调用传 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 事件列表（按 event_id 升序）
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Event'
+
+  /open/v1/events/ack:
+    post:
+      tags: [Events]
+      summary: 确认事件已处理
+      operationId: ackEvents
+      parameters:
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_ids]
+              properties:
+                event_ids:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+      responses:
+        '200':
+          description: 确认结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /open/v1/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: 注册回调地址
+      description: |
+        注册后服务端会立即向该地址发起一次校验请求（POST），请求体包含 `verify_challenge`；
+        回调地址需原样回显该字段即视为校验通过。
+      operationId: registerWebhook
+      parameters:
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bot_id, url]
+              properties:
+                bot_id:
+                  type: integer
+                  format: int64
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: string
+                  description: 逗号分隔的事件类型；为空订阅全部
+                  example: message.received,message.reply
+      responses:
+        '200':
+          description: 注册结果
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          secret:
+                            type: string
+                            description: 回调验签密钥，仅返回一次
+                          verify_challenge:
+                            type: string
+    get:
+      tags: [Webhooks]
+      summary: 查询回调列表
+      operationId: listWebhooks
+      parameters:
+        - name: bot_id
+          in: query
+          schema:
+            type: string
+          description: 可选，按机器人过滤；省略返回全部
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 回调列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Webhook'
+
+  /open/v1/webhooks/{id}:
+    get:
+      tags: [Webhooks]
+      summary: 查询回调详情
+      operationId: getWebhook
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 回调详情（含验签密钥）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+    delete:
+      tags: [Webhooks]
+      summary: 删除回调
+      operationId: deleteWebhook
+      parameters:
+        - $ref: '#/components/parameters/WebhookID'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Nonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /api/open/apps/create:
+    post:
+      tags: [Bots]
+      summary: （站内）创建开放平台应用
+      description: 站内接口，使用普通用户 JWT 鉴权，非签名鉴权。AppSecret 仅返回一次。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                scopes:
+                  type: string
+                  description: 逗号分隔的作用域
+                  example: bot:read,bot:write,message:send,message:read,conversation:read,webhook:manage
+                qps_limit:
+                  type: integer
+                  description: 0 表示使用默认 20 QPS
+      responses:
+        '200':
+          description: 应用凭证（仅此一次返回 app_secret）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /api/open/apps/list:
+    get:
+      tags: [Bots]
+      summary: （站内）查询当前用户的应用
+      security: []
+      responses:
+        '200':
+          description: 应用列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+
+  /api/open/apps/reset_secret:
+    post:
+      tags: [Bots]
+      summary: （站内）轮换应用密钥
+      description: 新密钥仅返回一次，旧密钥立即失效。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [app_id]
+              properties:
+                app_id:
+                  type: string
+      responses:
+        '200':
+          description: 新密钥
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'

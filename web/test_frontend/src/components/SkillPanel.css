@@ -1,0 +1,52 @@
+.skill-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+
+.skill-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.skill-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.skill-warnings {
+  font-size: 11px;
+  color: #d84315;
+  background: #fbe9e7;
+  border-radius: 6px;
+  padding: 6px 10px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.skill-bind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.skill-bind-select {
+  width: 120px;
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  font-size: 12px;
+}
+
+.skill-files {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}

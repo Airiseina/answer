@@ -1054,14 +1054,22 @@ docker exec answer_kafka-1 /opt/kafka/bin/kafka-producer-perf-test.sh \
 
 - **Markdown 版**：[docs/api_doc.md](docs/api_doc.md) — 按模块组织的接口说明（用户认证、消息、群组、Bot、知识库等）
 - **Swagger 3.0**：[docs/swagger.json](docs/swagger.json) — 可导入 Swagger Editor / Postman 查看和调试
+- **开放平台（OpenAPI 3.1）**：[docs/openapi/open_platform.yaml](docs/openapi/open_platform.yaml) — 第三方自助部署机器人的签名接口规范
+- **开放平台接入指南**：[docs/open_platform.md](docs/open_platform.md) — 签名算法、各语言示例、事件轮询/回调、错误码与限流
+- **管理后台**：独立账号体系，接口位于 `/api/admin/*`，与管理端用户 JWT 完全隔离
 
 > Base URL: `http://localhost:1234`（Docker 部署经由 Traefik 反向代理则为 `http://localhost`）
 > 认证方式：JWT Bearer Token（注册和登录外均需 Header `Authorization: <token>`）
 
+> 开放平台在线文档：网关启动后访问 `GET /open/docs`（Redoc 页面）或 `GET /open/openapi.yaml`（规范原文）。
+
 ## 后续方向
 
-- [ ] 增加用户个人skill
-- [ ] 实现多agent协助
-- [ ] 多租户
-- [ ] 编写用户bot市场
-- [ ] 扩展agent能力（识别文件和语音功能，日和周总结）
+- [x] 多租户（个人租户 + 组织租户 + 部门树，飞书式）
+- [x] 开放平台（AppID + AppSecret 自助部署机器人，支持事件轮询与 Webhook 回调）
+- [x] 编写用户bot市场（全局可见 + 人工审核 + 一键安装，只分发定义不分发知识库/MCP）
+- [x] Token 用量统计与成本核算（用户自带 apikey 记账，参考单价后台手工维护，OpenAPI 接入不计入）
+- [x] 扩展agent能力：日总结/周总结（每天 21:00、周日 21:00 由系统 Bot 发送，覆盖用户全部会话）
+- [x] 增加用户个人skill（仅资料型：zip/markdown 上传，每个 skill 独占知识库，绑定 Bot 后并入检索，不执行脚本）
+- [x] 实现多agent协助（可视化编排画布：按 Bot 编排 start/agent/end 拓扑，校验通过并发布后由 work_service 分层执行，失败自动回退单 Agent）
+- [ ] 扩展agent能力：识别文件和语音功能

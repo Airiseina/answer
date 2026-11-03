@@ -9,8 +9,8 @@ import (
 	"github.com/cloudwego/kitex/pkg/klog"
 )
 
-func GetMcpServersForBot(ctx context.Context, botId int64, rpcGetBotMcpServers func(ctx context.Context, botId int64) (*bot.GetBotMcpServersRes, error)) []ServerConfig {
-	resp, err := rpcGetBotMcpServers(ctx, botId)
+func GetMcpServersForBot(ctx context.Context, tenantId, botId int64, rpcGetBotMcpServers func(ctx context.Context, tenantId, botId int64) (*bot.GetBotMcpServersRes, error)) []ServerConfig {
+	resp, err := rpcGetBotMcpServers(ctx, tenantId, botId)
 	if err != nil {
 		klog.Errorf("获取Bot[%d]的MCP Server列表失败: %v", botId, err)
 		return nil

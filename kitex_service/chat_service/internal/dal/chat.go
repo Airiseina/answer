@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Airiseina/answer/kitex_service/chat_service/internal/model"
+	"github.com/Airiseina/answer/pkg/tenant"
 )
 
 // CreateMessage 将消息写入 PostgreSQL
@@ -189,9 +190,16 @@ func (dao *chatDao) DeleteMessagesBeforeTime(beforeTimestamp int64) (int64, erro
 // 关键词搜索使用 PostgreSQL 的 jsonb 文本搜索：content::text LIKE '%keyword%'
 // keyword 为空时仅按时间范围过滤
 // 时间范围通过 timestamp 字段过滤
-func (dao *chatDao) SearchHotMessages(conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error) {
+// tenantID > 0 时强制按 tenant_id 过滤；userID > 0 时只返回其所在会话的消息
+func (dao *chatDao) SearchHotMessages(tenantID, userID, conversationID int64, keyword string, startTime int64, endTime int64, limit int16) ([]model.Message, error) {
 	var messages []model.Message
-	query := dao.db
+	query := tenant.Scope(dao.db, tenantID)
+	if userID > 0 {
+		query = query.Where("conversation_id IN (?)",
+			dao.db.Model(&model.ConversationMember{}).
+				Select("conversation_id").
+				Where("user_id = ?", userID))
+	}
 	if keyword != "" {
 		query = query.Where("content::text LIKE ?", "%"+keyword+"%")
 	}
@@ -207,6 +215,29 @@ func (dao *chatDao) SearchHotMessages(conversationID int64, keyword string, star
 	err := query.Order("timestamp DESC").Limit(int(limit)).Find(&messages).Error
 	if err != nil {
 		return nil, fmt.Errorf("搜索热库消息失败: %w", err)
+	}
+	return messages, nil
+}
+
+// GetMessagesByTimeRange 跨会话拉取用户在时间窗内可见的消息
+// 与搜索不同，这里不带关键词，按时间升序返回，便于按时间线还原用户的一天/一周
+// tenantID > 0 时强制按 tenant_id 过滤；只返回 userID 所在会话的消息
+func (dao *chatDao) GetMessagesByTimeRange(tenantID, userID int64, startTime, endTime int64, limit int16) ([]model.Message, error) {
+	var messages []model.Message
+	query := tenant.Scope(dao.db, tenantID).
+		Where("conversation_id IN (?)",
+			dao.db.Model(&model.ConversationMember{}).
+				Select("conversation_id").
+				Where("user_id = ?", userID))
+	if startTime > 0 {
+		query = query.Where("timestamp >= ?", startTime)
+	}
+	if endTime > 0 {
+		query = query.Where("timestamp <= ?", endTime)
+	}
+	err := query.Order("timestamp ASC").Limit(int(limit)).Find(&messages).Error
+	if err != nil {
+		return nil, fmt.Errorf("按时间窗查询消息失败: %w", err)
 	}
 	return messages, nil
 }

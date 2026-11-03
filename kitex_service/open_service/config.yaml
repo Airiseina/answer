@@ -1,0 +1,31 @@
+## example
+mysql:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "123456"
+  name: "answer"
+
+etcd:
+  Addr: "127.0.0.1:2379"
+
+otel:
+  Addr: "localhost:4317"
+
+redis:
+  addr: "127.0.0.1:6379"
+
+kafka:
+  brokers: "127.0.0.1:9094"
+
+# 开放平台默认取值，详见 docs/open_platform.md 4.8 节。
+open:
+  timestamp_window: 300                                       # 时间戳有效窗口（秒）
+  nonce_ttl: 300                                              # nonce 去重 TTL（秒）
+  default_qps: 20                                             # 单 AppID 默认 QPS
+  max_bots_per_app: 50                                        # 单应用 Bot 数量上限
+  webhook_timeout: 10                                         # 单次回调投递超时（秒）
+  webhook_max_attempts: 5                                     # 回调最大投递次数
+  webhook_retry_backoff: [1, 5, 30, 120]                      # 回调重试退避（秒）
+  event_retention_days: 30                                    # 事件保留天数
+  app_secret_key: "answer-open-platform-default-key-please-change"  # AppSecret 加密口令，生产环境务必替换

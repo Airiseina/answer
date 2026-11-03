@@ -67,8 +67,8 @@ func buildUserIdMap(ctx context.Context, accounts []string) map[string]int64 {
 	return m
 }
 
-func buildGroupNumberMap(ctx context.Context, userID int64) map[int64]int64 {
-	groupsResp, err := rpc.GetUserGroups(ctx, &group.GetUserGroupsReq{UserId: userID})
+func buildGroupNumberMap(ctx context.Context, userID, tenantID int64) map[int64]int64 {
+	groupsResp, err := rpc.GetUserGroups(ctx, &group.GetUserGroupsReq{UserId: userID, TenantId: &tenantID})
 	if err != nil || groupsResp == nil {
 		hlog.CtxWarnf(ctx, "获取用户群组列表失败: %v", err)
 		return make(map[int64]int64)
@@ -113,6 +113,7 @@ func GetHistory(ctx context.Context, c *app.RequestContext) {
 		ConversationId: conversationID,
 		BeforeMsgId:    beforeMsgID,
 		Limit:          int16(limitInt),
+		TenantId:       &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC GetHistory失败: %v", err)
@@ -178,7 +179,8 @@ func GetConversations(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	userID := userInfo.Id
 	resp, err := rpc.GetConversations(ctx, &chat.GetConversationsReq{
-		UserId: userID,
+		UserId:   userID,
+		TenantId: &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC GetConversations失败: %v", err)
@@ -205,7 +207,7 @@ func GetConversations(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 
-	groupNumberMap := buildGroupNumberMap(ctx, userID)
+	groupNumberMap := buildGroupNumberMap(ctx, userID, userInfo.TenantId)
 
 	type conversationItem struct {
 		ConversationID int64    `json:"conversation_id,string"`
@@ -277,6 +279,7 @@ func MarkRead(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.MarkRead(ctx, &chat.MarkReadReq{
 		UserId:         userID,
 		ConversationId: conversationID,
+		TenantId:       &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC MarkRead失败: %v", err)
@@ -394,6 +397,7 @@ func RecallMessage(ctx context.Context, c *app.RequestContext) {
 		UserId:         userID,
 		MsgId:          msgID,
 		ConversationId: conversationID,
+		TenantId:       &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC RecallMessage失败: %v", err)
@@ -448,6 +452,7 @@ func EditMessage(ctx context.Context, c *app.RequestContext) {
 		MsgId:          msgID,
 		ConversationId: conversationID,
 		NewContent_:    reqBody.NewContent,
+		TenantId:       &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC EditMessage失败: %v", err)
@@ -496,6 +501,7 @@ func GetEditHistory(ctx context.Context, c *app.RequestContext) {
 		UserId:         userID,
 		MsgId:          msgID,
 		ConversationId: conversationID,
+		TenantId:       &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC GetEditHistory失败: %v", err)
@@ -593,6 +599,7 @@ func SyncMessages(ctx context.Context, c *app.RequestContext) {
 		UserId:   userID,
 		ConvSeqs: convSeqs,
 		Limit:    limit,
+		TenantId: &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "RPC SyncMessages失败: %v", err)
@@ -890,8 +897,9 @@ func SearchMessages(ctx context.Context, c *app.RequestContext) {
 	}
 
 	req := &chat.SearchMessagesReq{
-		UserId: userID,
-		Limit:  int16Ptr(int16(limitInt)),
+		UserId:   userID,
+		Limit:    int16Ptr(int16(limitInt)),
+		TenantId: &userInfo.TenantId,
 	}
 	if keyword != "" {
 		req.Keyword = stringPtr(keyword)

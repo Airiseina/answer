@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { api, uploadFile } from '../api/client.ts'
 import { useApp } from '../store/AppContext.tsx'
+import AgentGraphPanel from './AgentGraphPanel.tsx'
+import SkillPanel from './SkillPanel.tsx'
 import './BotsPanel.css'
 
 const AI_PROVIDERS = [
@@ -67,9 +69,48 @@ interface DocumentInfo {
   created_at: string
 }
 
+interface MarketBotInfo {
+  market_bot_id: string
+  publisher_id: string
+  publisher_name: string
+  name: string
+  description: string
+  avatar_url: string
+  system_prompt: string
+  model: string
+  base_url?: string
+  category: string
+  tags: string
+  status: number
+  review_note: string
+  install_count: number
+  rating: number
+  rating_count: number
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+// 市场条目状态机：0 草稿 / 1 待审核 / 2 已发布 / 3 已驳回 / 4 已下架
+const MARKET_STATUS_LABELS: Record<number, string> = {
+  0: '草稿',
+  1: '待审核',
+  2: '已发布',
+  3: '已驳回',
+  4: '已下架',
+}
+
+function marketStatusBadge(status: number): string {
+  if (status === 2) return 'enabled'
+  if (status === 3 || status === 4) return 'disabled'
+  return 'sse'
+}
+
+const MARKET_PAGE_SIZE = 20
+
 export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => void }) {
   const { conversations, setActiveConvId, loadConversations } = useApp()
-  const [tab, setTab] = useState<'create' | 'list' | 'mcp' | 'knowledge'>('list')
+  const [tab, setTab] = useState<'create' | 'list' | 'mcp' | 'knowledge' | 'market' | 'publish' | 'graph' | 'skill'>('list')
   const [bots, setBots] = useState<BotInfo[]>([])
   const [toast, setToast] = useState('')
   const [addBotModal, setAddBotModal] = useState<{ botId: string; botName: string } | null>(null)
@@ -100,6 +141,23 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
   const [bindKbBotId, setBindKbBotId] = useState('')
   const [botKnowledgeBases, setBotKnowledgeBases] = useState<KnowledgeBaseInfo[]>([])
   const [bindModal, setBindModal] = useState(false)
+
+  const [marketBots, setMarketBots] = useState<MarketBotInfo[]>([])
+  const [marketTotal, setMarketTotal] = useState(0)
+  const [marketPage, setMarketPage] = useState(1)
+  const [marketKeyword, setMarketKeyword] = useState('')
+  const [marketCategory, setMarketCategory] = useState('')
+  const [installBot, setInstallBot] = useState<MarketBotInfo | null>(null)
+  const [installForm, setInstallForm] = useState({ name: '', api_key: '', model: '', base_url: '' })
+  const [rateBot, setRateBot] = useState<MarketBotInfo | null>(null)
+  const [rateScore, setRateScore] = useState(5)
+
+  const [myPublished, setMyPublished] = useState<MarketBotInfo[]>([])
+  const [graphBotId, setGraphBotId] = useState('')
+  const [publishForm, setPublishForm] = useState({
+    market_bot_id: '', name: '', system_prompt: '', description: '',
+    model: '', base_url: '', category: '', tags: '',
+  })
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -257,7 +315,11 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
 
   useEffect(() => {
     if (tab === 'list') loadBots()
+    if (tab === 'graph') loadBots()
+    if (tab === 'skill') loadBots()
     if (tab === 'knowledge') loadKnowledgeBases()
+    if (tab === 'market') loadMarketBots(1)
+    if (tab === 'publish') loadMyPublished()
   }, [tab])
 
   useEffect(() => {
@@ -481,6 +543,131 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
     }
   }
 
+  const loadMarketBots = async (page = marketPage) => {
+    const params = new URLSearchParams()
+    if (marketKeyword.trim()) params.set('keyword', marketKeyword.trim())
+    if (marketCategory.trim()) params.set('category', marketCategory.trim())
+    params.set('page', String(page))
+    params.set('page_size', String(MARKET_PAGE_SIZE))
+    const res = await api('GET', `/api/market/bots?${params.toString()}`)
+    if (res.code === 0) {
+      setMarketBots(res.data?.bots || [])
+      setMarketTotal(res.data?.total || 0)
+      setMarketPage(page)
+    } else {
+      showToast(res.msg || '获取市场列表失败')
+    }
+  }
+
+  const loadMyPublished = async () => {
+    const res = await api('GET', '/api/market/my-published')
+    if (res.code === 0) {
+      setMyPublished(res.data?.bots || [])
+    } else {
+      showToast(res.msg || '获取我的发布失败')
+    }
+  }
+
+  const openInstallModal = (item: MarketBotInfo) => {
+    setInstallBot(item)
+    setInstallForm({ name: item.name, api_key: '', model: item.model, base_url: item.base_url || '' })
+  }
+
+  const handleInstall = async () => {
+    if (!installBot) return
+    if (!installForm.api_key || !installForm.model) {
+      showToast('请填写你自己的 API Key 与模型')
+      return
+    }
+    const payload: Record<string, string> = {
+      market_bot_id: installBot.market_bot_id,
+      api_key: installForm.api_key,
+      model: installForm.model,
+    }
+    if (installForm.name) payload.name = installForm.name
+    if (installForm.base_url) payload.base_url = installForm.base_url
+    const res = await api('POST', '/api/market/bots/install', payload)
+    if (res.code === 0) {
+      showToast('安装成功，已添加到我的 Bot')
+      setInstallBot(null)
+      loadBots()
+    } else {
+      showToast(res.msg || '安装失败')
+    }
+  }
+
+  const openRateModal = (item: MarketBotInfo) => {
+    setRateBot(item)
+    setRateScore(item.rating ? Math.round(item.rating) : 5)
+  }
+
+  const handleRate = async () => {
+    if (!rateBot) return
+    const res = await api('POST', '/api/market/bots/rate', {
+      market_bot_id: rateBot.market_bot_id,
+      score: rateScore,
+    })
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '评分成功' : (res.msg || '评分失败'))
+    if (ok) {
+      setRateBot(null)
+      loadMarketBots()
+    }
+  }
+
+  const resetPublishForm = () => {
+    setPublishForm({
+      market_bot_id: '', name: '', system_prompt: '', description: '',
+      model: '', base_url: '', category: '', tags: '',
+    })
+  }
+
+  const openPublishEdit = (item: MarketBotInfo) => {
+    setPublishForm({
+      market_bot_id: item.market_bot_id,
+      name: item.name,
+      system_prompt: item.system_prompt,
+      description: item.description,
+      model: item.model,
+      base_url: item.base_url || '',
+      category: item.category,
+      tags: item.tags,
+    })
+  }
+
+  const handlePublish = async () => {
+    if (!publishForm.name || !publishForm.system_prompt) {
+      showToast('请填写 Bot 名称与系统提示词')
+      return
+    }
+    const editing = !!publishForm.market_bot_id
+    const payload: Record<string, string> = {
+      name: publishForm.name,
+      system_prompt: publishForm.system_prompt,
+    }
+    if (editing) payload.market_bot_id = publishForm.market_bot_id
+    if (publishForm.description) payload.description = publishForm.description
+    if (publishForm.model) payload.model = publishForm.model
+    if (publishForm.base_url) payload.base_url = publishForm.base_url
+    if (publishForm.category) payload.category = publishForm.category
+    if (publishForm.tags) payload.tags = publishForm.tags
+    const res = await api('POST', editing ? '/api/market/bots/update' : '/api/market/bots', payload)
+    if (res.code === 0) {
+      showToast(editing ? '已提交修改，等待重新审核' : '已提交发布申请，等待审核')
+      resetPublishForm()
+      loadMyPublished()
+    } else {
+      showToast(res.msg || '提交失败')
+    }
+  }
+
+  const handleOfflinePublish = async (marketBotId: string) => {
+    const res = await api('POST', '/api/market/bots/offline', { market_bot_id: marketBotId })
+    const ok = res.code === 0 && res.data?.success
+    showToast(ok ? '已下架' : (res.msg || '下架失败'))
+    if (ok) loadMyPublished()
+  }
+
   const groupConversations = conversations.filter(c => c.type === 2)
 
   useEffect(() => {
@@ -502,10 +689,20 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
       <div className="bots-tabs">
         <button className={`ctab ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>我的 Bot</button>
         <button className={`ctab ${tab === 'create' ? 'active' : ''}`} onClick={() => setTab('create')}>创建 Bot</button>
+        <button className={`ctab ${tab === 'graph' ? 'active' : ''}`} onClick={() => setTab('graph')}>编排</button>
+        <button className={`ctab ${tab === 'skill' ? 'active' : ''}`} onClick={() => setTab('skill')}>Skill</button>
+        <button className={`ctab ${tab === 'market' ? 'active' : ''}`} onClick={() => setTab('market')}>市场</button>
+        <button className={`ctab ${tab === 'publish' ? 'active' : ''}`} onClick={() => setTab('publish')}>发布</button>
         <button className={`ctab ${tab === 'mcp' ? 'active' : ''}`} onClick={() => setTab('mcp')}>MCP 工具</button>
         <button className={`ctab ${tab === 'knowledge' ? 'active' : ''}`} onClick={() => setTab('knowledge')}>知识库</button>
       </div>
       <div className="bots-content">
+        {tab === 'graph' && (
+          <AgentGraphPanel bots={bots} botId={graphBotId} onSelectBot={setGraphBotId} />
+        )}
+
+        {tab === 'skill' && <SkillPanel bots={bots} />}
+
         {tab === 'create' && (
           <div className="add-form">
             <div className="form-field">
@@ -573,6 +770,151 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
                   )}
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {tab === 'market' && (
+          <div className="market-tab">
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input
+                value={marketKeyword}
+                onChange={e => setMarketKeyword(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') loadMarketBots(1) }}
+                placeholder="搜索名称/描述/标签"
+                style={{ flex: 1, minWidth: 0, padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}
+              />
+              <input
+                value={marketCategory}
+                onChange={e => setMarketCategory(e.target.value)}
+                placeholder="分类"
+                style={{ width: 80, padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}
+              />
+              <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px', flexShrink: 0 }} onClick={() => loadMarketBots(1)}>搜索</button>
+            </div>
+            {marketBots.length === 0 ? (
+              <div className="contacts-empty" style={{ padding: '20px 0' }}>暂无已发布的市场 Bot</div>
+            ) : (
+              <div className="mcp-server-list">
+                {marketBots.map(m => (
+                  <div key={m.market_bot_id} className="mcp-server-item">
+                    <div className="mcp-server-main">
+                      <div className="mcp-server-info">
+                        <div className="mcp-server-name">
+                          {m.avatar_url
+                            ? <img src={m.avatar_url} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }} />
+                            : '🤖'}
+                          {m.name}
+                          <span className="mcp-badge enabled">v{m.version}</span>
+                        </div>
+                        {m.description && <div className="mcp-server-desc">{m.description}</div>}
+                        <div className="mcp-server-url">
+                          {m.publisher_name || '匿名'} · {m.model || '未指定模型'} · 安装 {m.install_count} · 评分 {m.rating ? m.rating.toFixed(1) : '—'}{m.rating_count > 0 ? ` (${m.rating_count})` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mcp-server-actions">
+                      <button className="btn-icon" title="评分" onClick={() => openRateModal(m)} style={{ flexShrink: 0 }}>★</button>
+                      <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px', flexShrink: 0 }} onClick={() => openInstallModal(m)}>安装</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {marketTotal > MARKET_PAGE_SIZE && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                <button
+                  className="btn-cancel"
+                  style={{ fontSize: 12, padding: '4px 12px' }}
+                  disabled={marketPage <= 1}
+                  onClick={() => loadMarketBots(marketPage - 1)}
+                >上一页</button>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {marketPage} / {Math.ceil(marketTotal / MARKET_PAGE_SIZE)}
+                </span>
+                <button
+                  className="btn-cancel"
+                  style={{ fontSize: 12, padding: '4px 12px' }}
+                  disabled={marketPage >= Math.ceil(marketTotal / MARKET_PAGE_SIZE)}
+                  onClick={() => loadMarketBots(marketPage + 1)}
+                >下一页</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'publish' && (
+          <div className="publish-tab">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 8px' }}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{publishForm.market_bot_id ? '编辑发布' : '发布新 Bot'}</span>
+              {publishForm.market_bot_id && (
+                <button className="btn-cancel" style={{ fontSize: 12, padding: '4px 12px' }} onClick={resetPublishForm}>新建</button>
+              )}
+            </div>
+            <div className="add-form">
+              <div className="form-field">
+                <label>Bot 名称 *</label>
+                <input value={publishForm.name} onChange={e => setPublishForm({ ...publishForm, name: e.target.value })} placeholder="市场展示名称" />
+              </div>
+              <div className="form-field">
+                <label>系统提示词 *</label>
+                <textarea
+                  value={publishForm.system_prompt}
+                  onChange={e => setPublishForm({ ...publishForm, system_prompt: e.target.value })}
+                  rows={4}
+                  placeholder="定义 Bot 的角色与能力（改动后会重新审核）"
+                  style={{ width: '100%', resize: 'vertical', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}
+                />
+              </div>
+              <div className="form-field">
+                <label>描述</label>
+                <input value={publishForm.description} onChange={e => setPublishForm({ ...publishForm, description: e.target.value })} placeholder="一句话说明用途" />
+              </div>
+              <div className="form-field">
+                <label>推荐模型</label>
+                <input value={publishForm.model} onChange={e => setPublishForm({ ...publishForm, model: e.target.value })} placeholder="如 gpt-4o-mini" />
+              </div>
+              <div className="form-field">
+                <label>分类</label>
+                <input value={publishForm.category} onChange={e => setPublishForm({ ...publishForm, category: e.target.value })} placeholder="如 效率、写作" />
+              </div>
+              <div className="form-field">
+                <label>标签</label>
+                <input value={publishForm.tags} onChange={e => setPublishForm({ ...publishForm, tags: e.target.value })} placeholder="逗号分隔，如 周报,办公" />
+              </div>
+              <button className="btn-primary full" onClick={handlePublish}>{publishForm.market_bot_id ? '提交修改' : '提交发布'}</button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0 8px' }}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>我的发布</span>
+              <button className="btn-cancel" style={{ fontSize: 12, padding: '4px 12px' }} onClick={loadMyPublished}>刷新</button>
+            </div>
+            {myPublished.length === 0 ? (
+              <div className="contacts-empty" style={{ padding: '20px 0' }}>还没有发布任何 Bot</div>
+            ) : (
+              <div className="mcp-server-list">
+                {myPublished.map(m => (
+                  <div key={m.market_bot_id} className="mcp-server-item">
+                    <div className="mcp-server-main">
+                      <div className="mcp-server-info">
+                        <div className="mcp-server-name">
+                          {m.name}
+                          <span className={`mcp-badge ${marketStatusBadge(m.status)}`}>{MARKET_STATUS_LABELS[m.status] || m.status}</span>
+                          {m.status === 2 && <span className="mcp-badge sse">v{m.version}</span>}
+                        </div>
+                        {m.review_note && <div className="mcp-server-desc">审核意见：{m.review_note}</div>}
+                        <div className="mcp-server-url">安装 {m.install_count} · 评分 {m.rating ? m.rating.toFixed(1) : '—'}</div>
+                      </div>
+                    </div>
+                    <div className="mcp-server-actions">
+                      <button className="btn-icon" title="编辑" onClick={() => openPublishEdit(m)} style={{ flexShrink: 0 }}>✎</button>
+                      {m.status !== 4 && (
+                        <button className="btn-icon" title="下架" onClick={() => handleOfflinePublish(m.market_bot_id)} style={{ flexShrink: 0, color: 'var(--danger)' }}>✕</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -898,6 +1240,66 @@ export default function BotsPanel({ onSwitchToChat }: { onSwitchToChat: () => vo
             )}
             <div className="modal-actions" style={{ marginTop: 12 }}>
               <button className="btn-cancel" onClick={() => setBindModal(false)}>关闭</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {installBot && (
+        <div className="modal-overlay" onClick={() => setInstallBot(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3>安装「{installBot.name}」</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
+              市场只分发 Bot 定义，需要你自己提供 API Key 与模型。
+            </div>
+            <div className="form-field">
+              <label>Bot 名称</label>
+              <input value={installForm.name} onChange={e => setInstallForm({ ...installForm, name: e.target.value })} />
+            </div>
+            <div className="form-field">
+              <label>API Key *</label>
+              <input
+                type="password"
+                value={installForm.api_key}
+                onChange={e => setInstallForm({ ...installForm, api_key: e.target.value })}
+                placeholder="你自己的 LLM API Key"
+              />
+            </div>
+            <div className="form-field">
+              <label>模型 *</label>
+              <input value={installForm.model} onChange={e => setInstallForm({ ...installForm, model: e.target.value })} placeholder="如 gpt-4o-mini" />
+            </div>
+            <div className="form-field">
+              <label>API Base URL</label>
+              <input value={installForm.base_url} onChange={e => setInstallForm({ ...installForm, base_url: e.target.value })} placeholder="留空则使用服务商默认" />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setInstallBot(null)}>取消</button>
+              <button className="btn-primary" onClick={handleInstall}>确认安装</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rateBot && (
+        <div className="modal-overlay" onClick={() => setRateBot(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <h3>给「{rateBot.name}」评分</h3>
+            <div className="form-field">
+              <label>评分（1-5）</label>
+              <select
+                value={rateScore}
+                onChange={e => setRateScore(Number(e.target.value))}
+                style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid var(--border)' }}
+              >
+                {[5, 4, 3, 2, 1].map(n => (
+                  <option key={n} value={n}>{'★'.repeat(n)}{'☆'.repeat(5 - n)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setRateBot(null)}>取消</button>
+              <button className="btn-primary" onClick={handleRate}>提交评分</button>
             </div>
           </div>
         </div>

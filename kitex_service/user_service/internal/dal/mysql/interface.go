@@ -41,6 +41,8 @@ type UserDao interface {
 	GetFriendGroupsByUserId(userID int64) ([]model.FriendGroup, error)
 	GetUsersByIds(userIds []int64) ([]model.User, error)
 	GetUsersByAccounts(accounts []string) ([]model.User, error)
+	// ListActiveUsers 游标式枚举非 Bot 用户，供后台定时任务（日/周总结）逐个处理
+	ListActiveUsers(afterUserID int64, limit int) ([]model.User, error)
 	UpdateAvatar(userID int64, avatarURL string) error
 	CreateBotUser(name, avatarURL string) (int64, error)
 	UpdateBotUserName(userID int64, name string) error

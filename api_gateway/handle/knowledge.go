@@ -84,6 +84,7 @@ func CreateKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 		OwnerId:     userId,
 		Name:        req.Name,
 		Description: &req.Description,
+		TenantId:    &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "创建知识库失败: %v", err)
@@ -94,13 +95,16 @@ func CreateKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 }
 
 func GetKnowledgeBase(ctx context.Context, c *app.RequestContext) {
+	identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := identity.(*middleware.Resp)
+
 	kbIDStr := c.Query("kb_id")
 	kbID, err := strconv.ParseInt(kbIDStr, 10, 64)
 	if err != nil {
 		response.Error(c, "参数错误", "kb_id无效")
 		return
 	}
-	resp, err := rpc.GetKnowledgeBase(ctx, &knowledge.GetKnowledgeBaseReq{KbId: kbID})
+	resp, err := rpc.GetKnowledgeBase(ctx, &knowledge.GetKnowledgeBaseReq{KbId: kbID, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "查询知识库失败: %v", err)
 		response.Error(c, "查询知识库失败", nil)
@@ -118,7 +122,7 @@ func GetUserKnowledgeBases(ctx context.Context, c *app.RequestContext) {
 	userInfo := identity.(*middleware.Resp)
 	userId := userInfo.Id
 
-	resp, err := rpc.GetUserKnowledgeBases(ctx, &knowledge.GetUserKnowledgeBasesReq{OwnerId: userId})
+	resp, err := rpc.GetUserKnowledgeBases(ctx, &knowledge.GetUserKnowledgeBasesReq{OwnerId: userId, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "查询用户知识库列表失败: %v", err)
 		response.Error(c, "查询知识库列表失败", nil)
@@ -153,6 +157,7 @@ func UpdateKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 	kitexReq := &knowledge.UpdateKnowledgeBaseReq{
 		KbId:       req.KbID,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	}
 	if req.Name != "" {
 		kitexReq.Name = &req.Name
@@ -186,6 +191,7 @@ func DeleteKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.DeleteKnowledgeBase(ctx, &knowledge.DeleteKnowledgeBaseReq{
 		KbId:       req.KbID,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "删除知识库失败: %v", err)
@@ -220,6 +226,7 @@ func AddDocument(ctx context.Context, c *app.RequestContext) {
 		FileUrl:    req.FileURL,
 		FileType:   req.FileType,
 		FileSize:   req.FileSize,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "添加文档失败: %v", err)
@@ -230,13 +237,16 @@ func AddDocument(ctx context.Context, c *app.RequestContext) {
 }
 
 func GetDocuments(ctx context.Context, c *app.RequestContext) {
+	identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := identity.(*middleware.Resp)
+
 	kbIDStr := c.Query("kb_id")
 	kbID, err := strconv.ParseInt(kbIDStr, 10, 64)
 	if err != nil {
 		response.Error(c, "参数错误", "kb_id无效")
 		return
 	}
-	resp, err := rpc.GetDocuments(ctx, &knowledge.GetDocumentsReq{KbId: kbID})
+	resp, err := rpc.GetDocuments(ctx, &knowledge.GetDocumentsReq{KbId: kbID, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "查询文档列表失败: %v", err)
 		response.Error(c, "查询文档列表失败", nil)
@@ -269,6 +279,7 @@ func DeleteDocument(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.DeleteDocument(ctx, &knowledge.DeleteDocumentReq{
 		DocId:      req.DocID,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "删除文档失败: %v", err)
@@ -295,6 +306,7 @@ func RetryDocument(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.RetryDocument(ctx, &knowledge.RetryDocumentReq{
 		DocId:      req.DocID,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "重试文档解析失败: %v", err)
@@ -337,6 +349,7 @@ func BindKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 		BotId:      req.BotID,
 		OperatorId: userId,
 		KbId:       req.KbID,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "绑定知识库失败: %v", err)
@@ -365,6 +378,7 @@ func UnbindKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 		BotId:      req.BotID,
 		OperatorId: userId,
 		KbId:       req.KbID,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "解绑知识库失败: %v", err)
@@ -375,13 +389,16 @@ func UnbindKnowledgeBase(ctx context.Context, c *app.RequestContext) {
 }
 
 func GetBotKnowledgeBases(ctx context.Context, c *app.RequestContext) {
+	identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := identity.(*middleware.Resp)
+
 	botIDStr := c.Query("bot_id")
 	botID, err := strconv.ParseInt(botIDStr, 10, 64)
 	if err != nil {
 		response.Error(c, "参数错误", "bot_id无效")
 		return
 	}
-	resp, err := rpc.GetBotKnowledgeBases(ctx, &knowledge.GetBotKnowledgeBasesReq{BotId: botID})
+	resp, err := rpc.GetBotKnowledgeBases(ctx, &knowledge.GetBotKnowledgeBasesReq{BotId: botID, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "查询Bot知识库列表失败: %v", err)
 		response.Error(c, "查询Bot知识库列表失败", nil)

@@ -74,6 +74,7 @@ func joinStrings(ss []string, sep string) string {
 type Client struct {
 	Manager     *Manager        // 所属的连接管理器，用于注册/注销和消息分发
 	UserId      int64           // 用户ID，作为客户端的唯一标识
+	TenantID    int64           // 当前连接绑定的租户ID，来自 JWT claims
 	UserName    string          // 用户名称，WebSocket 连接时从 user_service 获取
 	UserAccount string          // 用户账号，WebSocket 连接时从 user_service 获取
 	Socket      *websocket.Conn // WebSocket 连接实例

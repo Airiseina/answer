@@ -35,8 +35,8 @@ type McpServerInfoDTO struct {
 	CreatedAt   int64
 }
 
-func (svc *McpServerService) CreateMcpServer(operatorId int64, botId int64, name, url, description, transport, authType, authToken string) (int64, error) {
-	bot, err := svc.botDao.GetBot(botId)
+func (svc *McpServerService) CreateMcpServer(tenantId, operatorId int64, botId int64, name, url, description, transport, authType, authToken string) (int64, error) {
+	bot, err := svc.botDao.GetBot(tenantId, botId)
 	if err != nil {
 		return 0, fmt.Errorf("查询Bot失败: %w", err)
 	}
@@ -57,6 +57,7 @@ func (svc *McpServerService) CreateMcpServer(operatorId int64, botId int64, name
 	}
 	server := model.McpServer{
 		ID:          svc.snowNode.Generate(),
+		TenantID:    tenantId,
 		BotID:       botId,
 		Name:        name,
 		Description: description,
@@ -73,8 +74,8 @@ func (svc *McpServerService) CreateMcpServer(operatorId int64, botId int64, name
 	return server.ID, nil
 }
 
-func (svc *McpServerService) GetBotMcpServers(botId int64) ([]McpServerInfoDTO, error) {
-	servers, err := svc.dao.GetBotMcpServers(botId)
+func (svc *McpServerService) GetBotMcpServers(tenantId, botId int64) ([]McpServerInfoDTO, error) {
+	servers, err := svc.dao.GetBotMcpServers(tenantId, botId)
 	if err != nil {
 		return nil, err
 	}
@@ -85,15 +86,15 @@ func (svc *McpServerService) GetBotMcpServers(botId int64) ([]McpServerInfoDTO, 
 	return dtos, nil
 }
 
-func (svc *McpServerService) UpdateMcpServer(id, operatorId int64, updates map[string]interface{}) (bool, error) {
-	server, err := svc.dao.GetMcpServer(id)
+func (svc *McpServerService) UpdateMcpServer(tenantId, id, operatorId int64, updates map[string]interface{}) (bool, error) {
+	server, err := svc.dao.GetMcpServer(tenantId, id)
 	if err != nil {
 		return false, err
 	}
 	if server.ID == 0 {
 		return false, nil
 	}
-	bot, err := svc.botDao.GetBot(server.BotID)
+	bot, err := svc.botDao.GetBot(tenantId, server.BotID)
 	if err != nil {
 		return false, err
 	}
@@ -103,22 +104,22 @@ func (svc *McpServerService) UpdateMcpServer(id, operatorId int64, updates map[s
 	if bot.CreatorID != operatorId {
 		return false, fmt.Errorf("只有Bot创建者才能修改MCP Server")
 	}
-	err = svc.dao.UpdateMcpServer(id, updates)
+	err = svc.dao.UpdateMcpServer(tenantId, id, updates)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (svc *McpServerService) DeleteMcpServer(id, operatorId int64) (bool, error) {
-	server, err := svc.dao.GetMcpServer(id)
+func (svc *McpServerService) DeleteMcpServer(tenantId, id, operatorId int64) (bool, error) {
+	server, err := svc.dao.GetMcpServer(tenantId, id)
 	if err != nil {
 		return false, err
 	}
 	if server.ID == 0 {
 		return false, nil
 	}
-	bot, err := svc.botDao.GetBot(server.BotID)
+	bot, err := svc.botDao.GetBot(tenantId, server.BotID)
 	if err != nil {
 		return false, err
 	}
@@ -128,7 +129,7 @@ func (svc *McpServerService) DeleteMcpServer(id, operatorId int64) (bool, error)
 	if bot.CreatorID != operatorId {
 		return false, fmt.Errorf("只有Bot创建者才能删除MCP Server")
 	}
-	err = svc.dao.DeleteMcpServer(id)
+	err = svc.dao.DeleteMcpServer(tenantId, id)
 	if err != nil {
 		return false, err
 	}

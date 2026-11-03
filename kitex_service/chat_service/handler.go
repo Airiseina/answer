@@ -23,7 +23,7 @@ type ChatServiceImpl struct {
 
 func (s *ChatServiceImpl) SendMessage(ctx context.Context, req *chat.SendMessageReq) (resp *chat.SendMessageRes, err error) {
 	start := time.Now()
-	result, err := s.chatService.SendMessage(ctx, req.SenderId, req.ConversationId, req.PeerId, req.Content, req.ClientSeq, req.GetQuoteMsgId())
+	result, err := s.chatService.SendMessage(ctx, req.GetTenantId(), req.SenderId, req.ConversationId, req.PeerId, req.Content, req.ClientSeq, req.GetQuoteMsgId())
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]发送消息失败: %v", req.SenderId, err)
 		meter.M.MessageSentTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "error")))
@@ -34,6 +34,7 @@ func (s *ChatServiceImpl) SendMessage(ctx context.Context, req *chat.SendMessage
 	return &chat.SendMessageRes{
 		Success:          true,
 		MsgId:            result.MsgID,
+		TenantId:         &result.TenantID,
 		Timestamp:        result.Timestamp,
 		ConversationId:   result.ConversationID,
 		MemberIds:        result.MemberIDs,
@@ -44,7 +45,7 @@ func (s *ChatServiceImpl) SendMessage(ctx context.Context, req *chat.SendMessage
 }
 
 func (s *ChatServiceImpl) GetHistory(ctx context.Context, req *chat.GetHistoryReq) (resp *chat.GetHistoryRes, err error) {
-	messages, err := s.chatService.GetHistory(ctx, req.UserId, req.ConversationId, req.BeforeMsgId, req.Limit)
+	messages, err := s.chatService.GetHistory(ctx, req.GetTenantId(), req.UserId, req.ConversationId, req.BeforeMsgId, req.Limit)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]拉取会话[%d]历史消息失败: %v", req.UserId, req.ConversationId, err)
 		return &chat.GetHistoryRes{Success: false}, nil
@@ -56,6 +57,7 @@ func (s *ChatServiceImpl) GetHistory(ctx context.Context, req *chat.GetHistoryRe
 			ClientSeq:      m.ClientSeq,
 			SenderId:       m.SenderID,
 			ConversationId: m.ConversationID,
+			TenantId:       &m.TenantID,
 			Content:        m.Content,
 			Timestamp:      m.Timestamp,
 			Seq:            &m.Seq,
@@ -79,7 +81,7 @@ func (s *ChatServiceImpl) CreateConversation(ctx context.Context, req *chat.Crea
 	if req.GroupId != nil {
 		groupID = *req.GroupId
 	}
-	convID, err := s.chatService.CreateConversation(ctx, req.Name, req.MemberIds, groupID)
+	convID, err := s.chatService.CreateConversation(ctx, req.GetTenantId(), req.Name, req.MemberIds, groupID)
 	if err != nil {
 		klog.CtxErrorf(ctx, "创建会话失败: %v", err)
 		return &chat.CreateConversationRes{Success: false}, nil
@@ -91,7 +93,7 @@ func (s *ChatServiceImpl) CreateConversation(ctx context.Context, req *chat.Crea
 }
 
 func (s *ChatServiceImpl) GetConversations(ctx context.Context, req *chat.GetConversationsReq) (resp *chat.GetConversationsRes, err error) {
-	conversations, err := s.chatService.GetConversations(ctx, req.UserId)
+	conversations, err := s.chatService.GetConversations(ctx, req.GetTenantId(), req.UserId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询用户[%d]会话列表失败: %v", req.UserId, err)
 		return nil, fmt.Errorf("查询会话列表失败: %w", err)
@@ -105,6 +107,7 @@ func (s *ChatServiceImpl) GetConversations(ctx context.Context, req *chat.GetCon
 		}
 		list = append(list, &chat.ConversationInfo{
 			ConversationId: c.ID,
+			TenantId:       &c.TenantID,
 			Type:           convType,
 			Name:           name,
 			MemberIds:      c.MemberIDs,
@@ -165,7 +168,7 @@ func (s *ChatServiceImpl) GetOnlineStatus(ctx context.Context, req *chat.GetOnli
 }
 
 func (s *ChatServiceImpl) AddConversationMembers(ctx context.Context, req *chat.AddConversationMembersReq) (resp *chat.AddConversationMembersRes, err error) {
-	err = s.chatService.AddConversationMembers(ctx, req.ConversationId, req.MemberIds)
+	err = s.chatService.AddConversationMembers(ctx, req.GetTenantId(), req.ConversationId, req.MemberIds)
 	if err != nil {
 		klog.CtxErrorf(ctx, "添加会话[%d]成员失败: %v", req.ConversationId, err)
 		return &chat.AddConversationMembersRes{Success: false}, nil
@@ -174,7 +177,7 @@ func (s *ChatServiceImpl) AddConversationMembers(ctx context.Context, req *chat.
 }
 
 func (s *ChatServiceImpl) RemoveConversationMembers(ctx context.Context, req *chat.RemoveConversationMembersReq) (resp *chat.RemoveConversationMembersRes, err error) {
-	err = s.chatService.RemoveConversationMembers(ctx, req.ConversationId, req.MemberIds)
+	err = s.chatService.RemoveConversationMembers(ctx, req.GetTenantId(), req.ConversationId, req.MemberIds)
 	if err != nil {
 		klog.CtxErrorf(ctx, "移除会话[%d]成员失败: %v", req.ConversationId, err)
 		return &chat.RemoveConversationMembersRes{Success: false}, nil
@@ -183,7 +186,7 @@ func (s *ChatServiceImpl) RemoveConversationMembers(ctx context.Context, req *ch
 }
 
 func (s *ChatServiceImpl) DeleteConversation(ctx context.Context, req *chat.DeleteConversationReq) (resp *chat.DeleteConversationRes, err error) {
-	err = s.chatService.DeleteConversation(ctx, req.ConversationId)
+	err = s.chatService.DeleteConversation(ctx, req.GetTenantId(), req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "删除会话[%d]失败: %v", req.ConversationId, err)
 		return &chat.DeleteConversationRes{Success: false}, nil
@@ -192,7 +195,7 @@ func (s *ChatServiceImpl) DeleteConversation(ctx context.Context, req *chat.Dele
 }
 
 func (s *ChatServiceImpl) MarkRead(ctx context.Context, req *chat.MarkReadReq) (resp *chat.MarkReadRes, err error) {
-	maxReadSeq, err := s.chatService.MarkRead(ctx, req.UserId, req.ConversationId)
+	maxReadSeq, err := s.chatService.MarkRead(ctx, req.GetTenantId(), req.UserId, req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]标记会话[%d]已读失败: %v", req.UserId, req.ConversationId, err)
 		return &chat.MarkReadRes{Success: false}, nil
@@ -204,7 +207,7 @@ func (s *ChatServiceImpl) MarkRead(ctx context.Context, req *chat.MarkReadReq) (
 }
 
 func (s *ChatServiceImpl) GetConversationMembers(ctx context.Context, req *chat.GetConversationMembersReq) (resp *chat.GetConversationMembersRes, err error) {
-	members, err := s.chatService.GetConversationMembers(ctx, req.ConversationId)
+	members, err := s.chatService.GetConversationMembers(ctx, req.GetTenantId(), req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "查询会话[%d]成员列表失败: %v", req.ConversationId, err)
 		return &chat.GetConversationMembersRes{Success: false}, nil
@@ -216,7 +219,7 @@ func (s *ChatServiceImpl) GetConversationMembers(ctx context.Context, req *chat.
 }
 
 func (s *ChatServiceImpl) GetOrCreatePrivateConversation(ctx context.Context, req *chat.GetOrCreatePrivateConversationReq) (resp *chat.GetOrCreatePrivateConversationRes, err error) {
-	convID, err := s.chatService.GetOrCreatePrivateConversation(ctx, req.UserIdA, req.UserIdB)
+	convID, err := s.chatService.GetOrCreatePrivateConversation(ctx, req.GetTenantId(), req.UserIdA, req.UserIdB)
 	if err != nil {
 		klog.CtxErrorf(ctx, "获取或创建单聊会话失败, userA=%d, userB=%d: %v", req.UserIdA, req.UserIdB, err)
 		return &chat.GetOrCreatePrivateConversationRes{Success: false}, nil
@@ -228,7 +231,7 @@ func (s *ChatServiceImpl) GetOrCreatePrivateConversation(ctx context.Context, re
 }
 
 func (s *ChatServiceImpl) RecallMessage(ctx context.Context, req *chat.RecallMessageReq) (resp *chat.RecallMessageRes, err error) {
-	result, err := s.chatService.RecallMessage(ctx, req.UserId, req.MsgId, req.ConversationId)
+	result, err := s.chatService.RecallMessage(ctx, req.GetTenantId(), req.UserId, req.MsgId, req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]撤回消息[%d]失败: %v", req.UserId, req.MsgId, err)
 		return nil, err
@@ -241,7 +244,7 @@ func (s *ChatServiceImpl) RecallMessage(ctx context.Context, req *chat.RecallMes
 }
 
 func (s *ChatServiceImpl) EditMessage(ctx context.Context, req *chat.EditMessageReq) (resp *chat.EditMessageRes, err error) {
-	result, err := s.chatService.EditMessage(ctx, req.UserId, req.MsgId, req.ConversationId, req.NewContent_)
+	result, err := s.chatService.EditMessage(ctx, req.GetTenantId(), req.UserId, req.MsgId, req.ConversationId, req.NewContent_)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]编辑消息[%d]失败: %v", req.UserId, req.MsgId, err)
 		return &chat.EditMessageRes{Success: false}, nil
@@ -254,7 +257,7 @@ func (s *ChatServiceImpl) EditMessage(ctx context.Context, req *chat.EditMessage
 }
 
 func (s *ChatServiceImpl) GetEditHistory(ctx context.Context, req *chat.GetEditHistoryReq) (resp *chat.GetEditHistoryRes, err error) {
-	histories, err := s.chatService.GetEditHistory(ctx, req.UserId, req.MsgId, req.ConversationId)
+	histories, err := s.chatService.GetEditHistory(ctx, req.GetTenantId(), req.UserId, req.MsgId, req.ConversationId)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]查询消息[%d]编辑历史失败: %v", req.UserId, req.MsgId, err)
 		return &chat.GetEditHistoryRes{Success: false}, nil
@@ -284,7 +287,7 @@ func (s *ChatServiceImpl) SyncMessages(ctx context.Context, req *chat.SyncMessag
 			LastSeq:        pair.LastSeq,
 		})
 	}
-	results, err := s.chatService.SyncMessages(ctx, req.UserId, convSeqs, req.Limit)
+	results, err := s.chatService.SyncMessages(ctx, req.GetTenantId(), req.UserId, convSeqs, req.Limit)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]同步消息失败: %v", req.UserId, err)
 		return &chat.SyncMessagesRes{Success: false}, nil
@@ -298,6 +301,7 @@ func (s *ChatServiceImpl) SyncMessages(ctx context.Context, req *chat.SyncMessag
 				ClientSeq:      m.ClientSeq,
 				SenderId:       m.SenderID,
 				ConversationId: m.ConversationID,
+				TenantId:       &m.TenantID,
 				Content:        m.Content,
 				Timestamp:      m.Timestamp,
 				Seq:            &m.Seq,
@@ -317,7 +321,7 @@ func (s *ChatServiceImpl) SyncMessages(ctx context.Context, req *chat.SyncMessag
 }
 
 func (s *ChatServiceImpl) SearchColdMessages(ctx context.Context, req *chat.SearchColdMessagesReq) (resp *chat.SearchColdMessagesRes, err error) {
-	messages, err := s.chatService.SearchColdMessages(ctx, req.ConversationId, req.Keyword, req.UserId, req.Limit)
+	messages, err := s.chatService.SearchColdMessages(ctx, req.GetTenantId(), req.ConversationId, req.Keyword, req.UserId, req.Limit)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]搜索冷库消息失败: %v", req.UserId, err)
 		return &chat.SearchColdMessagesRes{Success: false}, nil
@@ -329,6 +333,7 @@ func (s *ChatServiceImpl) SearchColdMessages(ctx context.Context, req *chat.Sear
 			ClientSeq:      m.ClientSeq,
 			SenderId:       m.SenderID,
 			ConversationId: m.ConversationID,
+			TenantId:       &m.TenantID,
 			Content:        m.Content,
 			Timestamp:      m.Timestamp,
 			Seq:            &m.Seq,
@@ -367,7 +372,7 @@ func (s *ChatServiceImpl) SearchMessages(ctx context.Context, req *chat.SearchMe
 	if req.Limit != nil {
 		limit = *req.Limit
 	}
-	messages, err := s.chatService.SearchMessages(ctx, req.UserId, keyword, conversationID, startTime, endTime, limit)
+	messages, err := s.chatService.SearchMessages(ctx, req.GetTenantId(), req.UserId, keyword, conversationID, startTime, endTime, limit)
 	if err != nil {
 		klog.CtxErrorf(ctx, "用户[%d]搜索历史消息失败: %v", req.UserId, err)
 		return &chat.SearchMessagesRes{Success: false}, nil
@@ -379,6 +384,7 @@ func (s *ChatServiceImpl) SearchMessages(ctx context.Context, req *chat.SearchMe
 			ClientSeq:      m.ClientSeq,
 			SenderId:       m.SenderID,
 			ConversationId: m.ConversationID,
+			TenantId:       &m.TenantID,
 			Content:        m.Content,
 			Timestamp:      m.Timestamp,
 			Seq:            &m.Seq,
@@ -393,5 +399,42 @@ func (s *ChatServiceImpl) SearchMessages(ctx context.Context, req *chat.SearchMe
 	return &chat.SearchMessagesRes{
 		Success:  true,
 		Messages: list,
+	}, nil
+}
+
+// GetMessagesByTimeRange 跨会话聚合用户时间窗内的消息：供日/周总结取数
+func (s *ChatServiceImpl) GetMessagesByTimeRange(ctx context.Context, req *chat.GetMessagesByTimeRangeReq) (resp *chat.GetMessagesByTimeRangeRes, err error) {
+	var limit int16
+	if req.Limit != nil {
+		limit = *req.Limit
+	}
+	messages, truncated, err := s.chatService.GetMessagesByTimeRange(ctx, req.GetTenantId(), req.UserId, req.StartTime, req.EndTime, limit)
+	if err != nil {
+		klog.CtxErrorf(ctx, "用户[%d]时间窗消息聚合失败: %v", req.UserId, err)
+		return &chat.GetMessagesByTimeRangeRes{Success: false}, nil
+	}
+	list := make([]*chat.Message, 0, len(messages))
+	for _, m := range messages {
+		msg := &chat.Message{
+			MsgId:          m.MsgID,
+			ClientSeq:      m.ClientSeq,
+			SenderId:       m.SenderID,
+			ConversationId: m.ConversationID,
+			TenantId:       &m.TenantID,
+			Content:        m.Content,
+			Timestamp:      m.Timestamp,
+			Seq:            &m.Seq,
+			Status:         &m.Status,
+			IsEdited:       &m.IsEdited,
+		}
+		if m.QuoteMsgID != 0 {
+			msg.QuoteMsgId = &m.QuoteMsgID
+		}
+		list = append(list, msg)
+	}
+	return &chat.GetMessagesByTimeRangeRes{
+		Success:   true,
+		Messages:  list,
+		Truncated: &truncated,
 	}, nil
 }

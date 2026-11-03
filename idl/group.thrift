@@ -27,6 +27,7 @@ struct CreateGroupReq {
     1: i64 creator_id
     2: string name
     3: list<i64> initial_members
+    4: optional i64 tenant_id
 }
 
 struct CreateGroupRes {
@@ -39,16 +40,19 @@ struct InviteMembersReq {
     1: i64 inviter_id
     2: i64 group_id
     3: list<i64> user_ids
+    4: optional i64 tenant_id
 }
 
 struct KickMembersReq {
     1: i64 operator_id
     2: i64 group_id
     3: list<i64> user_ids
+    4: optional i64 tenant_id
 }
 
 struct GetGroupInfoReq {
     1: i64 group_id
+    2: optional i64 tenant_id
 }
 
 struct GetGroupInfoRes {
@@ -60,12 +64,14 @@ struct ChangeOwnerReq{
     1:i64 old_id
     2:i64 new_id
     3:i64 group_id
+    4: optional i64 tenant_id
 }
 
 struct ChangeNoticeReq{
     1:i64 operator_id
     2:i64 group_id
     3:string notice
+    4: optional i64 tenant_id
 }
 
 struct MutedReq{
@@ -73,6 +79,7 @@ struct MutedReq{
     2:i64 group_id
     3:i64 muted_id
     4:bool is_muted
+    5: optional i64 tenant_id
 }
 
 struct SetAdminReq {
@@ -80,10 +87,12 @@ struct SetAdminReq {
     2: i64 group_id
     3: i64 target_id
     4: i64 role
+    5: optional i64 tenant_id
 }
 
 struct GetUserGroupsReq {
     1: i64 user_id
+    2: optional i64 tenant_id
 }
 
 struct UserGroupInfo {
@@ -98,6 +107,7 @@ struct GetUserGroupsRes {
 
 struct SearchGroupByNumberReq {
     1: i64 group_number
+    2: optional i64 tenant_id
 }
 
 struct GroupSearchResult {
@@ -115,6 +125,7 @@ struct JoinGroupReq {
     1: i64 user_id
     2: i64 group_number
     3: string message
+    4: optional i64 tenant_id
 }
 
 struct HandleJoinReqReq {
@@ -122,10 +133,12 @@ struct HandleJoinReqReq {
     2: i64 group_id
     3: i64 user_id
     4: bool accept
+    5: optional i64 tenant_id
 }
 
 struct GetJoinRequestsReq {
     1: i64 group_id
+    2: optional i64 tenant_id
 }
 
 struct JoinRequestInfo {
@@ -142,6 +155,7 @@ struct GetJoinRequestsRes {
 struct CheckMutedReq{
     1:i64 group_id
     2:i64 user_id
+    3: optional i64 tenant_id
 }
 
 struct CheckMutedRes{

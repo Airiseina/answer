@@ -25,11 +25,17 @@ export interface UploadResult {
 }
 
 export async function uploadFile(file: File): Promise<{ code: number; msg: string; data?: UploadResult }> {
+  return uploadFileTo('/api/files', file);
+}
+
+// uploadFileTo 以 multipart 方式把文件提交到任意上传接口。
+// 目前用于 /api/files（通用附件）与 /api/skill/upload（个人 Skill 包）两处。
+export async function uploadFileTo<T = any>(path: string, file: File): Promise<{ code: number; msg: string; data?: T }> {
   const token = localStorage.getItem('im_token');
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const res = await fetch(API_BASE + '/api/files', {
+    const res = await fetch(API_BASE + path, {
       method: 'POST',
       headers: token ? { 'Authorization': 'Bearer ' + token } : {},
       body: formData,

@@ -1,4 +1,11 @@
 ## example
+mysql:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "123456"
+  name: "answer"
+
 etcd:
   Addr: "127.0.0.1:2379"
 
@@ -10,6 +17,9 @@ gateway:
 
 kafka:
   brokers: "127.0.0.1:9094"
+
+redis:
+  addr: "127.0.0.1:6379"          # 总结调度跨实例去重锁依赖 Garnet/Redis
 
 mcp:
   mem0_url: "http://localhost:9004/sse"
@@ -34,3 +44,21 @@ image:
 
 ragas_eval:
   url: "http://localhost:8090"          # RAGAS评估服务地址，留空则禁用自动评估
+
+ai:
+  summary:
+    daily_prompt_file: "prompt/daily_summary.md"    # 日总结提示词文件
+    weekly_prompt_file: "prompt/weekly_summary.md"  # 周总结提示词文件
+  agent_graph:
+    enabled: true             # 多 Agent 协作编排开关
+    timeout_seconds: 240      # 编排图单次执行总超时(秒)
+    max_agent_nodes: 12       # 单次执行的 agent 节点上限
+  bot_task:
+    max_concurrent: 10        # Bot 任务全局并发上限（跨 Bot 共享信号量）
+    per_bot_queue: 50         # 单个 Bot 的任务排队长度
+
+summary:
+  tick_interval: 60          # 调度扫描间隔(秒)
+  send_hour: 21              # 每日/每周总结发送时刻(小时, 东八区)
+  stagger_minutes: 30        # 用户分桶错峰窗口(分钟)
+  page_size: 500             # 每页枚举的用户数

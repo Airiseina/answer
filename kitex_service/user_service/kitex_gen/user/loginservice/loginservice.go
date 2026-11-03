@@ -160,6 +160,111 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateTenant": kitex.NewMethodInfo(
+		createTenantHandler,
+		newLoginServiceCreateTenantArgs,
+		newLoginServiceCreateTenantResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListTenants": kitex.NewMethodInfo(
+		listTenantsHandler,
+		newLoginServiceListTenantsArgs,
+		newLoginServiceListTenantsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetTenant": kitex.NewMethodInfo(
+		getTenantHandler,
+		newLoginServiceGetTenantArgs,
+		newLoginServiceGetTenantResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateTenant": kitex.NewMethodInfo(
+		updateTenantHandler,
+		newLoginServiceUpdateTenantArgs,
+		newLoginServiceUpdateTenantResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListTenantMembers": kitex.NewMethodInfo(
+		listTenantMembersHandler,
+		newLoginServiceListTenantMembersArgs,
+		newLoginServiceListTenantMembersResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"AddTenantMember": kitex.NewMethodInfo(
+		addTenantMemberHandler,
+		newLoginServiceAddTenantMemberArgs,
+		newLoginServiceAddTenantMemberResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SetTenantMemberRole": kitex.NewMethodInfo(
+		setTenantMemberRoleHandler,
+		newLoginServiceSetTenantMemberRoleArgs,
+		newLoginServiceSetTenantMemberRoleResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RemoveTenantMember": kitex.NewMethodInfo(
+		removeTenantMemberHandler,
+		newLoginServiceRemoveTenantMemberArgs,
+		newLoginServiceRemoveTenantMemberResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListDepartments": kitex.NewMethodInfo(
+		listDepartmentsHandler,
+		newLoginServiceListDepartmentsArgs,
+		newLoginServiceListDepartmentsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateDepartment": kitex.NewMethodInfo(
+		createDepartmentHandler,
+		newLoginServiceCreateDepartmentArgs,
+		newLoginServiceCreateDepartmentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RenameDepartment": kitex.NewMethodInfo(
+		renameDepartmentHandler,
+		newLoginServiceRenameDepartmentArgs,
+		newLoginServiceRenameDepartmentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"MoveDepartment": kitex.NewMethodInfo(
+		moveDepartmentHandler,
+		newLoginServiceMoveDepartmentArgs,
+		newLoginServiceMoveDepartmentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RemoveDepartment": kitex.NewMethodInfo(
+		removeDepartmentHandler,
+		newLoginServiceRemoveDepartmentArgs,
+		newLoginServiceRemoveDepartmentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SetMemberDepartment": kitex.NewMethodInfo(
+		setMemberDepartmentHandler,
+		newLoginServiceSetMemberDepartmentArgs,
+		newLoginServiceSetMemberDepartmentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListActiveUsers": kitex.NewMethodInfo(
+		listActiveUsersHandler,
+		newLoginServiceListActiveUsersArgs,
+		newLoginServiceListActiveUsersResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -604,6 +709,276 @@ func newLoginServiceUpdateBotUserNameResult() interface{} {
 	return user.NewLoginServiceUpdateBotUserNameResult()
 }
 
+func createTenantHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceCreateTenantArgs)
+	realResult := result.(*user.LoginServiceCreateTenantResult)
+	success, err := handler.(user.LoginService).CreateTenant(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceCreateTenantArgs() interface{} {
+	return user.NewLoginServiceCreateTenantArgs()
+}
+
+func newLoginServiceCreateTenantResult() interface{} {
+	return user.NewLoginServiceCreateTenantResult()
+}
+
+func listTenantsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceListTenantsArgs)
+	realResult := result.(*user.LoginServiceListTenantsResult)
+	success, err := handler.(user.LoginService).ListTenants(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceListTenantsArgs() interface{} {
+	return user.NewLoginServiceListTenantsArgs()
+}
+
+func newLoginServiceListTenantsResult() interface{} {
+	return user.NewLoginServiceListTenantsResult()
+}
+
+func getTenantHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceGetTenantArgs)
+	realResult := result.(*user.LoginServiceGetTenantResult)
+	success, err := handler.(user.LoginService).GetTenant(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceGetTenantArgs() interface{} {
+	return user.NewLoginServiceGetTenantArgs()
+}
+
+func newLoginServiceGetTenantResult() interface{} {
+	return user.NewLoginServiceGetTenantResult()
+}
+
+func updateTenantHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceUpdateTenantArgs)
+	realResult := result.(*user.LoginServiceUpdateTenantResult)
+	success, err := handler.(user.LoginService).UpdateTenant(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceUpdateTenantArgs() interface{} {
+	return user.NewLoginServiceUpdateTenantArgs()
+}
+
+func newLoginServiceUpdateTenantResult() interface{} {
+	return user.NewLoginServiceUpdateTenantResult()
+}
+
+func listTenantMembersHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceListTenantMembersArgs)
+	realResult := result.(*user.LoginServiceListTenantMembersResult)
+	success, err := handler.(user.LoginService).ListTenantMembers(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceListTenantMembersArgs() interface{} {
+	return user.NewLoginServiceListTenantMembersArgs()
+}
+
+func newLoginServiceListTenantMembersResult() interface{} {
+	return user.NewLoginServiceListTenantMembersResult()
+}
+
+func addTenantMemberHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceAddTenantMemberArgs)
+	realResult := result.(*user.LoginServiceAddTenantMemberResult)
+	success, err := handler.(user.LoginService).AddTenantMember(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceAddTenantMemberArgs() interface{} {
+	return user.NewLoginServiceAddTenantMemberArgs()
+}
+
+func newLoginServiceAddTenantMemberResult() interface{} {
+	return user.NewLoginServiceAddTenantMemberResult()
+}
+
+func setTenantMemberRoleHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceSetTenantMemberRoleArgs)
+	realResult := result.(*user.LoginServiceSetTenantMemberRoleResult)
+	success, err := handler.(user.LoginService).SetTenantMemberRole(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceSetTenantMemberRoleArgs() interface{} {
+	return user.NewLoginServiceSetTenantMemberRoleArgs()
+}
+
+func newLoginServiceSetTenantMemberRoleResult() interface{} {
+	return user.NewLoginServiceSetTenantMemberRoleResult()
+}
+
+func removeTenantMemberHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceRemoveTenantMemberArgs)
+	realResult := result.(*user.LoginServiceRemoveTenantMemberResult)
+	success, err := handler.(user.LoginService).RemoveTenantMember(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceRemoveTenantMemberArgs() interface{} {
+	return user.NewLoginServiceRemoveTenantMemberArgs()
+}
+
+func newLoginServiceRemoveTenantMemberResult() interface{} {
+	return user.NewLoginServiceRemoveTenantMemberResult()
+}
+
+func listDepartmentsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceListDepartmentsArgs)
+	realResult := result.(*user.LoginServiceListDepartmentsResult)
+	success, err := handler.(user.LoginService).ListDepartments(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceListDepartmentsArgs() interface{} {
+	return user.NewLoginServiceListDepartmentsArgs()
+}
+
+func newLoginServiceListDepartmentsResult() interface{} {
+	return user.NewLoginServiceListDepartmentsResult()
+}
+
+func createDepartmentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceCreateDepartmentArgs)
+	realResult := result.(*user.LoginServiceCreateDepartmentResult)
+	success, err := handler.(user.LoginService).CreateDepartment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceCreateDepartmentArgs() interface{} {
+	return user.NewLoginServiceCreateDepartmentArgs()
+}
+
+func newLoginServiceCreateDepartmentResult() interface{} {
+	return user.NewLoginServiceCreateDepartmentResult()
+}
+
+func renameDepartmentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceRenameDepartmentArgs)
+	realResult := result.(*user.LoginServiceRenameDepartmentResult)
+	success, err := handler.(user.LoginService).RenameDepartment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceRenameDepartmentArgs() interface{} {
+	return user.NewLoginServiceRenameDepartmentArgs()
+}
+
+func newLoginServiceRenameDepartmentResult() interface{} {
+	return user.NewLoginServiceRenameDepartmentResult()
+}
+
+func moveDepartmentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceMoveDepartmentArgs)
+	realResult := result.(*user.LoginServiceMoveDepartmentResult)
+	success, err := handler.(user.LoginService).MoveDepartment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceMoveDepartmentArgs() interface{} {
+	return user.NewLoginServiceMoveDepartmentArgs()
+}
+
+func newLoginServiceMoveDepartmentResult() interface{} {
+	return user.NewLoginServiceMoveDepartmentResult()
+}
+
+func removeDepartmentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceRemoveDepartmentArgs)
+	realResult := result.(*user.LoginServiceRemoveDepartmentResult)
+	success, err := handler.(user.LoginService).RemoveDepartment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceRemoveDepartmentArgs() interface{} {
+	return user.NewLoginServiceRemoveDepartmentArgs()
+}
+
+func newLoginServiceRemoveDepartmentResult() interface{} {
+	return user.NewLoginServiceRemoveDepartmentResult()
+}
+
+func setMemberDepartmentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceSetMemberDepartmentArgs)
+	realResult := result.(*user.LoginServiceSetMemberDepartmentResult)
+	success, err := handler.(user.LoginService).SetMemberDepartment(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceSetMemberDepartmentArgs() interface{} {
+	return user.NewLoginServiceSetMemberDepartmentArgs()
+}
+
+func newLoginServiceSetMemberDepartmentResult() interface{} {
+	return user.NewLoginServiceSetMemberDepartmentResult()
+}
+
+func listActiveUsersHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*user.LoginServiceListActiveUsersArgs)
+	realResult := result.(*user.LoginServiceListActiveUsersResult)
+	success, err := handler.(user.LoginService).ListActiveUsers(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newLoginServiceListActiveUsersArgs() interface{} {
+	return user.NewLoginServiceListActiveUsersArgs()
+}
+
+func newLoginServiceListActiveUsersResult() interface{} {
+	return user.NewLoginServiceListActiveUsersResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -819,6 +1194,156 @@ func (p *kClient) UpdateBotUserName(ctx context.Context, req *user.UpdateBotUser
 	_args.Req = req
 	var _result user.LoginServiceUpdateBotUserNameResult
 	if err = p.c.Call(ctx, "UpdateBotUserName", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateTenant(ctx context.Context, req *user.CreateTenantReq) (r *user.CreateTenantRes, err error) {
+	var _args user.LoginServiceCreateTenantArgs
+	_args.Req = req
+	var _result user.LoginServiceCreateTenantResult
+	if err = p.c.Call(ctx, "CreateTenant", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTenants(ctx context.Context, req *user.ListTenantsReq) (r *user.ListTenantsRes, err error) {
+	var _args user.LoginServiceListTenantsArgs
+	_args.Req = req
+	var _result user.LoginServiceListTenantsResult
+	if err = p.c.Call(ctx, "ListTenants", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTenant(ctx context.Context, req *user.GetTenantReq) (r *user.GetTenantRes, err error) {
+	var _args user.LoginServiceGetTenantArgs
+	_args.Req = req
+	var _result user.LoginServiceGetTenantResult
+	if err = p.c.Call(ctx, "GetTenant", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateTenant(ctx context.Context, req *user.UpdateTenantReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceUpdateTenantArgs
+	_args.Req = req
+	var _result user.LoginServiceUpdateTenantResult
+	if err = p.c.Call(ctx, "UpdateTenant", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTenantMembers(ctx context.Context, req *user.ListTenantMembersReq) (r *user.ListTenantMembersRes, err error) {
+	var _args user.LoginServiceListTenantMembersArgs
+	_args.Req = req
+	var _result user.LoginServiceListTenantMembersResult
+	if err = p.c.Call(ctx, "ListTenantMembers", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AddTenantMember(ctx context.Context, req *user.AddTenantMemberReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceAddTenantMemberArgs
+	_args.Req = req
+	var _result user.LoginServiceAddTenantMemberResult
+	if err = p.c.Call(ctx, "AddTenantMember", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SetTenantMemberRole(ctx context.Context, req *user.SetTenantMemberRoleReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceSetTenantMemberRoleArgs
+	_args.Req = req
+	var _result user.LoginServiceSetTenantMemberRoleResult
+	if err = p.c.Call(ctx, "SetTenantMemberRole", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RemoveTenantMember(ctx context.Context, req *user.RemoveTenantMemberReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceRemoveTenantMemberArgs
+	_args.Req = req
+	var _result user.LoginServiceRemoveTenantMemberResult
+	if err = p.c.Call(ctx, "RemoveTenantMember", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListDepartments(ctx context.Context, req *user.ListDepartmentsReq) (r *user.ListDepartmentsRes, err error) {
+	var _args user.LoginServiceListDepartmentsArgs
+	_args.Req = req
+	var _result user.LoginServiceListDepartmentsResult
+	if err = p.c.Call(ctx, "ListDepartments", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateDepartment(ctx context.Context, req *user.CreateDepartmentReq) (r *user.CreateDepartmentRes, err error) {
+	var _args user.LoginServiceCreateDepartmentArgs
+	_args.Req = req
+	var _result user.LoginServiceCreateDepartmentResult
+	if err = p.c.Call(ctx, "CreateDepartment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RenameDepartment(ctx context.Context, req *user.RenameDepartmentReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceRenameDepartmentArgs
+	_args.Req = req
+	var _result user.LoginServiceRenameDepartmentResult
+	if err = p.c.Call(ctx, "RenameDepartment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MoveDepartment(ctx context.Context, req *user.MoveDepartmentReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceMoveDepartmentArgs
+	_args.Req = req
+	var _result user.LoginServiceMoveDepartmentResult
+	if err = p.c.Call(ctx, "MoveDepartment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RemoveDepartment(ctx context.Context, req *user.RemoveDepartmentReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceRemoveDepartmentArgs
+	_args.Req = req
+	var _result user.LoginServiceRemoveDepartmentResult
+	if err = p.c.Call(ctx, "RemoveDepartment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SetMemberDepartment(ctx context.Context, req *user.SetMemberDepartmentReq) (r *user.CommonRes, err error) {
+	var _args user.LoginServiceSetMemberDepartmentArgs
+	_args.Req = req
+	var _result user.LoginServiceSetMemberDepartmentResult
+	if err = p.c.Call(ctx, "SetMemberDepartment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListActiveUsers(ctx context.Context, req *user.ListActiveUsersReq) (r *user.ListActiveUsersRes, err error) {
+	var _args user.LoginServiceListActiveUsersArgs
+	_args.Req = req
+	var _result user.LoginServiceListActiveUsersResult
+	if err = p.c.Call(ctx, "ListActiveUsers", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -14,6 +14,11 @@ type Client interface {
 	SummarizeConversation(ctx context.Context, req *work.SummarizeConversationReq, callOptions ...callopt.Option) (r *work.SummarizeConversationRes, err error)
 	SuggestReplies(ctx context.Context, req *work.SuggestRepliesReq, callOptions ...callopt.Option) (r *work.SuggestRepliesRes, err error)
 	TranslateMessage(ctx context.Context, req *work.TranslateMessageReq, callOptions ...callopt.Option) (r *work.TranslateMessageRes, err error)
+	GenerateSummary(ctx context.Context, req *work.GenerateSummaryReq, callOptions ...callopt.Option) (r *work.GenerateSummaryRes, err error)
+	GetSummaryReport(ctx context.Context, req *work.GetSummaryReportReq, callOptions ...callopt.Option) (r *work.GetSummaryReportRes, err error)
+	ListSummaryReports(ctx context.Context, req *work.ListSummaryReportsReq, callOptions ...callopt.Option) (r *work.ListSummaryReportsRes, err error)
+	GetSummarySchedule(ctx context.Context, req *work.GetSummaryScheduleReq, callOptions ...callopt.Option) (r *work.GetSummaryScheduleRes, err error)
+	SetSummarySchedule(ctx context.Context, req *work.SetSummaryScheduleReq, callOptions ...callopt.Option) (r *work.SetSummaryScheduleRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -58,4 +63,29 @@ func (p *kWorkServiceClient) SuggestReplies(ctx context.Context, req *work.Sugge
 func (p *kWorkServiceClient) TranslateMessage(ctx context.Context, req *work.TranslateMessageReq, callOptions ...callopt.Option) (r *work.TranslateMessageRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.TranslateMessage(ctx, req)
+}
+
+func (p *kWorkServiceClient) GenerateSummary(ctx context.Context, req *work.GenerateSummaryReq, callOptions ...callopt.Option) (r *work.GenerateSummaryRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GenerateSummary(ctx, req)
+}
+
+func (p *kWorkServiceClient) GetSummaryReport(ctx context.Context, req *work.GetSummaryReportReq, callOptions ...callopt.Option) (r *work.GetSummaryReportRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetSummaryReport(ctx, req)
+}
+
+func (p *kWorkServiceClient) ListSummaryReports(ctx context.Context, req *work.ListSummaryReportsReq, callOptions ...callopt.Option) (r *work.ListSummaryReportsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListSummaryReports(ctx, req)
+}
+
+func (p *kWorkServiceClient) GetSummarySchedule(ctx context.Context, req *work.GetSummaryScheduleReq, callOptions ...callopt.Option) (r *work.GetSummaryScheduleRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetSummarySchedule(ctx, req)
+}
+
+func (p *kWorkServiceClient) SetSummarySchedule(ctx context.Context, req *work.SetSummaryScheduleReq, callOptions ...callopt.Option) (r *work.SetSummaryScheduleRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SetSummarySchedule(ctx, req)
 }

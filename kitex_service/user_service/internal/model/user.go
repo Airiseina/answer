@@ -13,6 +13,7 @@ type BaseModel struct {
 
 type User struct {
 	BaseModel
+	TenantID  int64  `json:"tenant_id" gorm:"not null;default:0;index"` // 用户归属的默认租户（个人租户）
 	Account   string `json:"account" gorm:"type:varchar(20);uniqueIndex;not null"`
 	Name      string `json:"name" gorm:"type:varchar(20);not null"`
 	Hash      string `json:"hash" gorm:"not null"`
@@ -28,22 +29,25 @@ const (
 
 type FriendRequest struct {
 	BaseModel
-	Sender   int64  `json:"sender" gorm:"index:idx_sender_receiver,unique;not null"`
-	Receiver int64  `json:"receiver" gorm:"index:idx_sender_receiver,unique;not null"`
+	TenantID int64  `json:"tenant_id" gorm:"not null;default:0;index;uniqueIndex:idx_tenant_sender_receiver"`
+	Sender   int64  `json:"sender" gorm:"index:idx_tenant_sender_receiver,unique;not null"`
+	Receiver int64  `json:"receiver" gorm:"index:idx_tenant_sender_receiver,unique;not null"`
 	Status   int64  `json:"status" gorm:"type:tinyint;default:0;not null"`
 	Message  string `json:"message" gorm:"type:varchar(200)"`
 }
 
 type Friend struct {
 	BaseModel
-	UserID   int64  `json:"user_id" gorm:"index:idx_user_friend,unique;not null"`
-	FriendID int64  `json:"friend_id" gorm:"index:idx_user_friend,unique;not null"`
+	TenantID int64  `json:"tenant_id" gorm:"not null;default:0;index;uniqueIndex:idx_tenant_user_friend"`
+	UserID   int64  `json:"user_id" gorm:"index:idx_tenant_user_friend,unique;not null"`
+	FriendID int64  `json:"friend_id" gorm:"index:idx_tenant_user_friend,unique;not null"`
 	GroupID  int64  `json:"group_id" gorm:"index:idx_group;default:0;not null"`
 	Remark   string `json:"remark" gorm:"type:varchar(50)"`
 }
 
 type FriendGroup struct {
 	BaseModel
-	UserID int64  `json:"user_id" gorm:"index:idx_user_group,unique;not null"`
-	Name   string `json:"name" gorm:"type:varchar(50);index:idx_user_group,unique;not null"`
+	TenantID int64  `json:"tenant_id" gorm:"not null;default:0;index;uniqueIndex:idx_tenant_user_group"`
+	UserID   int64  `json:"user_id" gorm:"index:idx_tenant_user_group,unique;not null"`
+	Name     string `json:"name" gorm:"type:varchar(50);index:idx_tenant_user_group,unique;not null"`
 }

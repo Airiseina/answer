@@ -24,6 +24,27 @@ type Client interface {
 	GetBotMcpServers(ctx context.Context, req *bot.GetBotMcpServersReq, callOptions ...callopt.Option) (r *bot.GetBotMcpServersRes, err error)
 	UpdateMcpServer(ctx context.Context, req *bot.UpdateMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
 	DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	PublishMarketBot(ctx context.Context, req *bot.PublishMarketBotReq, callOptions ...callopt.Option) (r *bot.PublishMarketBotRes, err error)
+	UpdateMarketBot(ctx context.Context, req *bot.UpdateMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	GetMarketBot(ctx context.Context, req *bot.GetMarketBotReq, callOptions ...callopt.Option) (r *bot.GetMarketBotRes, err error)
+	ListMarketBots(ctx context.Context, req *bot.ListMarketBotsReq, callOptions ...callopt.Option) (r *bot.ListMarketBotsRes, err error)
+	ListMyMarketBots(ctx context.Context, req *bot.ListMyMarketBotsReq, callOptions ...callopt.Option) (r *bot.ListMyMarketBotsRes, err error)
+	InstallMarketBot(ctx context.Context, req *bot.InstallMarketBotReq, callOptions ...callopt.Option) (r *bot.InstallMarketBotRes, err error)
+	RateMarketBot(ctx context.Context, req *bot.RateMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	OfflineMarketBot(ctx context.Context, req *bot.OfflineMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	ListMarketReviews(ctx context.Context, req *bot.ListMarketReviewsReq, callOptions ...callopt.Option) (r *bot.ListMarketReviewsRes, err error)
+	ReviewMarketBot(ctx context.Context, req *bot.ReviewMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	UploadUserSkill(ctx context.Context, req *bot.UploadUserSkillReq, callOptions ...callopt.Option) (r *bot.UploadUserSkillRes, err error)
+	ListUserSkills(ctx context.Context, req *bot.ListUserSkillsReq, callOptions ...callopt.Option) (r *bot.ListUserSkillsRes, err error)
+	GetUserSkill(ctx context.Context, req *bot.GetUserSkillReq, callOptions ...callopt.Option) (r *bot.GetUserSkillRes, err error)
+	DeleteUserSkill(ctx context.Context, req *bot.DeleteUserSkillReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	BindUserSkill(ctx context.Context, req *bot.BindUserSkillReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	ListBotSkills(ctx context.Context, req *bot.ListBotSkillsReq, callOptions ...callopt.Option) (r *bot.ListBotSkillsRes, err error)
+	SaveAgentGraph(ctx context.Context, req *bot.SaveAgentGraphReq, callOptions ...callopt.Option) (r *bot.SaveAgentGraphRes, err error)
+	GetAgentGraph(ctx context.Context, req *bot.GetAgentGraphReq, callOptions ...callopt.Option) (r *bot.GetAgentGraphRes, err error)
+	ValidateAgentGraph(ctx context.Context, req *bot.ValidateAgentGraphReq, callOptions ...callopt.Option) (r *bot.ValidateAgentGraphRes, err error)
+	PublishAgentGraph(ctx context.Context, req *bot.PublishAgentGraphReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error)
+	ListAgentGraphHistory(ctx context.Context, req *bot.ListAgentGraphHistoryReq, callOptions ...callopt.Option) (r *bot.ListAgentGraphHistoryRes, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -118,4 +139,109 @@ func (p *kBotServiceClient) UpdateMcpServer(ctx context.Context, req *bot.Update
 func (p *kBotServiceClient) DeleteMcpServer(ctx context.Context, req *bot.DeleteMcpServerReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.DeleteMcpServer(ctx, req)
+}
+
+func (p *kBotServiceClient) PublishMarketBot(ctx context.Context, req *bot.PublishMarketBotReq, callOptions ...callopt.Option) (r *bot.PublishMarketBotRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.PublishMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) UpdateMarketBot(ctx context.Context, req *bot.UpdateMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) GetMarketBot(ctx context.Context, req *bot.GetMarketBotReq, callOptions ...callopt.Option) (r *bot.GetMarketBotRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) ListMarketBots(ctx context.Context, req *bot.ListMarketBotsReq, callOptions ...callopt.Option) (r *bot.ListMarketBotsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMarketBots(ctx, req)
+}
+
+func (p *kBotServiceClient) ListMyMarketBots(ctx context.Context, req *bot.ListMyMarketBotsReq, callOptions ...callopt.Option) (r *bot.ListMyMarketBotsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMyMarketBots(ctx, req)
+}
+
+func (p *kBotServiceClient) InstallMarketBot(ctx context.Context, req *bot.InstallMarketBotReq, callOptions ...callopt.Option) (r *bot.InstallMarketBotRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.InstallMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) RateMarketBot(ctx context.Context, req *bot.RateMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RateMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) OfflineMarketBot(ctx context.Context, req *bot.OfflineMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.OfflineMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) ListMarketReviews(ctx context.Context, req *bot.ListMarketReviewsReq, callOptions ...callopt.Option) (r *bot.ListMarketReviewsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMarketReviews(ctx, req)
+}
+
+func (p *kBotServiceClient) ReviewMarketBot(ctx context.Context, req *bot.ReviewMarketBotReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ReviewMarketBot(ctx, req)
+}
+
+func (p *kBotServiceClient) UploadUserSkill(ctx context.Context, req *bot.UploadUserSkillReq, callOptions ...callopt.Option) (r *bot.UploadUserSkillRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UploadUserSkill(ctx, req)
+}
+
+func (p *kBotServiceClient) ListUserSkills(ctx context.Context, req *bot.ListUserSkillsReq, callOptions ...callopt.Option) (r *bot.ListUserSkillsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListUserSkills(ctx, req)
+}
+
+func (p *kBotServiceClient) GetUserSkill(ctx context.Context, req *bot.GetUserSkillReq, callOptions ...callopt.Option) (r *bot.GetUserSkillRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetUserSkill(ctx, req)
+}
+
+func (p *kBotServiceClient) DeleteUserSkill(ctx context.Context, req *bot.DeleteUserSkillReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteUserSkill(ctx, req)
+}
+
+func (p *kBotServiceClient) BindUserSkill(ctx context.Context, req *bot.BindUserSkillReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BindUserSkill(ctx, req)
+}
+
+func (p *kBotServiceClient) ListBotSkills(ctx context.Context, req *bot.ListBotSkillsReq, callOptions ...callopt.Option) (r *bot.ListBotSkillsRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListBotSkills(ctx, req)
+}
+
+func (p *kBotServiceClient) SaveAgentGraph(ctx context.Context, req *bot.SaveAgentGraphReq, callOptions ...callopt.Option) (r *bot.SaveAgentGraphRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SaveAgentGraph(ctx, req)
+}
+
+func (p *kBotServiceClient) GetAgentGraph(ctx context.Context, req *bot.GetAgentGraphReq, callOptions ...callopt.Option) (r *bot.GetAgentGraphRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAgentGraph(ctx, req)
+}
+
+func (p *kBotServiceClient) ValidateAgentGraph(ctx context.Context, req *bot.ValidateAgentGraphReq, callOptions ...callopt.Option) (r *bot.ValidateAgentGraphRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ValidateAgentGraph(ctx, req)
+}
+
+func (p *kBotServiceClient) PublishAgentGraph(ctx context.Context, req *bot.PublishAgentGraphReq, callOptions ...callopt.Option) (r *bot.CommonRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.PublishAgentGraph(ctx, req)
+}
+
+func (p *kBotServiceClient) ListAgentGraphHistory(ctx context.Context, req *bot.ListAgentGraphHistoryReq, callOptions ...callopt.Option) (r *bot.ListAgentGraphHistoryRes, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListAgentGraphHistory(ctx, req)
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/Airiseina/answer/kitex_service/bot_service/internal/service"
 	"github.com/Airiseina/answer/kitex_service/bot_service/kitex_gen/bot/botservice"
 	"github.com/Airiseina/answer/kitex_service/bot_service/rpc"
+	"github.com/Airiseina/answer/pkg/audit"
 	"github.com/Airiseina/answer/pkg/infra"
 	"github.com/Airiseina/answer/pkg/observability/meter"
 	"github.com/Airiseina/answer/pkg/observability/tracer"
@@ -68,7 +69,9 @@ func main() {
 		klog.Fatalf("连接数据库失败:%v", err)
 	}
 	storage.Init(v)
-	err = db.AutoMigrate(&model.Bot{}, &model.McpServer{})
+	err = db.AutoMigrate(&model.Bot{}, &model.McpServer{}, &model.MarketBot{}, &model.MarketBotInstall{},
+		&model.MarketBotRating{}, &model.AgentGraph{}, &model.AgentGraphHistory{},
+		&model.UserSkill{}, &model.UserSkillFile{}, &model.BotSkill{}, &audit.Log{})
 	if err != nil {
 		klog.Fatalf("数据库建表失败:%v", err)
 	}
@@ -76,12 +79,22 @@ func main() {
 	mcpServerDao := dal.NewMcpServerDao(db)
 	botService := service.NewBotService(botDao)
 	mcpServerService := service.NewMcpServerService(mcpServerDao, botDao)
+	marketService := service.NewMarketService(dal.NewMarketBotDao(db), dal.NewMarketInstallDao(db),
+		dal.NewMarketRatingDao(db), botDao, botService, audit.NewRecorder(db))
+	agentGraphService := service.NewAgentGraphService(dal.NewAgentGraphDao(db), botDao, audit.NewRecorder(db))
+	skillService := service.NewSkillService(dal.NewUserSkillDao(db), botDao, audit.NewRecorder(db))
 	systemBotId, err := botService.InitSystemBot(context.Background())
 	if err != nil {
 		klog.Fatalf("系统Bot初始化失败:%v", err)
 	}
 	klog.Infof("系统Bot ID: %d", systemBotId)
-	svr := botservice.NewServer(&BotServiceImpl{botService: botService, mcpServerService: mcpServerService},
+	svr := botservice.NewServer(&BotServiceImpl{
+		botService:        botService,
+		mcpServerService:  mcpServerService,
+		marketService:     marketService,
+		agentGraphService: agentGraphService,
+		skillService:      skillService,
+	},
 		server.WithSuite(tracing.NewServerSuite()),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: "botservice"}),
 		server.WithServiceAddr(addr),

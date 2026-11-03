@@ -40,22 +40,29 @@ func (g *Neo4jGraph) EnsureConstraints(ctx context.Context) error {
 	session := g.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close(ctx)
 
-	// Chunk节点唯一约束
-	_, err := session.Run(ctx,
-		"CREATE CONSTRAINT chunk_id IF NOT EXISTS FOR (c:Chunk) REQUIRE c.chunk_id IS UNIQUE",
-		nil,
-	)
-	if err != nil {
-		klog.Warnf("创建Chunk约束失败(可能已存在): %v", err)
+	// 多租户改造：唯一键带上 tenant_id，允许不同租户存在同名实体/分块。
+	// 旧的全局唯一约束会阻止跨租户同名数据共存，需要先清理。
+	for _, stmt := range []string{
+		"DROP CONSTRAINT chunk_id IF EXISTS",
+		"DROP CONSTRAINT entity_name IF EXISTS",
+	} {
+		if _, err := session.Run(ctx, stmt, nil); err != nil {
+			klog.Warnf("清理旧图谱约束失败(可能不存在): %v", err)
+		}
 	}
 
-	// Entity节点唯一约束
-	_, err = session.Run(ctx,
-		"CREATE CONSTRAINT entity_name IF NOT EXISTS FOR (e:Entity) REQUIRE e.name IS UNIQUE",
+	if _, err := session.Run(ctx,
+		"CREATE CONSTRAINT chunk_tenant_id IF NOT EXISTS FOR (c:Chunk) REQUIRE (c.tenant_id, c.chunk_id) IS UNIQUE",
 		nil,
-	)
-	if err != nil {
-		klog.Warnf("创建Entity约束失败(可能已存在): %v", err)
+	); err != nil {
+		klog.Warnf("创建Chunk租户约束失败(可能已存在): %v", err)
+	}
+
+	if _, err := session.Run(ctx,
+		"CREATE CONSTRAINT entity_tenant_name IF NOT EXISTS FOR (e:Entity) REQUIRE (e.tenant_id, e.name) IS UNIQUE",
+		nil,
+	); err != nil {
+		klog.Warnf("创建Entity租户约束失败(可能已存在): %v", err)
 	}
 
 	return nil
@@ -64,6 +71,7 @@ func (g *Neo4jGraph) EnsureConstraints(ctx context.Context) error {
 // ChunkData 分块数据，用于图索引
 type ChunkData struct {
 	ChunkID    string
+	TenantID   int64
 	KBID       int64
 	DocID      int64
 	Content    string
@@ -74,6 +82,7 @@ type ChunkData struct {
 // EntityData 实体数据
 type EntityData struct {
 	Name        string
+	TenantID    int64
 	Type        string // 实体类型：Person, Organization, Concept, Technology等
 	Description string
 	ChunkIDs    []string // 关联的分块ID
@@ -84,6 +93,7 @@ type RelationData struct {
 	SourceEntity string
 	TargetEntity string
 	RelationType string
+	TenantID     int64
 }
 
 // IndexChunks 将文档分块索引到知识图谱
@@ -96,11 +106,12 @@ func (g *Neo4jGraph) IndexChunks(ctx context.Context, chunks []ChunkData) error 
 		for _, chunk := range chunks {
 			// 创建Chunk节点
 			_, err := tx.Run(ctx,
-				`MERGE (c:Chunk {chunk_id: $chunk_id})
+				`MERGE (c:Chunk {tenant_id: $tenant_id, chunk_id: $chunk_id})
 				 SET c.kb_id = $kb_id, c.doc_id = $doc_id, c.content = $content,
 				     c.chunk_index = $chunk_index, c.source = $source`,
 				map[string]interface{}{
 					"chunk_id":    chunk.ChunkID,
+					"tenant_id":   chunk.TenantID,
 					"kb_id":       chunk.KBID,
 					"doc_id":      chunk.DocID,
 					"content":     chunk.Content,
@@ -126,10 +137,11 @@ func (g *Neo4jGraph) IndexEntities(ctx context.Context, entities []EntityData, r
 		// 创建实体节点并关联到Chunk
 		for _, entity := range entities {
 			_, err := tx.Run(ctx,
-				`MERGE (e:Entity {name: $name})
+				`MERGE (e:Entity {tenant_id: $tenant_id, name: $name})
 				 SET e.type = $type, e.description = $description`,
 				map[string]interface{}{
 					"name":        entity.Name,
+					"tenant_id":   entity.TenantID,
 					"type":        entity.Type,
 					"description": entity.Description,
 				},
@@ -142,11 +154,12 @@ func (g *Neo4jGraph) IndexEntities(ctx context.Context, entities []EntityData, r
 			// 关联实体到Chunk
 			for _, chunkID := range entity.ChunkIDs {
 				_, err := tx.Run(ctx,
-					`MATCH (e:Entity {name: $name}), (c:Chunk {chunk_id: $chunk_id})
+					`MATCH (e:Entity {tenant_id: $tenant_id, name: $name}), (c:Chunk {tenant_id: $tenant_id, chunk_id: $chunk_id})
 					 MERGE (e)-[:MENTIONED_IN]->(c)`,
 					map[string]interface{}{
-						"name":     entity.Name,
-						"chunk_id": chunkID,
+						"name":      entity.Name,
+						"tenant_id": entity.TenantID,
+						"chunk_id":  chunkID,
 					},
 				)
 				if err != nil {
@@ -159,13 +172,14 @@ func (g *Neo4jGraph) IndexEntities(ctx context.Context, entities []EntityData, r
 		for _, rel := range relations {
 			_, err := tx.Run(ctx,
 				fmt.Sprintf(
-					`MATCH (s:Entity {name: $source}), (t:Entity {name: $target})
+					`MATCH (s:Entity {tenant_id: $tenant_id, name: $source}), (t:Entity {tenant_id: $tenant_id, name: $target})
 					 MERGE (s)-[:%s]->(t)`,
 					sanitizeRelType(rel.RelationType),
 				),
 				map[string]interface{}{
-					"source": rel.SourceEntity,
-					"target": rel.TargetEntity,
+					"source":    rel.SourceEntity,
+					"target":    rel.TargetEntity,
+					"tenant_id": rel.TenantID,
 				},
 			)
 			if err != nil {
@@ -190,7 +204,7 @@ type GraphSearchResult struct {
 
 // SearchByKeywords 通过关键词在图谱中检索相关Chunk
 // 策略：匹配Chunk内容中的关键词，并通过实体关系扩展检索范围
-func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, kbIDs []int64, keywords []string, topK int) ([]GraphSearchResult, error) {
+func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, tenantID int64, kbIDs []int64, keywords []string, topK int) ([]GraphSearchResult, error) {
 	if len(keywords) == 0 {
 		return nil, nil
 	}
@@ -209,6 +223,7 @@ func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, kbIDs []int64, keywor
 		query := `
 			MATCH (c:Chunk)
 			WHERE c.kb_id IN $kb_ids
+			  AND ($tenant_id = 0 OR c.tenant_id = $tenant_id)
 			  AND ANY(keyword IN $keywords WHERE toLower(c.content) CONTAINS toLower(keyword))
 			WITH c, size([kw IN $keywords WHERE toLower(c.content) CONTAINS toLower(kw)]) AS matchCount
 			ORDER BY matchCount DESC
@@ -220,6 +235,7 @@ func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, kbIDs []int64, keywor
 			"kb_ids":   kbIDList,
 			"keywords": keywords,
 			"top_k":    topK,
+			"tenant_id": tenantID,
 		})
 		if err != nil {
 			return nil, err
@@ -257,7 +273,7 @@ func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, kbIDs []int64, keywor
 	}
 
 	// 第二步：通过实体关系扩展检索（使用新session）
-	expandedResults, err := g.searchByEntityExpansion(ctx, kbIDList, keywords, topK)
+	expandedResults, err := g.searchByEntityExpansion(ctx, tenantID, kbIDList, keywords, topK)
 	if err != nil {
 		klog.Warnf("图谱实体扩展检索失败，仅使用直接匹配结果: %v", err)
 		return directResults, nil
@@ -269,20 +285,22 @@ func (g *Neo4jGraph) SearchByKeywords(ctx context.Context, kbIDs []int64, keywor
 
 // searchByEntityExpansion 通过实体关系扩展检索
 // 找到与关键词匹配的实体，然后通过关系找到关联的Chunk
-func (g *Neo4jGraph) searchByEntityExpansion(ctx context.Context, kbIDs []interface{}, keywords []string, topK int) ([]GraphSearchResult, error) {
+func (g *Neo4jGraph) searchByEntityExpansion(ctx context.Context, tenantID int64, kbIDs []interface{}, keywords []string, topK int) ([]GraphSearchResult, error) {
 	session := g.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 	result, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
 		query := `
 			// 找到名称匹配关键词的实体
 			MATCH (e:Entity)
-			WHERE ANY(kw IN $keywords WHERE toLower(e.name) CONTAINS toLower(kw))
+			WHERE ($tenant_id = 0 OR e.tenant_id = $tenant_id)
+			  AND ANY(kw IN $keywords WHERE toLower(e.name) CONTAINS toLower(kw))
 			// 通过实体找到关联的Chunk
 			MATCH (e)-[:MENTIONED_IN]->(c:Chunk)
-			WHERE c.kb_id IN $kb_ids
+			WHERE c.kb_id IN $kb_ids AND ($tenant_id = 0 OR c.tenant_id = $tenant_id)
 			// 也通过实体间关系扩展到相邻实体关联的Chunk
 			OPTIONAL MATCH (e)-[]-(related:Entity)-[:MENTIONED_IN]->(rc:Chunk)
-			WHERE rc.kb_id IN $kb_ids
+			WHERE rc.kb_id IN $kb_ids AND ($tenant_id = 0 OR rc.tenant_id = $tenant_id)
+			  AND ($tenant_id = 0 OR related.tenant_id = $tenant_id)
 			WITH collect(DISTINCT c) + collect(DISTINCT rc) AS allChunks
 			UNWIND allChunks AS chunk
 			WITH DISTINCT chunk
@@ -294,6 +312,7 @@ func (g *Neo4jGraph) searchByEntityExpansion(ctx context.Context, kbIDs []interf
 			"kb_ids":   kbIDs,
 			"keywords": keywords,
 			"top_k":    topK,
+			"tenant_id": tenantID,
 		})
 		if err != nil {
 			return nil, err
@@ -333,7 +352,7 @@ func (g *Neo4jGraph) searchByEntityExpansion(ctx context.Context, kbIDs []interf
 }
 
 // DeleteByDocID 删除文档关联的所有图节点
-func (g *Neo4jGraph) DeleteByDocID(ctx context.Context, docID int64) error {
+func (g *Neo4jGraph) DeleteByDocID(ctx context.Context, tenantID, docID int64) error {
 	session := g.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close(ctx)
 
@@ -341,8 +360,9 @@ func (g *Neo4jGraph) DeleteByDocID(ctx context.Context, docID int64) error {
 		// 删除文档关联的Chunk节点及其关系
 		_, err := tx.Run(ctx,
 			`MATCH (c:Chunk {doc_id: $doc_id})
+			 WHERE ($tenant_id = 0 OR c.tenant_id = $tenant_id)
 			 DETACH DELETE c`,
-			map[string]interface{}{"doc_id": docID},
+			map[string]interface{}{"doc_id": docID, "tenant_id": tenantID},
 		)
 		return nil, err
 	})
@@ -375,7 +395,8 @@ func (g *Neo4jGraph) GetAllChunksByDoc(ctx context.Context) (map[int64][]ChunkDa
 		records, err := tx.Run(ctx,
 			`MATCH (c:Chunk)
 			 RETURN c.chunk_id AS chunk_id, c.kb_id AS kb_id, c.doc_id AS doc_id,
-			        c.content AS content, c.chunk_index AS chunk_index, c.source AS source`,
+			        c.content AS content, c.chunk_index AS chunk_index, c.source AS source,
+			        c.tenant_id AS tenant_id`,
 			nil,
 		)
 		if err != nil {
@@ -391,10 +412,12 @@ func (g *Neo4jGraph) GetAllChunksByDoc(ctx context.Context) (map[int64][]ChunkDa
 			content, _ := record.Get("content")
 			chunkIndex, _ := record.Get("chunk_index")
 			source, _ := record.Get("source")
+			tenantID, _ := record.Get("tenant_id")
 
 			docIDVal := toInt64(docID)
 			docChunks[docIDVal] = append(docChunks[docIDVal], ChunkData{
 				ChunkID:    toString(chunkID),
+				TenantID:   toInt64(tenantID),
 				KBID:       toInt64(kbID),
 				DocID:      docIDVal,
 				Content:    toString(content),

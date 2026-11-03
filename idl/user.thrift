@@ -3,6 +3,12 @@ namespace go user
 struct CommonRes{
 1:bool success
 }
+struct TenantBrief{
+1:i64 id,
+2:string name,
+3:bool is_personal,
+4:i16 role,
+}
 struct RegisterReq{
 1:string account,
 2:string name,
@@ -19,6 +25,8 @@ struct LoginRes{
 1:i64 id,
 2:string account,
 3:string avatar_url,
+4:list<TenantBrief> tenants,
+5:i64 personal_tenant_id,
 }
 struct CheckUsersExistReq{
 1:list<i64> userIds,
@@ -161,6 +169,147 @@ struct UpdateBotUserNameReq{
 1:i64 user_id,
 2:string name,
 }
+
+// ===== 多租户（Phase 1）=====
+
+struct TenantInfo{
+1:i64 id,
+2:string name,
+3:string code,
+4:string logo_url,
+5:i64 owner_id,
+6:bool is_personal,
+7:i16 role,          // 当前用户在该租户的角色：2=owner 1=admin 0=member
+8:i64 member_count,
+9:i16 status,
+}
+struct CreateTenantReq{
+1:i64 user_id,
+2:string name,
+3:string logo_url,
+}
+struct CreateTenantRes{
+1:bool success,
+2:TenantInfo tenant,
+}
+struct ListTenantsReq{
+1:i64 user_id,
+}
+struct ListTenantsRes{
+1:list<TenantInfo> tenants,
+}
+struct GetTenantReq{
+1:i64 user_id,
+2:i64 tenant_id,
+}
+struct GetTenantRes{
+1:TenantInfo tenant,
+}
+struct UpdateTenantReq{
+1:i64 user_id,
+2:i64 tenant_id,
+3:string name,
+4:string logo_url,
+}
+struct TenantMemberInfo{
+1:i64 user_id,
+2:string account,
+3:string name,
+4:string avatar_url,
+5:i16 role,
+6:i64 dept_id,
+7:i16 status,
+}
+struct ListTenantMembersReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+}
+struct ListTenantMembersRes{
+1:list<TenantMemberInfo> members,
+}
+struct AddTenantMemberReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:string account,      // 本轮按账号直接添加（不做邀请码）
+4:i16 role,
+5:i64 dept_id,
+}
+struct SetTenantMemberRoleReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 user_id,
+4:i16 role,
+}
+struct RemoveTenantMemberReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 user_id,
+}
+struct TenantDepartmentInfo{
+1:i64 id,
+2:i64 tenant_id,
+3:i64 parent_id,
+4:string name,
+5:i32 order,
+}
+struct ListDepartmentsReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+}
+struct ListDepartmentsRes{
+1:list<TenantDepartmentInfo> departments,
+}
+struct CreateDepartmentReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 parent_id,
+4:string name,
+}
+struct CreateDepartmentRes{
+1:bool success,
+2:i64 dept_id,
+}
+struct RenameDepartmentReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 dept_id,
+4:string name,
+}
+struct MoveDepartmentReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 dept_id,
+4:i64 parent_id,
+}
+struct RemoveDepartmentReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 dept_id,
+}
+struct SetMemberDepartmentReq{
+1:i64 operator_id,
+2:i64 tenant_id,
+3:i64 user_id,
+4:i64 dept_id,
+}
+
+// ===== 系统任务枚举（Phase 4 日/周总结调度使用）=====
+
+// ListActiveUsersReq 游标式枚举非 Bot 用户，供后台定时任务逐个生成总结
+struct ListActiveUsersReq{
+1:i64 after_user_id,   // 只返回 id > after_user_id 的用户，首页传 0
+2:i32 limit,           // 单页条数，默认500，上限1000
+}
+
+struct ActiveUserInfo{
+1:i64 user_id,
+2:i64 tenant_id,       // 用户的个人租户 ID
+}
+
+struct ListActiveUsersRes{
+1:list<ActiveUserInfo> users,
+}
+
 service LoginService{
 RegisterRes Register(1:RegisterReq req)
 LoginRes Login(1:LoginReq req)
@@ -183,4 +332,19 @@ GetUsersInfoByAccountsRes GetUsersInfoByAccounts(1:GetUsersInfoByAccountsReq req
 CommonRes UpdateAvatar(1:UpdateAvatarReq req)
 CreateBotUserRes CreateBotUser(1:CreateBotUserReq req)
 CommonRes UpdateBotUserName(1:UpdateBotUserNameReq req)
+CreateTenantRes CreateTenant(1:CreateTenantReq req)
+ListTenantsRes ListTenants(1:ListTenantsReq req)
+GetTenantRes GetTenant(1:GetTenantReq req)
+CommonRes UpdateTenant(1:UpdateTenantReq req)
+ListTenantMembersRes ListTenantMembers(1:ListTenantMembersReq req)
+CommonRes AddTenantMember(1:AddTenantMemberReq req)
+CommonRes SetTenantMemberRole(1:SetTenantMemberRoleReq req)
+CommonRes RemoveTenantMember(1:RemoveTenantMemberReq req)
+ListDepartmentsRes ListDepartments(1:ListDepartmentsReq req)
+CreateDepartmentRes CreateDepartment(1:CreateDepartmentReq req)
+CommonRes RenameDepartment(1:RenameDepartmentReq req)
+CommonRes MoveDepartment(1:MoveDepartmentReq req)
+CommonRes RemoveDepartment(1:RemoveDepartmentReq req)
+CommonRes SetMemberDepartment(1:SetMemberDepartmentReq req)
+ListActiveUsersRes ListActiveUsers(1:ListActiveUsersReq req)
 }

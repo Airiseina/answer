@@ -66,3 +66,42 @@ func GetUserNames(ctx context.Context, userIds []int64) ([]*user.UserNameInfo, e
 	}
 	return resp.Users, nil
 }
+
+// ActiveUser 是枚举用户时的最小信息：用户ID + 个人租户ID。
+type ActiveUser struct {
+	UserID   int64
+	TenantID int64
+}
+
+// ListActiveUsers 游标式枚举非 Bot 用户，供日/周总结调度逐个处理。
+// afterUserID 为上一页最后一个用户ID，首页传 0。
+func ListActiveUsers(ctx context.Context, afterUserID int64, limit int32) ([]ActiveUser, error) {
+	resp, err := userCli.ListActiveUsers(ctx, &user.ListActiveUsersReq{
+		AfterUserId: afterUserID,
+		Limit:       limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	users := make([]ActiveUser, 0, len(resp.Users))
+	for _, u := range resp.Users {
+		users = append(users, ActiveUser{UserID: u.UserId, TenantID: u.TenantId})
+	}
+	return users, nil
+}
+
+// GetPersonalTenantID 读取用户的个人租户 ID，供总结报告记录归属。
+// 取不到时返回 0，不阻断总结生成。
+func GetPersonalTenantID(ctx context.Context, userID int64) int64 {
+	resp, err := userCli.ListTenants(ctx, &user.ListTenantsReq{UserId: userID})
+	if err != nil {
+		klog.CtxWarnf(ctx, "获取用户[%d]租户列表失败: %v", userID, err)
+		return 0
+	}
+	for _, t := range resp.Tenants {
+		if t.IsPersonal {
+			return t.Id
+		}
+	}
+	return 0
+}

@@ -108,8 +108,8 @@ func main() {
 	stuckDocs, err := docDao.GetStuckDocuments()
 	if err == nil && len(stuckDocs) > 0 {
 		for _, doc := range stuckDocs {
-			_ = docDao.UpdateStatus(doc.ID, model.DocStatusPending, 0, "")
-			_ = knowledgeService.RepublishDocParse(doc.ID, doc.KBID)
+			_ = docDao.UpdateStatus(doc.TenantID, doc.ID, model.DocStatusPending, 0, "")
+			_ = knowledgeService.RepublishDocParse(doc.TenantID, doc.ID, doc.KBID)
 		}
 		klog.Infof("已重置%d个卡在parsing状态的文档", len(stuckDocs))
 	}

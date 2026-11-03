@@ -4,6 +4,7 @@ import "time"
 
 type BotKnowledge struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	TenantID  int64     `gorm:"not null;default:0;index;uniqueIndex:idx_bot_kb" json:"tenant_id"`
 	BotID     int64     `gorm:"not null;uniqueIndex:idx_bot_kb" json:"bot_id"`
 	KBID      int64     `gorm:"not null;uniqueIndex:idx_bot_kb;index" json:"kb_id"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`

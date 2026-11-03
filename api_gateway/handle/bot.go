@@ -39,6 +39,7 @@ func CreateBot(ctx context.Context, c *app.RequestContext) {
 		ApiKey:       req.ApiKey,
 		Model:        req.Model,
 		BaseUrl:      &req.BaseUrl,
+		TenantId:     &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "创建Bot失败: %v", err)
@@ -71,6 +72,7 @@ func UpdateBot(ctx context.Context, c *app.RequestContext) {
 	rpcReq := &bot.UpdateBotReq{
 		BotId:      req.BotId,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	}
 	if req.Name != "" {
 		rpcReq.Name = &req.Name
@@ -116,6 +118,7 @@ func DeleteBot(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.DeleteBot(ctx, &bot.DeleteBotReq{
 		BotId:      req.BotId,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "删除Bot失败: %v", err)
@@ -142,7 +145,7 @@ func GetUserBots(ctx context.Context, c *app.RequestContext) {
 	userInfo := Identity.(*middleware.Resp)
 	userId := userInfo.Id
 
-	resp, err := rpc.GetUserBots(ctx, &bot.GetUserBotsReq{CreatorId: userId})
+	resp, err := rpc.GetUserBots(ctx, &bot.GetUserBotsReq{CreatorId: userId, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "获取Bot列表失败: %v", err)
 		response.Error(c, "获取Bot列表失败", nil)
@@ -189,6 +192,7 @@ func AddBotToConversation(ctx context.Context, c *app.RequestContext) {
 		BotId:            req.BotId,
 		ConversationId:   req.ConversationId,
 		ConversationType: req.ConversationType,
+		TenantId:         &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "将Bot拉入会话失败: %v", err)
@@ -236,7 +240,7 @@ func CreateMcpServer(ctx context.Context, c *app.RequestContext) {
 		response.Error(c, "参数错误", err.Error())
 		return
 	}
-	botResp, botErr := rpc.GetBot(ctx, &bot.GetBotReq{BotId: req.BotId})
+	botResp, botErr := rpc.GetBot(ctx, &bot.GetBotReq{BotId: req.BotId, TenantId: &userInfo.TenantId})
 	if botErr != nil {
 		hlog.CtxErrorf(ctx, "查询Bot[%d]信息失败: %v", req.BotId, botErr)
 		response.Error(c, "查询Bot信息失败", nil)
@@ -255,6 +259,7 @@ func CreateMcpServer(ctx context.Context, c *app.RequestContext) {
 		BotId:      req.BotId,
 		Name:       req.Name,
 		Url:        req.Url,
+		TenantId:   &userInfo.TenantId,
 	}
 	if req.Description != "" {
 		rpcReq.Description = &req.Description
@@ -294,12 +299,14 @@ type mcpServerItem struct {
 }
 
 func GetBotMcpServers(ctx context.Context, c *app.RequestContext) {
+	Identity, _ := c.Get(middleware.IdentityKey)
+	userInfo := Identity.(*middleware.Resp)
 	var req GetBotMcpServersReq
 	if err := c.BindAndValidate(&req); err != nil {
 		response.Error(c, "参数错误", err.Error())
 		return
 	}
-	resp, err := rpc.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: req.BotId})
+	resp, err := rpc.GetBotMcpServers(ctx, &bot.GetBotMcpServersReq{BotId: req.BotId, TenantId: &userInfo.TenantId})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "获取Bot[%d]的McpServer列表失败: %v", req.BotId, err)
 		response.Error(c, "获取McpServer列表失败", nil)
@@ -349,6 +356,7 @@ func UpdateMcpServer(ctx context.Context, c *app.RequestContext) {
 	rpcReq := &bot.UpdateMcpServerReq{
 		Id:         req.Id,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	}
 	if req.Name != "" {
 		rpcReq.Name = &req.Name
@@ -397,6 +405,7 @@ func DeleteMcpServer(ctx context.Context, c *app.RequestContext) {
 	resp, err := rpc.DeleteMcpServer(ctx, &bot.DeleteMcpServerReq{
 		Id:         req.Id,
 		OperatorId: userId,
+		TenantId:   &userInfo.TenantId,
 	})
 	if err != nil {
 		hlog.CtxErrorf(ctx, "删除McpServer失败: %v", err)

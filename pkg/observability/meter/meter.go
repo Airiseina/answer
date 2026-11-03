@@ -53,6 +53,11 @@ type Metrics struct {
 	UserLoginTotal       metric.Int64Counter
 	FriendOpTotal        metric.Int64Counter
 	RateLimitHitTotal    metric.Int64Counter
+	OpenAPIRequestTotal  metric.Int64Counter
+	MarketInstallTotal   metric.Int64Counter
+	SummaryGenerateTotal metric.Int64Counter
+	AgentGraphRunTotal   metric.Int64Counter
+	BillingCostTotal     metric.Float64Counter
 }
 
 var M *Metrics
@@ -192,6 +197,36 @@ func registerAll(serviceName string) {
 		metric.WithDescription("限流触发总数"),
 	)
 	mustRegister(err, "aim.ratelimit.hit.total")
+
+	M.OpenAPIRequestTotal, err = Meter().Int64Counter(
+		"aim.open.api.request.total",
+		metric.WithDescription("开放平台请求总数"),
+	)
+	mustRegister(err, "aim.open.api.request.total")
+
+	M.MarketInstallTotal, err = Meter().Int64Counter(
+		"aim.market.install.total",
+		metric.WithDescription("Bot 市场安装总数"),
+	)
+	mustRegister(err, "aim.market.install.total")
+
+	M.SummaryGenerateTotal, err = Meter().Int64Counter(
+		"aim.summary.generate.total",
+		metric.WithDescription("日/周总结生成总数"),
+	)
+	mustRegister(err, "aim.summary.generate.total")
+
+	M.AgentGraphRunTotal, err = Meter().Int64Counter(
+		"aim.agent.graph.run.total",
+		metric.WithDescription("多 Agent 编排图执行总数"),
+	)
+	mustRegister(err, "aim.agent.graph.run.total")
+
+	M.BillingCostTotal, err = Meter().Float64Counter(
+		"aim.billing.cost.total",
+		metric.WithDescription("按参考单价折算的预估成本累计"),
+	)
+	mustRegister(err, "aim.billing.cost.total")
 
 	fmt.Printf("[%s] 指标注册完成\n", serviceName)
 }

@@ -15,6 +15,11 @@ type OnlineInfo struct {
 	GatewayAddr string
 }
 
+// onlineKey 生成用户在线状态 Key。
+//
+// 这里刻意不带租户前缀：在线状态描述的是「这个连接上的用户」，
+// 而 user_id 由 snowflake 全局唯一生成，跨租户不会碰撞；
+// 网关在任意租户上下文下都需要按 userID 反查在线状态，带租户反而会导致查不到。
 func (dao *onlineDao) onlineKey(userID int64) string {
 	return fmt.Sprintf("online:%d", userID)
 }

@@ -16,7 +16,9 @@ import (
 
 // convPairKey 生成单聊会话的用户对缓存 Key
 // 无论 userA、userB 传入顺序如何，始终按较小值在前，保证同一对用户映射到同一个 Key
-// 格式: conv:pair:{minUID}:{maxUID}
+// 格式: conv:pair:{tenantID}:{minUID}:{maxUID}
+// 必须带租户前缀：同一对用户可能同时存在于个人租户与组织租户，
+// 两个租户下各自应有独立的单聊会话，不能共用缓存。
 func hasDuplicateMembers(members []int64) bool {
 	seen := make(map[int64]struct{}, len(members))
 	for _, m := range members {
@@ -28,12 +30,12 @@ func hasDuplicateMembers(members []int64) bool {
 	return false
 }
 
-func (dao *conversationDao) convPairKey(userA, userB int64) string {
+func (dao *conversationDao) convPairKey(tenantID, userA, userB int64) string {
 	minUID, maxUID := userA, userB
 	if userA > userB {
 		minUID, maxUID = userB, userA
 	}
-	return fmt.Sprintf("conv:pair:%d:%d", minUID, maxUID)
+	return fmt.Sprintf("conv:pair:%d:%d:%d", tenantID, minUID, maxUID)
 }
 
 // convMembersKey 生成会话成员列表的缓存 Key
@@ -63,6 +65,7 @@ func (dao *conversationDao) CreateConversation(ctx context.Context, conv *model.
 			}
 			member := model.ConversationMember{
 				ConversationID: conv.ID,
+				TenantID:       conv.TenantID,
 				UserID:         uid,
 				Role:           role,
 				JoinedAt:       now,
@@ -86,7 +89,7 @@ func (dao *conversationDao) CreateConversation(ctx context.Context, conv *model.
 		if memberIDs[0] > memberIDs[1] {
 			minUID, maxUID = memberIDs[1], memberIDs[0]
 		}
-		if err := dao.rdb.Set(ctx, dao.convPairKey(minUID, maxUID), conv.ID, 0).Err(); err != nil {
+		if err := dao.rdb.Set(ctx, dao.convPairKey(conv.TenantID, minUID, maxUID), conv.ID, 0).Err(); err != nil {
 			return 0, err
 		}
 	}
@@ -106,7 +109,7 @@ func (dao *conversationDao) CreateConversation(ctx context.Context, conv *model.
 // 获取锁失败时，渐进退避重试读取缓存（3 次，50ms/100ms/150ms）
 //
 // 参数 idGen: 会话ID生成函数，由 Service 层提供，DAL 层不持有 ID 生成策略
-func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, userA, userB int64, idGen func() int64) (int64, error) {
+func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, tenantID, userA, userB int64, idGen func() int64) (int64, error) {
 	if userA == userB {
 		return 0, fmt.Errorf("单聊会话的两个用户不能相同")
 	}
@@ -114,7 +117,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	if userA > userB {
 		minUID, maxUID = userB, userA
 	}
-	pairKey := dao.convPairKey(minUID, maxUID)
+	pairKey := dao.convPairKey(tenantID, minUID, maxUID)
 
 	// ===== 第一级：查 Redis 缓存 =====
 	val, err := dao.rdb.Get(ctx, pairKey).Result()
@@ -124,7 +127,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 			var exists bool
 			existsErr := dao.db.WithContext(ctx).
 				Table("conversation_table").
-				Where("id = ? AND type = ?", convID, model.ConvTypePrivate).
+				Where("id = ? AND type = ? AND tenant_id = ?", convID, model.ConvTypePrivate, tenantID).
 				Select("1").
 				Limit(1).
 				Scan(&exists).Error
@@ -141,7 +144,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	}
 
 	// ===== 第二级：查数据库 =====
-	existingConvID, dbErr := dao.findPrivateConversation(ctx, minUID, maxUID)
+	existingConvID, dbErr := dao.findPrivateConversation(ctx, tenantID, minUID, maxUID)
 	if dbErr != nil {
 		return 0, fmt.Errorf("查询数据库会话失败: %w", dbErr)
 	}
@@ -154,7 +157,8 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	}
 
 	// ===== 第三级：分布式锁保护下的创建 =====
-	lockKey := fmt.Sprintf("lock:conv:create:%d:%d", minUID, maxUID)
+	// 锁同样按租户隔离，避免不同租户下的会话创建互相阻塞。
+	lockKey := fmt.Sprintf("lock:conv:create:%d:%d:%d", tenantID, minUID, maxUID)
 	lockValue := fmt.Sprintf("%d:%d", time.Now().UnixNano(), minUID)
 	locked, lockErr := dao.rdb.SetNX(ctx, lockKey, lockValue, 5*time.Second).Result()
 	if lockErr != nil {
@@ -181,7 +185,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 		dao.rdb.Eval(ctx, luaScript, []string{lockKey}, lockValue)
 	}()
 	// Double-Check：加锁后再次查库，防止锁竞争期间已被另一个请求创建
-	existingConvID, dbErr = dao.findPrivateConversation(ctx, minUID, maxUID)
+	existingConvID, dbErr = dao.findPrivateConversation(ctx, tenantID, minUID, maxUID)
 	if dbErr != nil {
 		return 0, fmt.Errorf("双重检查查询会话失败: %w", dbErr)
 	}
@@ -195,6 +199,7 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 	// ID 由调用方通过 idGen 回调生成，DAL 层不持有 ID 生成策略
 	conv := &model.Conversation{
 		ID:        idGen(),
+		TenantID:  tenantID,
 		Type:      model.ConvTypePrivate,
 		Name:      "", // 单聊会话名称为空，由前端根据成员信息展示
 		CreatedAt: time.Now().UnixMilli(),
@@ -206,15 +211,18 @@ func (dao *conversationDao) GetOrCreatePrivateConversation(ctx context.Context, 
 // findPrivateConversation 在数据库中查找两人共同的单聊会话
 // 通过子查询实现：先找两人共同参与的会话ID，再筛选 type=1 的单聊会话
 // 返回值: 会话ID（0 表示不存在），数据库错误
-func (dao *conversationDao) findPrivateConversation(ctx context.Context, minUID, maxUID int64) (int64, error) {
+func (dao *conversationDao) findPrivateConversation(ctx context.Context, tenantID, minUID, maxUID int64) (int64, error) {
 	var convID int64
 	subQuery := dao.db.Table("conversation_member").
 		Select("conversation_id").
 		Where("user_id = ? AND conversation_id IN (SELECT conversation_id FROM conversation_member WHERE user_id = ?)", minUID, maxUID)
-	err := dao.db.WithContext(ctx).
+	q := dao.db.WithContext(ctx).
 		Table("conversation_table").
-		Where("id IN (?) AND type = ?", subQuery, model.ConvTypePrivate).
-		Limit(1).
+		Where("id IN (?) AND type = ?", subQuery, model.ConvTypePrivate)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	err := q.Limit(1).
 		Pluck("id", &convID).Error
 	if err != nil {
 		return 0, err
@@ -256,7 +264,7 @@ func (dao *conversationDao) GetConversationMembers(ctx context.Context, conversa
 // GetUserConversations 查询用户参与的所有会话
 // 先通过 conversation_member 表查找用户所属的会话ID列表，
 // 再批量查询会话详情，按 updated_at 降序排列（最近活跃的会话排在前面）
-func (dao *conversationDao) GetUserConversations(ctx context.Context, userID int64) ([]model.Conversation, error) {
+func (dao *conversationDao) GetUserConversations(ctx context.Context, tenantID, userID int64) ([]model.Conversation, error) {
 	var convIDs []int64
 	err := dao.db.WithContext(ctx).
 		Model(&model.ConversationMember{}).
@@ -270,7 +278,11 @@ func (dao *conversationDao) GetUserConversations(ctx context.Context, userID int
 	}
 
 	var conversations []model.Conversation
-	err = dao.db.WithContext(ctx).Where("id IN ?", convIDs).Order("updated_at DESC").Find(&conversations).Error
+	q := dao.db.WithContext(ctx).Where("id IN ?", convIDs)
+	if tenantID > 0 {
+		q = q.Where("tenant_id = ?", tenantID)
+	}
+	err = q.Order("updated_at DESC").Find(&conversations).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询会话详情失败: %w", err)
 	}
@@ -340,11 +352,16 @@ func (dao *conversationDao) AddMembers(ctx context.Context, conversationID int64
 	if len(memberIDs) == 0 {
 		return nil
 	}
+	tenantID, err := dao.conversationTenantID(ctx, conversationID)
+	if err != nil {
+		return err
+	}
 	now := time.Now().UnixMilli()
 	members := make([]model.ConversationMember, 0, len(memberIDs))
 	for _, uid := range memberIDs {
 		members = append(members, model.ConversationMember{
 			ConversationID: conversationID,
+			TenantID:       tenantID,
 			UserID:         uid,
 			Role:           model.MemberRoleNormal,
 			JoinedAt:       now,
@@ -377,6 +394,19 @@ func (dao *conversationDao) RemoveMembers(ctx context.Context, conversationID in
 	}
 	dao.invalidateMembersCache(ctx, conversationID)
 	return nil
+}
+
+// conversationTenantID 查询会话所属租户，用于成员写入时补齐 tenant_id
+func (dao *conversationDao) conversationTenantID(ctx context.Context, conversationID int64) (int64, error) {
+	var tenantID int64
+	err := dao.db.WithContext(ctx).
+		Table("conversation_table").
+		Where("id = ?", conversationID).
+		Pluck("tenant_id", &tenantID).Error
+	if err != nil {
+		return 0, fmt.Errorf("查询会话租户失败: %w", err)
+	}
+	return tenantID, nil
 }
 
 // BatchGetConversationMembers 批量查询多个会话的成员列表
@@ -473,6 +503,7 @@ func (dao *conversationDao) DeleteConversation(ctx context.Context, conversation
 // convMaxSeqKey 生成会话最大消息序号的 Redis Key
 // 格式: conv:max_seq:{conversationID}
 // 用于写扩散模型：每条消息落库后递增此 Key，作为该会话内消息的单调递增序号
+// 不带租户前缀：conversationID 全局唯一，Key 本身已隐含唯一租户归属。
 func (dao *conversationDao) convMaxSeqKey(conversationID int64) string {
 	return fmt.Sprintf("conv:max_seq:%d", conversationID)
 }
@@ -480,6 +511,7 @@ func (dao *conversationDao) convMaxSeqKey(conversationID int64) string {
 // memberReadSeqKey 生成会话成员已读序号的 Redis 缓存 Key
 // 格式: conv:member:read_seq:{conversationID}:{userID}
 // 缓存用户在该会话中的已读位置，加速未读数计算
+// 不带租户前缀：conversationID 全局唯一，且成员关系已由会话归属决定。
 func (dao *conversationDao) memberReadSeqKey(conversationID int64, userID int64) string {
 	return fmt.Sprintf("conv:member:read_seq:%d:%d", conversationID, userID)
 }

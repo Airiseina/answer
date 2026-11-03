@@ -11,6 +11,23 @@ func Routes(h *server.Hertz) {
 	h.POST("/register", handle.Register)
 	h.POST("/login", middleware.Authmiddleware.LoginHandler)
 	h.GET("/files/*filepath", handle.FileProxy)
+
+	// 管理后台独立登录态：独立密钥、独立 claims，与普通用户完全隔离。
+	h.POST("/api/admin/login", middleware.AdminAuthmiddleware.LoginHandler)
+	adminGroup := h.Group("/api/admin", middleware.AdminAuthmiddleware.MiddlewareFunc())
+	adminGroup.GET("/profile", handle.AdminProfile)
+	adminGroup.POST("/password", handle.AdminChangePassword)
+	adminGroup.GET("/accounts", handle.AdminListAccounts)
+	adminGroup.POST("/accounts/create", handle.AdminCreateAccount)
+	adminGroup.POST("/accounts/status", handle.AdminUpdateAccountStatus)
+	adminGroup.GET("/market/reviews", handle.AdminListMarketReviews)
+	adminGroup.POST("/market/reviews/:market_bot_id/approve", handle.AdminApproveMarketBot)
+	adminGroup.POST("/market/reviews/:market_bot_id/reject", handle.AdminRejectMarketBot)
+	// 参考单价由后台手工维护；用户侧用量看板仅本人可见，不提供跨用户查询入口。
+	adminGroup.GET("/billing/prices", handle.AdminListModelPrices)
+	adminGroup.POST("/billing/prices", handle.AdminUpsertModelPrice)
+	adminGroup.POST("/billing/prices/delete", handle.AdminDeleteModelPrice)
+
 	authGroup := h.Group("/api", middleware.Authmiddleware.MiddlewareFunc())
 	authGroup.POST("/create_group", handle.CreateGroup)
 	authGroup.POST("/invite_members", handle.InviteMembers)
@@ -52,8 +69,39 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/chat/summarize", handle.SummarizeConversation)
 	authGroup.POST("/chat/suggest_replies", handle.SuggestReplies)
 	authGroup.POST("/chat/translate", handle.TranslateMessage)
+
+	// 系统 Agent 日/周总结：列表/详情/手动生成/订阅设置，仅本人可见。
+	authGroup.GET("/summary/list", handle.ListSummaryReports)
+	authGroup.GET("/summary/daily", handle.ListDailySummaries)
+	authGroup.GET("/summary/weekly", handle.ListWeeklySummaries)
+	authGroup.GET("/summary/detail", handle.GetSummaryReport)
+	authGroup.POST("/summary/generate", handle.GenerateSummary)
+	authGroup.GET("/summary/schedule", handle.GetSummarySchedule)
+	authGroup.POST("/summary/schedule", handle.SetSummarySchedule)
+
+	// 用量统计：仅返回本人数据（user_id 由登录态强制注入）。
+	authGroup.GET("/billing/usage", handle.GetUsageDetail)
+	authGroup.GET("/billing/usage/summary", handle.GetUsageSummary)
+
 	authGroup.POST("/update_avatar", handle.UpdateAvatar)
 	authGroup.POST("/files", handle.Upload)
+
+	// 多租户：读操作仅需登录态，写操作要求当前租户的 owner/admin。
+	authGroup.POST("/tenant/create", handle.TenantCreate)
+	authGroup.GET("/tenant/list", handle.TenantList)
+	authGroup.GET("/tenant/info", handle.TenantInfo)
+	authGroup.POST("/tenant/switch", handle.TenantSwitch)
+	authGroup.POST("/tenant/update", handle.TenantUpdate, middleware.RequireTenantAdmin())
+	authGroup.GET("/tenant/members", handle.TenantListMembers, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/member/add", handle.TenantAddMember, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/member/set_role", handle.TenantSetMemberRole, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/member/remove", handle.TenantRemoveMember, middleware.RequireTenantAdmin())
+	authGroup.GET("/tenant/departments", handle.TenantListDepartments)
+	authGroup.POST("/tenant/department/create", handle.TenantCreateDepartment, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/department/rename", handle.TenantRenameDepartment, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/department/move", handle.TenantMoveDepartment, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/department/remove", handle.TenantRemoveDepartment, middleware.RequireTenantAdmin())
+	authGroup.POST("/tenant/department/set_member", handle.TenantSetMemberDepartment, middleware.RequireTenantAdmin())
 
 	authGroup.POST("/bot/create", handle.CreateBot)
 	authGroup.POST("/bot/update", handle.UpdateBot)
@@ -65,6 +113,23 @@ func Routes(h *server.Hertz) {
 	authGroup.GET("/bot/mcp/list", handle.GetBotMcpServers)
 	authGroup.POST("/bot/mcp/update", handle.UpdateMcpServer)
 	authGroup.POST("/bot/mcp/delete", handle.DeleteMcpServer)
+
+	// Bot 市场：浏览全局可见；发布/安装/评分等写操作要求登录态。
+	authGroup.GET("/market/bots", handle.ListMarketBots)
+	authGroup.GET("/market/bots/:market_bot_id", handle.GetMarketBot)
+	authGroup.GET("/market/my-published", handle.ListMyMarketBots)
+	authGroup.POST("/market/bots", handle.PublishMarketBot)
+	authGroup.POST("/market/bots/update", handle.UpdateMarketBot)
+	authGroup.POST("/market/bots/offline", handle.OfflineMarketBot)
+	authGroup.POST("/market/bots/install", handle.InstallMarketBot)
+	authGroup.POST("/market/bots/rate", handle.RateMarketBot)
+
+	// 多 Agent 协作编排：按 Bot 维度保存/校验/发布编排图，读写均限定当前租户。
+	authGroup.GET("/bot/agent-graph", handle.GetAgentGraph)
+	authGroup.POST("/bot/agent-graph/save", handle.SaveAgentGraph)
+	authGroup.POST("/bot/agent-graph/validate", handle.ValidateAgentGraph)
+	authGroup.POST("/bot/agent-graph/publish", handle.PublishAgentGraph)
+	authGroup.GET("/bot/agent-graph/history", handle.ListAgentGraphHistory)
 
 	authGroup.POST("/knowledge/create", handle.CreateKnowledgeBase)
 	authGroup.GET("/knowledge/get", handle.GetKnowledgeBase)
@@ -78,4 +143,39 @@ func Routes(h *server.Hertz) {
 	authGroup.POST("/knowledge/bind", handle.BindKnowledgeBase)
 	authGroup.POST("/knowledge/unbind", handle.UnbindKnowledgeBase)
 	authGroup.GET("/knowledge/bot_bases", handle.GetBotKnowledgeBases)
+
+	// 个人 Skill（资料型）：上传/列表/详情/删除与 Bot 绑定，严格按登录用户隔离。
+	authGroup.POST("/skill/upload", handle.UploadUserSkill)
+	authGroup.GET("/skill/list", handle.ListUserSkills)
+	authGroup.GET("/skill/detail", handle.GetUserSkill)
+	authGroup.POST("/skill/delete", handle.DeleteUserSkill)
+	authGroup.POST("/skill/bind", handle.BindUserSkill)
+	authGroup.GET("/skill/bot_skills", handle.ListBotSkills)
+
+	// 开放平台：站内应用管理（普通登录态，仅创建者可操作自己的应用）。
+	authGroup.POST("/open/apps/create", handle.OpenCreateApp)
+	authGroup.GET("/open/apps/list", handle.OpenListApps)
+	authGroup.GET("/open/apps/detail", handle.OpenGetApp)
+	authGroup.POST("/open/apps/reset_secret", handle.OpenResetAppSecret)
+	authGroup.POST("/open/apps/status", handle.OpenUpdateAppStatus)
+
+	// 开放平台：第三方入口，独立签名鉴权，不挂普通 JWT。
+	h.GET("/open/docs", handle.OpenDocs)
+	h.GET("/open/openapi.yaml", handle.OpenAPISpec)
+	openGroup := h.Group("/open/v1", middleware.OpenAuth())
+	openGroup.POST("/bots", middleware.RequireScope("bot:write"), handle.OpenCreateBot)
+	openGroup.GET("/bots", middleware.RequireScope("bot:read"), handle.OpenListBots)
+	openGroup.GET("/bots/:bot_id", middleware.RequireScope("bot:read"), handle.OpenGetBot)
+	openGroup.PATCH("/bots/:bot_id", middleware.RequireScope("bot:write"), handle.OpenUpdateBot)
+	openGroup.DELETE("/bots/:bot_id", middleware.RequireScope("bot:write"), handle.OpenDeleteBot)
+	openGroup.POST("/bots/:bot_id/conversations", middleware.RequireScope("bot:write"), handle.OpenAddBotToConversation)
+	openGroup.POST("/messages/send", middleware.RequireScope("message:send"), handle.OpenSendMessage)
+	openGroup.GET("/messages", middleware.RequireScope("message:read"), handle.OpenListMessages)
+	openGroup.GET("/conversations", middleware.RequireScope("conversation:read"), handle.OpenListConversations)
+	openGroup.GET("/events", middleware.RequireScope("message:read"), handle.OpenListEvents)
+	openGroup.POST("/events/ack", middleware.RequireScope("message:read"), handle.OpenAckEvents)
+	openGroup.POST("/webhooks", middleware.RequireScope("webhook:manage"), handle.OpenRegisterWebhook)
+	openGroup.GET("/webhooks", middleware.RequireScope("webhook:manage"), handle.OpenListWebhooks)
+	openGroup.GET("/webhooks/:id", middleware.RequireScope("webhook:manage"), handle.OpenGetWebhook)
+	openGroup.DELETE("/webhooks/:id", middleware.RequireScope("webhook:manage"), handle.OpenDeleteWebhook)
 }

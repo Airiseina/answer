@@ -99,10 +99,13 @@ require (
 )
 
 require (
+	github.com/Airiseina/answer/kitex_service/admin_service v0.0.0
+	github.com/Airiseina/answer/kitex_service/billing_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/bot_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/chat_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/group_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/knowledge_service v0.0.0
+	github.com/Airiseina/answer/kitex_service/open_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/user_service v0.0.0
 	github.com/Airiseina/answer/kitex_service/work_service v0.0.0
 	github.com/Airiseina/answer/pkg v0.0.0
@@ -111,10 +114,13 @@ require (
 )
 
 replace (
+	github.com/Airiseina/answer/kitex_service/admin_service => ../kitex_service/admin_service
+	github.com/Airiseina/answer/kitex_service/billing_service => ../kitex_service/billing_service
 	github.com/Airiseina/answer/kitex_service/bot_service => ../kitex_service/bot_service
 	github.com/Airiseina/answer/kitex_service/chat_service => ../kitex_service/chat_service
 	github.com/Airiseina/answer/kitex_service/group_service => ../kitex_service/group_service
 	github.com/Airiseina/answer/kitex_service/knowledge_service => ../kitex_service/knowledge_service
+	github.com/Airiseina/answer/kitex_service/open_service => ../kitex_service/open_service
 	github.com/Airiseina/answer/kitex_service/user_service => ../kitex_service/user_service
 	github.com/Airiseina/answer/kitex_service/work_service => ../kitex_service/work_service
 	github.com/Airiseina/answer/pkg => ../pkg

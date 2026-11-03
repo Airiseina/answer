@@ -4,6 +4,7 @@ import "time"
 
 type KnowledgeBase struct {
 	ID          int64     `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	TenantID    int64     `gorm:"not null;default:0;index" json:"tenant_id"`
 	OwnerID     int64     `gorm:"not null;index" json:"owner_id"`
 	Name        string    `gorm:"type:varchar(128);not null" json:"name"`
 	Description string    `gorm:"type:varchar(512);default:''" json:"description"`

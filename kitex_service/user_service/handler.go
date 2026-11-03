@@ -15,6 +15,7 @@ import (
 type LoginServiceImpl struct {
 	userService   *service.UserService
 	friendService *service.FriendService
+	tenantService *service.TenantService
 }
 
 func (s *LoginServiceImpl) Register(ctx context.Context, req *user.RegisterReq) (resp *user.RegisterRes, err error) {
@@ -48,7 +49,21 @@ func (s *LoginServiceImpl) Login(ctx context.Context, req *user.LoginReq) (resp 
 		return &user.LoginRes{}, nil
 	}
 	meter.M.UserLoginTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("status", "success")))
-	return &user.LoginRes{Account: userInfo.Account, Id: userInfo.Id, AvatarUrl: userInfo.AvatarURL}, nil
+	resp = &user.LoginRes{
+		Account:          userInfo.Account,
+		Id:               userInfo.Id,
+		AvatarUrl:        userInfo.AvatarURL,
+		PersonalTenantId: userInfo.PersonalTenantID,
+	}
+	for _, t := range userInfo.Tenants {
+		resp.Tenants = append(resp.Tenants, &user.TenantBrief{
+			Id:         t.Id,
+			Name:       t.Name,
+			IsPersonal: t.IsPersonal,
+			Role:       t.Role,
+		})
+	}
+	return resp, nil
 }
 
 func (s *LoginServiceImpl) CheckUsersExist(ctx context.Context, req *user.CheckUsersExistReq) (resp *user.CheckUsersExistRes, err error) {
@@ -311,4 +326,21 @@ func (s *LoginServiceImpl) UpdateBotUserName(ctx context.Context, req *user.Upda
 		return nil, err
 	}
 	return &user.CommonRes{Success: success}, nil
+}
+
+// ListActiveUsers 游标式枚举非 Bot 用户，供 work_service 的日/周总结调度使用。
+func (s *LoginServiceImpl) ListActiveUsers(ctx context.Context, req *user.ListActiveUsersReq) (resp *user.ListActiveUsersRes, err error) {
+	dtos, err := s.userService.ListActiveUsers(req.AfterUserId, req.Limit)
+	if err != nil {
+		klog.CtxErrorf(ctx, "枚举活跃用户时发生系统错误: %v", err)
+		return nil, err
+	}
+	list := make([]*user.ActiveUserInfo, 0, len(dtos))
+	for _, dto := range dtos {
+		list = append(list, &user.ActiveUserInfo{
+			UserId:   dto.UserID,
+			TenantId: dto.TenantID,
+		})
+	}
+	return &user.ListActiveUsersRes{Users: list}, nil
 }

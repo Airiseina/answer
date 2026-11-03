@@ -153,6 +153,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetMessagesByTimeRange": kitex.NewMethodInfo(
+		getMessagesByTimeRangeHandler,
+		newChatServiceGetMessagesByTimeRangeArgs,
+		newChatServiceGetMessagesByTimeRangeResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -579,6 +586,24 @@ func newChatServiceSearchMessagesResult() interface{} {
 	return chat.NewChatServiceSearchMessagesResult()
 }
 
+func getMessagesByTimeRangeHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*chat.ChatServiceGetMessagesByTimeRangeArgs)
+	realResult := result.(*chat.ChatServiceGetMessagesByTimeRangeResult)
+	success, err := handler.(chat.ChatService).GetMessagesByTimeRange(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+func newChatServiceGetMessagesByTimeRangeArgs() interface{} {
+	return chat.NewChatServiceGetMessagesByTimeRangeArgs()
+}
+
+func newChatServiceGetMessagesByTimeRangeResult() interface{} {
+	return chat.NewChatServiceGetMessagesByTimeRangeResult()
+}
+
 type kClient struct {
 	c client.Client
 }
@@ -784,6 +809,16 @@ func (p *kClient) SearchMessages(ctx context.Context, req *chat.SearchMessagesRe
 	_args.Req = req
 	var _result chat.ChatServiceSearchMessagesResult
 	if err = p.c.Call(ctx, "SearchMessages", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetMessagesByTimeRange(ctx context.Context, req *chat.GetMessagesByTimeRangeReq) (r *chat.GetMessagesByTimeRangeRes, err error) {
+	var _args chat.ChatServiceGetMessagesByTimeRangeArgs
+	_args.Req = req
+	var _result chat.ChatServiceGetMessagesByTimeRangeResult
+	if err = p.c.Call(ctx, "GetMessagesByTimeRange", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

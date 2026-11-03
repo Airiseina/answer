@@ -9,6 +9,7 @@ const (
 
 type Message struct {
 	MsgID          int64  `gorm:"primaryKey;autoIncrement:false" json:"msg_id"`
+	TenantID       int64  `gorm:"not null;default:0;index:idx_tenant_timestamp" json:"tenant_id"`
 	ClientSeq      int64  `gorm:"not null;default:0" json:"client_seq"`
 	SenderID       int64  `gorm:"not null;index:idx_sender" json:"sender_id"`
 	ConversationID int64  `gorm:"not null;default:0;index:idx_conversation_timestamp" json:"conversation_id"`
@@ -16,7 +17,7 @@ type Message struct {
 	Content        string `gorm:"type:jsonb;not null" json:"content"`
 	Status         int16  `gorm:"not null;default:0" json:"status"`
 	IsEdited       bool   `gorm:"not null;default:false" json:"is_edited"`
-	Timestamp      int64  `gorm:"not null;index:idx_conversation_timestamp" json:"timestamp"`
+	Timestamp      int64  `gorm:"not null;index:idx_conversation_timestamp;index:idx_tenant_timestamp" json:"timestamp"`
 	QuoteMsgID     int64  `gorm:"not null;default:0;index:idx_quote_msg_id" json:"quote_msg_id"`
 }
 
@@ -88,6 +89,7 @@ const (
 
 type Conversation struct {
 	ID        int64  `gorm:"primaryKey;autoIncrement:false" json:"id"`
+	TenantID  int64  `gorm:"not null;default:0;index" json:"tenant_id"`
 	Type      int16  `gorm:"not null" json:"type"`
 	Name      string `gorm:"type:varchar(128);not null;default:''" json:"name"`
 	GroupID   int64  `gorm:"default:0;index" json:"group_id"`
@@ -105,6 +107,7 @@ const (
 )
 
 type ConversationMember struct {
+	TenantID       int64 `gorm:"not null;default:0;index" json:"tenant_id"`
 	ConversationID int64 `gorm:"primaryKey" json:"conversation_id"`
 	UserID         int64 `gorm:"primaryKey" json:"user_id"`
 	Role           int16 `gorm:"not null;default:2" json:"role"`
@@ -121,6 +124,7 @@ func (ConversationMember) TableName() string {
 // 拉取消息时直接查个人收件箱，无需实时计算，读取快
 type InboxMessage struct {
 	ID             int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	TenantID       int64  `gorm:"not null;default:0;index" json:"tenant_id"`
 	UserID         int64  `gorm:"not null;index:idx_user_conv_seq" json:"user_id"`
 	ConversationID int64  `gorm:"not null;index:idx_user_conv_seq" json:"conversation_id"`
 	MsgID          int64  `gorm:"not null" json:"msg_id"`
@@ -141,6 +145,7 @@ func (InboxMessage) TableName() string {
 // 仅用于查询，不通过 GORM 操作，使用 clickhouse-go 原生客户端
 type ColdMessage struct {
 	MsgID          int64  `json:"msg_id"`
+	TenantID       int64  `json:"tenant_id"`
 	ClientSeq      int64  `json:"client_seq"`
 	SenderID       int64  `json:"sender_id"`
 	ConversationID int64  `json:"conversation_id"`
@@ -165,6 +170,7 @@ const MessageCacheCount = 50
 
 type MessageEditHistory struct {
 	ID         int64  `gorm:"primaryKey;autoIncrement" json:"id"`
+	TenantID   int64  `gorm:"not null;default:0;index" json:"tenant_id"`
 	MsgID      int64  `gorm:"not null;index:idx_msg_id_version" json:"msg_id"`
 	Version    int32  `gorm:"not null;index:idx_msg_id_version" json:"version"`
 	OldContent string `gorm:"type:jsonb;not null" json:"old_content"`
